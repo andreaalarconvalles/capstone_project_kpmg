@@ -7,7 +7,7 @@
 
 ## Project Overview
 
-**ARIA** (Airbnb Revenue Intelligence & Analytics) is a machine learning pricing and risk intelligence platform for the short-term rental market, built in partnership with **KPMG Spain** as an IE Business School Corporate Capstone 2026.
+**ARIA** (Agentic Real-estate Intelligence Advisor) is a machine learning pricing and risk intelligence platform for the short-term rental market, built in partnership with **KPMG Spain** as an IE Business School Corporate Capstone 2026.
 
 - **Cities:** Paris (120,809 listings) · Athens (14,242 listings)
 - **Master dataset:** `aria_mega_dataset_v4_1_final.csv` — 135,051 listings × 96 columns

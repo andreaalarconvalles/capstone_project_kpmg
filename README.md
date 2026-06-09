@@ -2,7 +2,7 @@
 
 **KPMG Capstone Project · Group 4**
 
-ARIA is a two-model intelligence system for Airbnb hosts in Athens and Paris. It combines an XGBoost price-prediction engine that surfaces underpricing gaps with a LightGBM classifier that flags hosts at risk of churn — delivering actionable revenue and retention intelligence from four integrated data sources.
+**ARIA** — Agentic Real-estate Intelligence Advisor — is a two-model intelligence system for Airbnb hosts in Athens and Paris. It combines an XGBoost price-prediction engine that surfaces underpricing gaps with a LightGBM classifier that flags hosts at risk of churn — delivering actionable revenue and retention intelligence from four integrated data sources.
 
 ---
 
