@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ARIA — KPMG Capstone Master Planner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --ink:        #0f0f0f;
+  --ink-mid:    #3d3d3d;
+  --ink-muted:  #787878;
+  --ink-faint:  #c4c4c4;
+  --paper:      #f9f7f4;
+  --paper-warm: #f2ede6;
+  --paper-card: #ffffff;
+  --rule:       rgba(0,0,0,0.08);
+  --rule-mid:   rgba(0,0,0,0.14);
+  --accent-purple: #5b4de8;
+  --accent-purple-lt: #ede9fd;
+  --accent-purple-mid: #c4b8f7;
+  --accent-amber: #d97706;
+  --accent-amber-lt: #fef3c7;
+  --accent-amber-mid: #fcd34d;
+  --accent-teal:  #0d7964;
+  --accent-teal-lt: #d1fae5;
+  --accent-teal-mid: #6ee7b7;
+  --accent-red:   #c0392b;
+  --accent-red-lt: #fee2e2;
+  --accent-blue:  #1d4ed8;
+  --accent-blue-lt: #dbeafe;
+  --accent-blue-mid: #93c5fd;
+  --mono: 'DM Mono', monospace;
+  --serif: 'DM Serif Display', serif;
+  --sans: 'Outfit', sans-serif;
+  --radius-sm: 4px; --radius-md: 8px; --radius-lg: 14px; --radius-xl: 20px;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.06),0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.08),0 1px 3px rgba(0,0,0,0.05);
+}
+html { scroll-behavior: smooth; }
+body { font-family: var(--sans); background: var(--paper); color: var(--ink); font-size: 15px; line-height: 1.7; min-height: 100vh; }
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--paper-warm); }
+::-webkit-scrollbar-thumb { background: var(--ink-faint); border-radius: 3px; }
+.shell { display: flex; min-height: 100vh; }
+
+/* SIDEBAR */
+.sidebar { width: 240px; min-height: 100vh; background: var(--ink); color: var(--paper); position: fixed; top: 0; left: 0; bottom: 0; display: flex; flex-direction: column; z-index: 100; overflow-y: auto; }
+.sidebar-logo { padding: 28px 24px 20px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+.sidebar-logo .product-name { font-family: var(--serif); font-size: 26px; letter-spacing: -0.5px; color: #fff; line-height: 1; }
+.sidebar-logo .product-sub { font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em; color: rgba(255,255,255,0.4); margin-top: 4px; font-weight: 500; }
+.sidebar-kpmg-badge { margin: 16px 24px 0; font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: rgba(255,255,255,0.35); font-weight: 500; display: flex; align-items: center; gap: 6px; }
+.sidebar-kpmg-badge::before { content: ''; display: inline-block; width: 6px; height: 6px; background: var(--accent-purple-mid); border-radius: 50%; }
+.nav { padding: 24px 0; flex: 1; }
+.nav-section-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.14em; color: rgba(255,255,255,0.3); font-weight: 600; padding: 0 24px; margin-bottom: 6px; margin-top: 18px; }
+.nav-section-label:first-child { margin-top: 0; }
+.nav-item { display: flex; align-items: center; gap: 10px; padding: 8px 24px; font-size: 13px; font-weight: 400; color: rgba(255,255,255,0.55); cursor: pointer; transition: all 0.15s; border-left: 2px solid transparent; text-decoration: none; }
+.nav-item:hover { color: rgba(255,255,255,0.9); background: rgba(255,255,255,0.05); }
+.nav-item.active { color: #fff; background: rgba(255,255,255,0.08); border-left-color: var(--accent-purple-mid); }
+.nav-item .nav-icon { font-size: 15px; opacity: 0.7; width: 18px; text-align: center; }
+.nav-item.active .nav-icon { opacity: 1; }
+.sidebar-footer { padding: 20px 24px; border-top: 1px solid rgba(255,255,255,0.08); font-size: 11px; color: rgba(255,255,255,0.25); line-height: 1.5; }
+.sidebar-footer strong { color: rgba(255,255,255,0.45); }
+
+/* MAIN */
+.main { margin-left: 240px; flex: 1; min-height: 100vh; }
+.section { display: none; padding: 48px 56px; max-width: 1100px; animation: fadeIn 0.2s ease; }
+.section.active { display: block; }
+@keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+
+/* TOP BAR */
+.top-bar { background: var(--paper-card); border-bottom: 1px solid var(--rule-mid); padding: 14px 56px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50; box-shadow: var(--shadow-sm); }
+.top-bar .breadcrumb { font-size: 12px; color: var(--ink-muted); display: flex; align-items: center; gap: 6px; }
+.top-bar .breadcrumb span { color: var(--ink); font-weight: 500; }
+.top-bar .top-meta { display: flex; align-items: center; gap: 14px; font-size: 12px; color: var(--ink-muted); }
+
+/* TYPOGRAPHY */
+.page-eyebrow { font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em; font-weight: 600; color: var(--accent-purple); margin-bottom: 8px; }
+.page-title { font-family: var(--serif); font-size: 38px; line-height: 1.15; letter-spacing: -0.5px; color: var(--ink); margin-bottom: 12px; }
+.page-lead { font-size: 16px; color: var(--ink-mid); line-height: 1.7; max-width: 680px; margin-bottom: 40px; }
+.section-title { font-family: var(--serif); font-size: 22px; letter-spacing: -0.3px; color: var(--ink); margin-bottom: 6px; line-height: 1.2; }
+.section-sub { font-size: 13px; color: var(--ink-muted); margin-bottom: 20px; line-height: 1.6; }
+.divider { height: 1px; background: var(--rule); margin: 36px 0; }
+.divider-sm { height: 1px; background: var(--rule); margin: 20px 0; }
+
+/* STATUS BADGES */
+.status-done    { display:inline-flex; align-items:center; gap:5px; background: var(--accent-teal-lt);   color: var(--accent-teal);   border: 1px solid var(--accent-teal-mid);   font-size:11px; font-weight:600; padding:3px 10px; border-radius:99px; }
+.status-next    { display:inline-flex; align-items:center; gap:5px; background: var(--accent-amber-lt);  color: var(--accent-amber);  border: 1px solid var(--accent-amber-mid);  font-size:11px; font-weight:600; padding:3px 10px; border-radius:99px; }
+.status-pending { display:inline-flex; align-items:center; gap:5px; background: var(--paper-warm);       color: var(--ink-muted);     border: 1px solid var(--rule-mid);          font-size:11px; font-weight:600; padding:3px 10px; border-radius:99px; }
+.status-done::before    { content: '✓'; }
+.status-next::before    { content: '→'; }
+.status-pending::before { content: '○'; }
+
+/* CARDS */
+.card { background: var(--paper-card); border: 1px solid var(--rule-mid); border-radius: var(--radius-lg); padding: 24px 28px; box-shadow: var(--shadow-sm); }
+.card + .card { margin-top: 12px; }
+.card-grid { display: grid; gap: 12px; }
+.card-grid-2 { grid-template-columns: 1fr 1fr; }
+.card-grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+.card h3 { font-size: 15px; font-weight: 600; color: var(--ink); margin-bottom: 6px; }
+.card p { font-size: 13px; color: var(--ink-mid); line-height: 1.65; }
+.card-accent-purple { border-left: 3px solid var(--accent-purple); }
+.card-accent-amber  { border-left: 3px solid var(--accent-amber); }
+.card-accent-teal   { border-left: 3px solid var(--accent-teal); }
+.card-accent-blue   { border-left: 3px solid var(--accent-blue); }
+.card-accent-red    { border-left: 3px solid var(--accent-red); }
+
+/* PILLS */
+.pill { display: inline-block; font-size: 11px; font-weight: 500; padding: 3px 9px; border-radius: 99px; white-space: nowrap; }
+.pill-purple { background: var(--accent-purple-lt); color: var(--accent-purple); }
+.pill-amber  { background: var(--accent-amber-lt);  color: var(--accent-amber); }
+.pill-teal   { background: var(--accent-teal-lt);   color: var(--accent-teal); }
+.pill-blue   { background: var(--accent-blue-lt);   color: var(--accent-blue); }
+.pill-red    { background: var(--accent-red-lt);    color: var(--accent-red); }
+.pill-mono   { font-family: var(--mono); font-size: 10px; background: var(--paper-warm); color: var(--ink-mid); border: 1px solid var(--rule-mid); }
+.pill-row    { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 10px; }
+
+/* TABLES */
+.data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.data-table th { text-align: left; padding: 8px 12px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-muted); border-bottom: 1px solid var(--rule-mid); background: var(--paper-warm); }
+.data-table th:first-child { border-radius: var(--radius-sm) 0 0 0; }
+.data-table th:last-child  { border-radius: 0 var(--radius-sm) 0 0; }
+.data-table td { padding: 10px 12px; border-bottom: 1px solid var(--rule); color: var(--ink-mid); vertical-align: top; line-height: 1.5; }
+.data-table td:first-child { color: var(--ink); font-weight: 500; }
+.data-table tr:last-child td { border-bottom: none; }
+.data-table tr:hover td { background: var(--paper-warm); }
+.table-wrap { border: 1px solid var(--rule-mid); border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow-sm); }
+
+/* CODE */
+.code-block { background: #1a1a2e; color: #e2e8f0; font-family: var(--mono); font-size: 12px; line-height: 1.7; padding: 18px 22px; border-radius: var(--radius-md); overflow-x: auto; margin: 10px 0; }
+.code-block .cm { color: #7f8ea3; }
+.code-block .ck { color: #81d4fa; }
+.code-block .cs { color: #c3e88d; }
+.code-block .cc { color: #f78c6c; }
+.code-block .cf { color: #c792ea; }
+.code-block .cd { color: #ffcb6b; }
+
+/* RESULT CALLOUTS */
+.result-callout { background: var(--paper-card); border: 1px solid var(--rule-mid); border-left: 4px solid var(--accent-teal); border-radius: var(--radius-lg); padding: 16px 20px; }
+.result-callout .rc-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.12em; font-weight: 700; color: var(--accent-teal); margin-bottom: 6px; }
+.result-callout .rc-val { font-family: var(--serif); font-size: 28px; color: var(--ink); line-height: 1; letter-spacing: -0.5px; }
+.result-callout .rc-sub { font-size: 12px; color: var(--ink-muted); margin-top: 3px; }
+
+/* CITY BLOCKS */
+.city-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.city-block { border-radius: var(--radius-lg); padding: 22px 24px; border: 1px solid; }
+.city-block.paris  { background: #ede9fd; border-color: #c4b8f7; }
+.city-block.athens { background: #fef3c7; border-color: #fcd34d; }
+.city-block h3 { font-family: var(--serif); font-size: 20px; margin-bottom: 4px; }
+.city-block.paris h3  { color: #3730a3; }
+.city-block.athens h3 { color: #92400e; }
+.city-block .city-tag { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; margin-bottom: 14px; display: block; }
+.city-block.paris .city-tag  { color: #5b4de8; }
+.city-block.athens .city-tag { color: #d97706; }
+.city-stat { margin-bottom: 6px; }
+.city-stat .cs-val { font-size: 18px; font-weight: 600; display: block; line-height: 1; }
+.city-stat .cs-lbl { font-size: 11px; color: var(--ink-muted); }
+.city-block.paris .cs-val  { color: #3730a3; }
+.city-block.athens .cs-val { color: #92400e; }
+.city-stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+.city-thesis { font-size: 12px; line-height: 1.6; margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(0,0,0,0.08); }
+.city-block.paris .city-thesis  { color: #4c46a0; }
+.city-block.athens .city-thesis { color: #92400e; }
+
+/* ARCH STACK */
+.arch-stack { display: flex; flex-direction: column; gap: 8px; }
+.arch-layer { display: grid; grid-template-columns: 100px 1fr; gap: 14px; align-items: stretch; }
+.arch-layer-name { display: flex; align-items: center; justify-content: center; text-align: center; font-size: 11px; font-weight: 600; border-radius: var(--radius-md); padding: 10px 8px; line-height: 1.3; }
+.arch-layer-body { background: var(--paper-card); border: 1px solid var(--rule-mid); border-radius: var(--radius-md); padding: 14px 18px; box-shadow: var(--shadow-sm); }
+.arch-layer-body h4 { font-size: 13px; font-weight: 600; color: var(--ink); margin-bottom: 4px; }
+.arch-layer-body p  { font-size: 12px; color: var(--ink-mid); line-height: 1.55; margin-bottom: 6px; }
+.arch-layer-body p:last-child { margin-bottom: 0; }
+
+/* INFO BANNERS */
+.info-banner { border-radius: var(--radius-md); padding: 13px 18px; font-size: 13px; line-height: 1.6; display: flex; gap: 10px; align-items: flex-start; margin-bottom: 16px; }
+.info-banner.info { background: var(--accent-blue-lt);  color: var(--accent-blue);  border: 1px solid var(--accent-blue-mid);  }
+.info-banner.warn { background: var(--accent-amber-lt); color: var(--accent-amber); border: 1px solid var(--accent-amber-mid); }
+.info-banner.good { background: var(--accent-teal-lt);  color: var(--accent-teal);  border: 1px solid var(--accent-teal-mid);  }
+.info-banner .bi  { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+
+/* HERO */
+.problem-hero { background: var(--ink); color: #fff; border-radius: var(--radius-xl); padding: 36px 40px; margin-bottom: 28px; position: relative; overflow: hidden; }
+.problem-hero::before { content: ''; position: absolute; top: -40px; right: -40px; width: 240px; height: 240px; border-radius: 50%; background: rgba(91,77,232,0.15); pointer-events: none; }
+.problem-hero .ph-eyebrow { font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em; color: var(--accent-purple-mid); font-weight: 600; margin-bottom: 12px; }
+.problem-hero h2 { font-family: var(--serif); font-size: 30px; line-height: 1.2; color: #fff; margin-bottom: 16px; max-width: 640px; }
+.problem-hero p  { font-size: 14px; line-height: 1.75; color: rgba(255,255,255,0.7); max-width: 680px; margin-bottom: 10px; }
+.problem-hero p:last-child { margin-bottom: 0; }
+.problem-trio { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 28px; }
+.problem-block { border-radius: var(--radius-lg); padding: 20px 22px; border: 1px solid var(--rule-mid); background: var(--paper-card); box-shadow: var(--shadow-sm); }
+.problem-block .pb-icon { font-size: 22px; margin-bottom: 10px; }
+.problem-block h4 { font-size: 13px; font-weight: 600; color: var(--ink); margin-bottom: 6px; }
+.problem-block p  { font-size: 12px; color: var(--ink-mid); line-height: 1.6; }
+
+/* KPMG BLOCK */
+.kpmg-block { background: #ede9fd; border: 1px solid #c4b8f7; border-radius: var(--radius-lg); padding: 22px 26px; margin-top: 24px; }
+.kpmg-block h4 { font-size: 14px; font-weight: 600; color: var(--accent-purple); margin-bottom: 8px; }
+.kpmg-block p  { font-size: 13px; color: #4338ca; line-height: 1.65; margin-bottom: 8px; }
+.kpmg-block p:last-child { margin-bottom: 0; }
+
+/* JUSTIFY BOX */
+.justify-box { background: var(--paper-warm); border-left: 3px solid var(--accent-purple); border-radius: 0 var(--radius-md) var(--radius-md) 0; padding: 14px 18px; margin: 14px 0; }
+.justify-box .jb-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.12em; font-weight: 700; color: var(--accent-purple); margin-bottom: 5px; }
+.justify-box p { font-size: 13px; color: var(--ink-mid); line-height: 1.65; margin: 0; }
+
+/* STEP LIST */
+.step-list { list-style: none; padding: 0; }
+.step-item { display: grid; grid-template-columns: 28px 1fr; gap: 12px; margin-bottom: 14px; align-items: start; }
+.step-num { width: 28px; height: 28px; background: var(--ink); color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; flex-shrink: 0; margin-top: 2px; }
+.step-body h5 { font-size: 13px; font-weight: 600; color: var(--ink); margin-bottom: 3px; }
+.step-body p  { font-size: 13px; color: var(--ink-mid); line-height: 1.6; margin: 0; }
+
+/* DELIVERABLE CARDS */
+.deliverable-card { display: grid; grid-template-columns: 36px 1fr; gap: 16px; align-items: start; background: var(--paper-card); border: 1px solid var(--rule-mid); border-radius: var(--radius-lg); padding: 18px 22px; margin-bottom: 10px; box-shadow: var(--shadow-sm); }
+.deliverable-num { width: 36px; height: 36px; border-radius: 50%; background: var(--ink); color: #fff; display: flex; align-items: center; justify-content: center; font-family: var(--serif); font-size: 18px; flex-shrink: 0; margin-top: 2px; }
+.deliverable-card h4 { font-size: 14px; font-weight: 600; color: var(--ink); margin-bottom: 5px; }
+.deliverable-card p  { font-size: 13px; color: var(--ink-mid); line-height: 1.65; }
+
+/* PHASE HEADER */
+.phase-header { display: flex; align-items: center; gap: 14px; margin-bottom: 12px; flex-wrap: wrap; }
+
+@media (max-width: 900px) {
+  .sidebar { width: 200px; } .main { margin-left: 200px; }
+  .section { padding: 32px 28px; }
+  .card-grid-3 { grid-template-columns: 1fr 1fr; }
+  .city-pair { grid-template-columns: 1fr; }
+  .problem-trio { grid-template-columns: 1fr; }
+  .top-bar { padding: 14px 28px; }
+}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<nav class="sidebar">
+  <div class="sidebar-logo">
+    <div class="product-name">ARIA</div>
+    <div class="product-sub">Agentic Real-estate Intelligence Advisor</div>
+  </div>
+  <div class="sidebar-kpmg-badge">IE × KPMG Capstone 2026</div>
+  <div class="nav">
+    <div class="nav-section-label">Project</div>
+    <a class="nav-item active" onclick="show('problem',this)"><span class="nav-icon">◈</span> Problem Statement</a>
+    <a class="nav-item" onclick="show('overview',this)"><span class="nav-icon">⬡</span> System Architecture</a>
+    <a class="nav-item" onclick="show('cities',this)"><span class="nav-icon">◎</span> City Selection</a>
+    <div class="nav-section-label">Phases</div>
+    <a class="nav-item" onclick="show('p1',this)"><span class="nav-icon">▦</span> Phase 1 — EDA</a>
+    <a class="nav-item" onclick="show('p2',this)"><span class="nav-icon">▦</span> Phase 2 — XGBoost</a>
+    <a class="nav-item" onclick="show('p3',this)"><span class="nav-icon">▦</span> Phase 3 — LightGBM</a>
+    <a class="nav-item" onclick="show('p4',this)"><span class="nav-icon">▦</span> Phase 4 — Prophet</a>
+    <a class="nav-item" onclick="show('p5',this)"><span class="nav-icon">▦</span> Phase 5 — RAG</a>
+    <a class="nav-item" onclick="show('p6',this)"><span class="nav-icon">▦</span> Phase 6 — LangGraph</a>
+    <a class="nav-item" onclick="show('p7',this)"><span class="nav-icon">▦</span> Phase 7 — Streamlit</a>
+    <div class="nav-section-label">Wrap-up</div>
+    <a class="nav-item" onclick="show('deliverables',this)"><span class="nav-icon">◻</span> Final Deliverables</a>
+  </div>
+  <div class="sidebar-footer">
+    <strong>IE Business School × KPMG Spain</strong><br>
+    Corporate Capstone 2026<br>
+    6 members · Paris × Athens
+  </div>
+</nav>
+
+<div class="main">
+  <div class="top-bar">
+    <div class="breadcrumb">ARIA <span>/ Master Planner</span></div>
+    <div class="top-meta"><span>MBDS Capstone · Corporate Track · KPMG Spain</span></div>
+  </div>
+
+<!-- ── PROBLEM ─────────────────────────────────────────────── -->
+<section class="section active" id="section-problem">
+  <div class="page-eyebrow">Section 01 — Problem Statement</div>
+  <h1 class="page-title">The challenge we are solving</h1>
+  <p class="page-lead">The narrative anchor for the entire project. Every model, every agent, every design decision ties back to this problem. It is what we pitch to KPMG and what every team member should be able to articulate in 60 seconds.</p>
+
+  <div class="problem-hero">
+    <div class="ph-eyebrow">KPMG Lighthouse Capstone — Problem Statement</div>
+    <h2>Short-term rental investment decisions are made on intuition.<br>They should be made on intelligence.</h2>
+    <p>The European STR market is growing at 11.5% CAGR toward $81 billion. Institutional and individual investors are deploying capital into urban STR assets — yet their tools remain a patchwork of static dashboards, manual research, and heuristic judgements. Two fundamental problems exist simultaneously: pricing opacity (no system explains why a listing commands twice the nightly rate of a similar property two kilometres away) and regulatory blindness (a wave of new STR legislation — Paris's 90-night annual cap, Athens's central district freeze — reshapes risk without queryable intelligence to quantify it).</p>
+    <p>The result: investors overpay for overcrowded markets or miss emerging opportunities — not because the data does not exist, but because there is no system that reasons across it, explains its conclusions, and delivers them in a format a decision-maker can act on.</p>
+  </div>
+
+  <div class="problem-trio">
+    <div class="problem-block"><div class="pb-icon">🔍</div><h4>Pricing opacity</h4><p>Listing prices vary 3–5× within the same neighbourhood with no transparent, data-backed explanation. Hosts underprice; investors miscalculate yield. ARIA's XGBoost + SHAP layer solves this.</p></div>
+    <div class="problem-block"><div class="pb-icon">⚠️</div><h4>Regulatory blindness</h4><p>STR regulation is fragmented, city-specific, and changing rapidly. ARIA's RAG compliance layer indexes AMA regulations and Loi Le Meur, citing the specific article per query.</p></div>
+    <div class="problem-block"><div class="pb-icon">📉</div><h4>Supply health risk</h4><p>Host churn and platform quality decay are invisible until they affect occupancy. ARIA's LightGBM classifier flags at-risk hosts before they exit — a leading indicator for investors.</p></div>
+  </div>
+
+  <div class="section-title">Our answer: ARIA</div>
+  <p class="section-sub">ARIA — Agentic Real-estate Intelligence Advisor — is a multi-agent AI system built for STR investment intelligence. Five specialist ML agents orchestrated via LangGraph, with a Streamlit demo and ReportLab PDF output. It does not produce a dashboard. It produces a decision.</p>
+
+  <div class="card-grid card-grid-2" style="margin-top:20px;">
+    <div class="card card-accent-purple"><h3>Research question</h3><p>Can a multi-agent AI system reason across pricing dynamics, occupancy forecasts, host risk signals, and regulatory constraints to generate an explainable, evidence-based STR investment recommendation for Paris and Athens?</p></div>
+    <div class="card card-accent-teal"><h3>Hypothesis</h3><p>A LangGraph-orchestrated system combining XGBoost pricing, Prophet demand forecasting, LightGBM host risk classification, RAG regulatory intelligence, and a GPT-4o listing coach will produce more explainable and more comprehensive recommendations than any single-model approach.</p></div>
+  </div>
+
+  <div class="kpmg-block">
+    <h4>◈ Why this maps to KPMG Lighthouse's five portfolios</h4>
+    <p><strong>Advanced Analytics:</strong> XGBoost + SHAP pricing model. <strong>Generative AI:</strong> GPT-4o listing coach + synthesis agent. <strong>AI Agents:</strong> LangGraph supervisor + 5 specialist nodes. <strong>Trusted AI & Governance:</strong> Human-in-the-loop approval checkpoint + leakage detection methodology. <strong>New Platform Lab:</strong> Streamlit interface + ReportLab PDF investor brief.</p>
+  </div>
+</section>
+
+<!-- ── ARCHITECTURE ─────────────────────────────────────────── -->
+<section class="section" id="section-overview">
+  <div class="page-eyebrow">Section 02 — System Architecture</div>
+  <h1 class="page-title">Five agents, one orchestrator</h1>
+  <p class="page-lead">A layered architecture where each layer is independently valuable but becomes greater than the sum of its parts when connected through LangGraph.</p>
+
+  <div class="arch-stack">
+    <div class="arch-layer">
+      <div class="arch-layer-name" style="background:var(--accent-teal-lt);color:var(--accent-teal);">Layer 0<br>Data</div>
+      <div class="arch-layer-body">
+        <h4>Mega dataset — 135,051 rows × 96 columns</h4>
+        <p>Four sources merged: Maven Analytics Paris 2021 (63,520 rows, observed prices), Inside Airbnb Paris 2025 (57,289 rows), Inside Airbnb Athens Sept 2025 (14,242 rows), Gyodi & Nawaro Zenodo 2021 (proximity indices). 41 documented pipeline steps. Universal join key: <code>listing_id</code> across all output CSVs.</p>
+        <div class="pill-row"><span class="pill pill-teal">135,051 listings</span><span class="pill pill-teal">96 columns</span><span class="pill pill-teal">41 pipeline steps</span><span class="pill pill-mono">aria_mega_dataset_v4_1_final.csv</span></div>
+      </div>
+    </div>
+    <div class="arch-layer">
+      <div class="arch-layer-name" style="background:var(--accent-purple-lt);color:var(--accent-purple);">Layer 1<br>Pricing</div>
+      <div class="arch-layer-body">
+        <h4>Agent 1: XGBoost Price Prediction</h4>
+        <p>Two separate models (Paris + Athens). Target: <code>log_price = log1p(price_eur)</code>. 26 features. 100-trial Optuna. SHAP TreeExplainer for per-listing attribution. Identifies underpriced listings and quantifies the revenue gap.</p>
+        <div class="pill-row"><span class="pill pill-purple">xgb_paris_v1.json</span><span class="pill pill-purple">xgb_athens_v1.json</span><span class="pill pill-mono">athens_underpricing_v1.csv</span></div>
+      </div>
+    </div>
+    <div class="arch-layer">
+      <div class="arch-layer-name" style="background:var(--accent-purple-lt);color:var(--accent-purple);">Layer 1<br>Risk</div>
+      <div class="arch-layer-body">
+        <h4>Agent 2: LightGBM Host Risk Classifier</h4>
+        <p>Athens only. Target: <code>at_risk_host</code> binary. 11 features after leakage correction. Classifies hosts by churn risk. Cross-referenced with XGBoost underpricing to identify priority coaching targets.</p>
+        <div class="pill-row"><span class="pill pill-purple">lgb_athens_risk_v1.txt</span><span class="pill pill-mono">athens_risk_scores_v1.csv</span></div>
+      </div>
+    </div>
+    <div class="arch-layer">
+      <div class="arch-layer-name" style="background:var(--accent-amber-lt);color:var(--accent-amber);">Layer 1<br>Forecast</div>
+      <div class="arch-layer-body">
+        <h4>Agent 3: Prophet Demand Forecasting</h4>
+        <p>Two Prophet models (Paris + Athens). Monthly occupancy forecast over a 12-month horizon with confidence intervals. External regressor: <code>review_growth_24_25</code>. Feeds the dynamic pricing layer in Phase 6.</p>
+        <div class="pill-row"><span class="pill pill-amber">prophet_paris_v1.pkl</span><span class="pill pill-amber">prophet_athens_v1.pkl</span><span class="pill pill-mono">prophet_*_forecast_v1.csv</span></div>
+      </div>
+    </div>
+    <div class="arch-layer">
+      <div class="arch-layer-name" style="background:var(--accent-blue-lt);color:var(--accent-blue);">Layer 2<br>Compliance</div>
+      <div class="arch-layer-body">
+        <h4>Agent 4: RAG Compliance</h4>
+        <p>ChromaDB vector index of AMA regulations (Athens) and Loi Le Meur / 90-night cap (Paris). Returns the specific regulation article per query plus a risk level. Every answer is cited — auditability is non-negotiable for the compliance use case.</p>
+        <div class="pill-row"><span class="pill pill-blue">ChromaDB</span><span class="pill pill-blue">LangChain</span><span class="pill pill-blue">OpenAI embeddings</span><span class="pill pill-mono">rag/chroma_db/</span></div>
+      </div>
+    </div>
+    <div class="arch-layer">
+      <div class="arch-layer-name" style="background:var(--accent-teal-lt);color:var(--accent-teal);">Layer 3<br>Agents</div>
+      <div class="arch-layer-body">
+        <h4>Agent 5: GPT-4o Listing Coach + LangGraph Supervisor</h4>
+        <p>LangGraph supervisor routes by persona (investor / host / developer) across all four specialist nodes. The GPT-4o coach node uses SHAP values as context and generates a personalised listing improvement recommendation. Human-in-the-loop approval before the investor brief is finalised. Dynamic pricing layer applies rule-based adjustments on top of XGBoost + Prophet outputs.</p>
+        <div class="pill-row"><span class="pill pill-teal">LangGraph</span><span class="pill pill-teal">GPT-4o coach</span><span class="pill pill-teal">HITL checkpoint</span><span class="pill pill-mono">agents/</span></div>
+      </div>
+    </div>
+    <div class="arch-layer">
+      <div class="arch-layer-name" style="background:var(--accent-red-lt);color:var(--accent-red);">Layer 4<br>Interface</div>
+      <div class="arch-layer-body">
+        <h4>Streamlit + ReportLab PDF</h4>
+        <p>3-tab Streamlit app serving investor, host, and developer personas. ReportLab generates a KPMG-formatted 6-section investor brief PDF on demand. The PDF is the physical deliverable left with the KPMG panel after the demo.</p>
+        <div class="pill-row"><span class="pill pill-red">Streamlit</span><span class="pill pill-red">Plotly</span><span class="pill pill-red">Folium</span><span class="pill pill-red">ReportLab PDF</span><span class="pill pill-mono">app/</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── CITIES ───────────────────────────────────────────────── -->
+<section class="section" id="section-cities">
+  <div class="page-eyebrow">Section 03 — City Selection</div>
+  <h1 class="page-title">Paris × Athens — justified</h1>
+  <p class="page-lead">City selection is not aesthetic. Each city must create analytical tension that makes the investment question non-trivial. The EDA confirmed these two cities produce the right structural contrast.</p>
+
+  <div class="city-pair">
+    <div class="city-block paris">
+      <span class="city-tag">Mature Market · Regulatory Stability</span>
+      <h3>Paris</h3>
+      <div class="city-stats-grid">
+        <div class="city-stat"><span class="cs-val">120,809</span><span class="cs-lbl">listings in dataset</span></div>
+        <div class="city-stat"><span class="cs-val">R²=0.588</span><span class="cs-lbl">XGBoost performance</span></div>
+        <div class="city-stat"><span class="cs-val">€29.1</span><span class="cs-lbl">model MAE</span></div>
+        <div class="city-stat"><span class="cs-val">2.4%</span><span class="cs-lbl">near-zone gross yield</span></div>
+      </div>
+      <p class="city-thesis">Size-driven pricing market: person_capacity and bedrooms dominate SHAP ranks 2–4. Regulatory surface: 90-night annual cap (primary residence), Loi Le Meur (November 2024), SIRET registration. Data vintage ceiling: Maven 2021 data introduces structural noise that limits model performance.</p>
+    </div>
+    <div class="city-block athens">
+      <span class="city-tag">Explosive Growth · Regulatory Window Closing</span>
+      <h3>Athens</h3>
+      <div class="city-stats-grid">
+        <div class="city-stat"><span class="cs-val">14,242</span><span class="cs-lbl">listings in dataset</span></div>
+        <div class="city-stat"><span class="cs-val">R²=0.676</span><span class="cs-lbl">XGBoost performance</span></div>
+        <div class="city-stat"><span class="cs-val">AUC=0.8288</span><span class="cs-lbl">LightGBM risk model</span></div>
+        <div class="city-stat"><span class="cs-val">865</span><span class="cs-lbl">priority host targets</span></div>
+      </div>
+      <p class="city-thesis">Quality + location-driven market: review_score_composite and dist_km at SHAP ranks 2–3. Distance effect is 2.8× stronger than Paris (Spearman ρ = −0.473 vs −0.171). Centre vs far revenue: €7,236 vs €1,848/yr (3.9× premium). AMA registration frozen in 1st–3rd districts from December 2024.</p>
+    </div>
+  </div>
+
+  <div class="justify-box" style="margin-top:24px;">
+    <div class="jb-label">Why this pairing is analytically correct — confirmed by EDA</div>
+    <p>The contrast is structural, not superficial. Paris requires price optimisation (size-driven, vintage data ceiling, tightening regulation). Athens requires entry-timing decisions (quality+location-driven, explosive growth, regulatory window narrowing). These two problems require different analytical tools, which is exactly why building one system that handles both demonstrates genuine technical breadth. The EDA confirmed the structural divergence: separate models are not just appropriate — they are required.</p>
+  </div>
+</section>
+
+<!-- ── PHASE 1 ───────────────────────────────────────────────── -->
+<section class="section" id="section-p1">
+  <div class="page-eyebrow">Phase 1</div>
+  <div class="phase-header">
+    <h1 class="page-title" style="margin-bottom:0;">EDA — Data Pipeline & Exploratory Analysis</h1>
+    <span class="status-done">Complete</span>
+  </div>
+  <p class="page-lead">The foundation every downstream phase depends on. 135,051 rows, 96 columns, 41 documented pipeline steps. All feature engineering and critical data decisions established here.</p>
+
+  <div class="card-grid card-grid-3" style="margin-bottom:28px;">
+    <div class="result-callout"><div class="rc-label">Dataset size</div><div class="rc-val">135,051</div><div class="rc-sub">rows × 96 columns</div></div>
+    <div class="result-callout"><div class="rc-label">Pipeline steps</div><div class="rc-val">41</div><div class="rc-sub">documented and reproducible</div></div>
+    <div class="result-callout"><div class="rc-label">Notebook grade</div><div class="rc-val">A+/99</div><div class="rc-sub">10 figures · 8 sections</div></div>
+  </div>
+
+  <div class="section-title">Key findings that shaped all downstream models</div>
+  <div class="card card-accent-purple" style="margin-bottom:10px;"><h3>Athens distance effect 2.8× stronger than Paris</h3><p>Spearman ρ = −0.473 (Athens) vs −0.171 (Paris). This is the primary justification for separate city models. A combined model would wash out the Athens distance signal — which is the dominant pricing variable in that market.</p></div>
+  <div class="card card-accent-amber" style="margin-bottom:10px;"><h3>VADER French-language bias: +0.178 compound points</h3><p>Paris VADER sentiment scores are inflated relative to Athens. Cross-city sentiment comparison is invalid. Paris VADER is within-city use only — documented in the methodology as a hard constraint.</p></div>
+  <div class="card card-accent-blue" style="margin-bottom:10px;"><h3>IAB occupancy cap at 255 days is a methodology cap, not a data error</h3><p>Inside Airbnb's confirmed hard cap is 70% of 365 = 255.5 days. 1,444 Athens listings hit this cap. All downstream Prophet and yield calculations account for this ceiling.</p></div>
+  <div class="card card-accent-teal"><h3>137 unlicensed Athens listings — ~€1.03M redistributable revenue</h3><p>Pricing at market rates (no significant price difference from licensed listings). If regulations force exit, their revenue redistributes to compliant operators. This is the investor acquisition signal for Phase 5 RAG.</p></div>
+
+  <div class="divider"></div>
+  <div class="section-title">Business quantification</div>
+  <div class="table-wrap"><table class="data-table"><thead><tr><th>Finding</th><th>Value</th><th>Business implication</th></tr></thead><tbody>
+    <tr><td>Athens centre vs far revenue</td><td>€7,236 vs €1,848/yr</td><td>3.9× premium — proximity is the dominant investment variable</td></tr>
+    <tr><td>Best yield zone (Athens)</td><td>Near zone — 2.4%</td><td>Better yield than centre (2.3%) with lower acquisition price</td></tr>
+    <tr><td>ZAPPION neighbourhood</td><td>Opp score=0.955, €15,416/yr</td><td>Highest-conviction single neighbourhood for developer persona</td></tr>
+    <tr><td>Sentiment Q4 vs Q1 uplift</td><td>+72% price premium</td><td>€2,838/yr difference — seasonal pricing strategy for host persona</td></tr>
+    <tr><td>at_risk_host positive class</td><td>56.8% of Athens listings</td><td>More than half of Athens hosts show at least one booking decline signal</td></tr>
+  </tbody></table></div>
+
+  <div class="info-banner good" style="margin-top:20px;"><span class="bi">📓</span><span><strong>Notebook:</strong> eda/ARIA_EDA_v4_FINAL.ipynb · Output: aria_mega_dataset_v4_1_final.csv (135,051 × 96)</span></div>
+</section>
+
+<!-- ── PHASE 2 ───────────────────────────────────────────────── -->
+<section class="section" id="section-p2">
+  <div class="page-eyebrow">Phase 2</div>
+  <div class="phase-header">
+    <h1 class="page-title" style="margin-bottom:0;">XGBoost Price Prediction</h1>
+    <span class="status-done">Complete</span>
+  </div>
+  <p class="page-lead">Two separate models for Paris and Athens. 26 features. 100-trial Optuna. SHAP-explainable per-listing attribution. 2,945 underpriced Athens listings and €4.8M foregone revenue identified.</p>
+
+  <div class="card-grid card-grid-3" style="margin-bottom:28px;">
+    <div class="result-callout"><div class="rc-label">Paris R²</div><div class="rc-val">0.588</div><div class="rc-sub">Above 0.52–0.58 published range for 2021-vintage data</div></div>
+    <div class="result-callout"><div class="rc-label">Athens R²</div><div class="rc-val">0.676</div><div class="rc-sub">Target &gt;0.65 PASSED · current-vintage data</div></div>
+    <div class="result-callout"><div class="rc-label">Underpriced</div><div class="rc-val">2,945</div><div class="rc-sub">Athens listings &gt;€15 below fair value · €4.8M/yr foregone</div></div>
+  </div>
+
+  <div class="section-title">SHAP findings — why two models are correct</div>
+  <div class="city-pair" style="margin-bottom:24px;">
+    <div class="city-block paris"><span class="city-tag">Paris — Size-driven market</span><h3>SHAP Rank 1–4</h3>
+      <div style="margin-top:12px;">
+        <div class="city-stat"><span class="cs-val" style="font-size:13px;">1 — neighbourhood_median_price</span></div>
+        <div class="city-stat"><span class="cs-val" style="font-size:13px;">2 — person_capacity</span></div>
+        <div class="city-stat"><span class="cs-val" style="font-size:13px;">3 — bedrooms</span></div>
+        <div class="city-stat"><span class="cs-val" style="font-size:13px;">4 — room_x_capacity</span></div>
+      </div>
+      <p class="city-thesis">Size dominates Paris pricing. Larger properties command higher premiums. review_score_composite reached rank 4 — a non-linear threshold effect invisible to Pearson r.</p>
+    </div>
+    <div class="city-block athens"><span class="city-tag">Athens — Quality + location market</span><h3>SHAP Rank 1–4</h3>
+      <div style="margin-top:12px;">
+        <div class="city-stat"><span class="cs-val" style="font-size:13px;">1 — neighbourhood_median_price</span></div>
+        <div class="city-stat"><span class="cs-val" style="font-size:13px;">2 — review_score_composite</span></div>
+        <div class="city-stat"><span class="cs-val" style="font-size:13px;">3 — dist_km</span></div>
+        <div class="city-stat"><span class="cs-val" style="font-size:13px;">4 — bedrooms</span></div>
+      </div>
+      <p class="city-thesis">Quality and proximity dominate. The 2.8× stronger distance effect confirmed by EDA is visible in SHAP. A combined model would wash out this signal entirely.</p>
+    </div>
+  </div>
+
+  <div class="section-title">Output files</div>
+  <div class="table-wrap"><table class="data-table"><thead><tr><th>File</th><th>Contents</th><th>Used by</th></tr></thead><tbody>
+    <tr><td>xgb_paris_v1.json</td><td>Trained Paris pricing model</td><td>Phase 6 LangGraph pricing node</td></tr>
+    <tr><td>xgb_athens_v1.json</td><td>Trained Athens pricing model</td><td>Phase 6 LangGraph pricing node</td></tr>
+    <tr><td>paris_predictions_v1.csv</td><td>Predicted fair price + gap per Paris listing</td><td>Phase 7 investor tab</td></tr>
+    <tr><td>athens_predictions_v1.csv</td><td>Predicted fair price + gap per Athens listing</td><td>Phase 7 investor + host tabs</td></tr>
+    <tr><td>athens_underpricing_v1.csv</td><td>2,945 listings where gap &gt;€15 — median gap €25</td><td>Phase 3 cross-reference · Phase 7 host tab</td></tr>
+    <tr><td>shap_paris_v1.csv / shap_athens_v1.csv</td><td>Per-feature SHAP values for holdout set</td><td>Phase 6 GPT-4o coach · Phase 7 SHAP breakdown</td></tr>
+  </tbody></table></div>
+  <div class="info-banner good" style="margin-top:20px;"><span class="bi">📓</span><span><strong>Notebook:</strong> eda/ARIA_XGBoost_v1.ipynb · 11 figures · 7 output files saved and load-verified</span></div>
+</section>
+
+<!-- ── PHASE 3 ───────────────────────────────────────────────── -->
+<section class="section" id="section-p3">
+  <div class="page-eyebrow">Phase 3</div>
+  <div class="phase-header">
+    <h1 class="page-title" style="margin-bottom:0;">LightGBM Host Risk Classifier</h1>
+    <span class="status-done">Complete</span>
+  </div>
+  <p class="page-lead">Binary classification: at_risk_host. Athens only. Data leakage discovered and corrected. Honest AUC=0.8288. 865 priority targets identified — both underpriced and high-risk.</p>
+
+  <div class="card-grid card-grid-3" style="margin-bottom:28px;">
+    <div class="result-callout"><div class="rc-label">AUC-ROC</div><div class="rc-val">0.8288</div><div class="rc-sub">Target &gt;0.72 PASSED · honest result after leakage corrected</div></div>
+    <div class="result-callout"><div class="rc-label">Avg Precision</div><div class="rc-val">0.8864</div><div class="rc-sub">Target &gt;0.65 PASSED · CV stable ±0.0088</div></div>
+    <div class="result-callout"><div class="rc-label">Priority targets</div><div class="rc-val">865</div><div class="rc-sub">Underpriced AND high-risk · €1.43M opportunity</div></div>
+  </div>
+
+  <div class="info-banner warn"><span class="bi">⚠️</span><span><strong>Leakage discovery and correction:</strong> An earlier run produced AUC=0.9995. Three features were identified as label dimensions — availability_365, review_scores_rating_norm, and availability_pressure — and excluded. Identified via SHAP (availability_365 at rank 1 with value 6.95). Honest AUC=0.8288. This discovery and correction is documented and is itself a mark of analytical rigour.</span></div>
+
+  <div class="section-title" style="margin-top:20px;">SHAP findings — EDA prediction confirmed</div>
+  <div class="table-wrap" style="margin-bottom:20px;"><table class="data-table"><thead><tr><th>SHAP Rank</th><th>Feature</th><th>Value</th><th>Interpretation</th></tr></thead><tbody>
+    <tr><td>1</td><td>review_velocity_l30d</td><td>0.936</td><td>Zero recent bookings = strongest at-risk signal. EDA predicted this — confirmed.</td></tr>
+    <tr><td>2</td><td>review_score_composite</td><td>0.859</td><td>Quality erosion is the churn mechanism, not just momentum decline.</td></tr>
+    <tr><td>3</td><td>reviews_per_month</td><td>0.661</td><td>Volume decline corroborates the velocity signal.</td></tr>
+    <tr><td>4</td><td>host_tenure_days</td><td>0.222</td><td>Newer hosts less resilient to demand shocks.</td></tr>
+    <tr><td>5</td><td>host_multi_listing</td><td>0.195</td><td>Single-listing hosts exit faster when struggling.</td></tr>
+  </tbody></table></div>
+
+  <div class="section-title">Business outputs</div>
+  <div class="card card-accent-teal" style="margin-bottom:10px;"><h3>865 priority targets: underpriced AND high-risk</h3><p>Cross-reference of athens_underpricing_v1.csv (Phase 2) and athens_risk_scores_v1.csv (Phase 3) on listing_id. These hosts are leaving money on the table while losing market position simultaneously. Revenue opportunity: 865 × €25 median gap × 66 days = €1.43M potential (€0.71M realisable at 50% gap closure).</p></div>
+  <div class="card card-accent-amber"><h3>PATISIA neighbourhood: €365k redistribution signal</h3><p>65 at-risk hosts in PATISIA. If they exit, €365k annual revenue redistributes to compliant operators. High-risk neighbourhoods are the investor acquisition map — the risk heatmap identifies where distressed supply will emerge.</p></div>
+
+  <div class="info-banner good" style="margin-top:20px;"><span class="bi">📓</span><span><strong>Notebook:</strong> eda/ARIA_LightGBM_v1.ipynb · 7 figures · 2 output files saved and load-verified</span></div>
+</section>
+
+<!-- ── PHASE 4 ───────────────────────────────────────────────── -->
+<section class="section" id="section-p4">
+  <div class="page-eyebrow">Phase 4</div>
+  <div class="phase-header">
+    <h1 class="page-title" style="margin-bottom:0;">Prophet Demand Forecasting</h1>
+    <span class="status-next">In Progress</span>
+  </div>
+  <p class="page-lead">Two Prophet time-series models predicting monthly occupancy over a 12-month horizon. The key engineering challenge is reshaping listing-level data into monthly neighbourhood-level time-series before fitting.</p>
+
+  <div class="info-banner info"><span class="bi">ℹ️</span><span><strong>Install first:</strong> <code>pip install prophet</code> — If it fails: <code>pip install prophet --no-deps &amp;&amp; pip install cmdstanpy holidays convertdate lunarcalendar pymeeus</code></span></div>
+
+  <div class="section-title" style="margin-top:8px;">Training data</div>
+  <div class="table-wrap" style="margin-bottom:24px;"><table class="data-table"><thead><tr><th>City</th><th>Filter</th><th>Rows</th><th>Target</th><th>Regressor</th></tr></thead><tbody>
+    <tr><td>Paris</td><td>prophet_training_eligible=1, city=paris</td><td>~42,978</td><td>estimated_occupancy_l365d</td><td>review_growth_24_25</td></tr>
+    <tr><td>Athens</td><td>prophet_training_eligible=1, city=athens</td><td>~10,661</td><td>estimated_occupancy_l365d</td><td>review_growth_24_25</td></tr>
+  </tbody></table></div>
+
+  <div class="section-title">The data reshaping step</div>
+  <p class="section-sub">Prophet requires ds (date) and y (value) format. The mega dataset is listing-level — aggregate to monthly neighbourhood-level occupancy before fitting.</p>
+  <div class="card" style="background:var(--paper-warm);margin-bottom:24px;">
+    <div class="code-block">
+<span class="cm"># Filter to Prophet-eligible Athens rows</span>
+df = mega[(mega['city']=='athens') & (mega['prophet_training_eligible']==1)].copy()
+
+<span class="cm"># Convert annual occupancy estimate to monthly proxy</span>
+df['monthly_occ'] = df['estimated_occupancy_l365d'] / 12
+
+<span class="cm"># Use last_review as date proxy, group to monthly city aggregate</span>
+df['ds'] = pd.to_datetime(df['last_review']).dt.to_period('M').dt.to_timestamp()
+monthly = df.groupby('ds').agg(y=('monthly_occ','mean'),
+                                review_growth_24_25=('review_growth_24_25','mean')).reset_index()
+
+<span class="cm"># Fit Prophet</span>
+<span class="cf">from</span> prophet <span class="cf">import</span> Prophet
+m = Prophet(seasonality_mode=<span class="cs">'multiplicative'</span>)
+m.add_regressor(<span class="cs">'review_growth_24_25'</span>)
+m.fit(monthly)
+future = m.make_future_dataframe(periods=12, freq=<span class="cs">'M'</span>)
+future[<span class="cs">'review_growth_24_25'</span>] = monthly[<span class="cs">'review_growth_24_25'</span>].median()
+forecast = m.predict(future)
+    </div>
+  </div>
+
+  <div class="section-title">Expected outputs</div>
+  <div class="table-wrap"><table class="data-table"><thead><tr><th>File</th><th>Contents</th><th>Used by</th></tr></thead><tbody>
+    <tr><td>models/prophet_paris_v1.pkl</td><td>Serialised Paris model</td><td>Phase 6 LangGraph forecast node</td></tr>
+    <tr><td>models/prophet_athens_v1.pkl</td><td>Serialised Athens model</td><td>Phase 6 LangGraph forecast node</td></tr>
+    <tr><td>data/outputs/prophet_paris_forecast_v1.csv</td><td>12-month forecast + confidence intervals</td><td>Phase 7 investor tab · dynamic pricing layer</td></tr>
+    <tr><td>data/outputs/prophet_athens_forecast_v1.csv</td><td>Same for Athens</td><td>Phase 7 investor tab · dynamic pricing layer</td></tr>
+  </tbody></table></div>
+  <div class="info-banner warn" style="margin-top:16px;"><span class="bi">⚠️</span><span><strong>Wide confidence intervals expected for Paris</strong> — 2021 vintage data limits recency. Athens is the primary actionable forecast. Acknowledge this in the investor brief: Paris forecast is directional, Athens is predictive.</span></div>
+</section>
+
+<!-- ── PHASE 5 ───────────────────────────────────────────────── -->
+<section class="section" id="section-p5">
+  <div class="page-eyebrow">Phase 5</div>
+  <div class="phase-header">
+    <h1 class="page-title" style="margin-bottom:0;">RAG Compliance Agent</h1>
+    <span class="status-pending">Pending</span>
+  </div>
+  <p class="page-lead">ChromaDB vector index of AMA regulations and Loi Le Meur. Given any query, returns the specific article that applies plus a risk level. Every answer is cited — auditability is non-negotiable for the compliance use case.</p>
+
+  <div class="info-banner warn"><span class="bi">⚠️</span><span><strong>Do not commit the ChromaDB index to git.</strong> Add <code>rag/chroma_db/</code> to .gitignore before committing. The index will be large binary files.</span></div>
+
+  <div class="section-title" style="margin-top:8px;">What to index</div>
+  <div class="city-pair" style="margin-bottom:24px;">
+    <div class="city-block paris"><span class="city-tag">Paris regulations</span><h3>Loi Le Meur (Nov 2024)</h3><p class="city-thesis">90-night annual cap (primary residence). SIRET registration requirement. Co-ownership syndicate ban mechanism (two-thirds vote). DPE energy rating requirement for new registrations. Source: Journal Officiel de la République Française.</p></div>
+    <div class="city-block athens"><span class="city-tag">Athens regulations</span><h3>AMA System</h3><p class="city-thesis">AMA registration system. Central district freeze: 1st–3rd municipal districts frozen from December 2024. Mandatory safety standards: AC, ventilation, liability insurance required. 137 unlicensed listings identified in Phase 1 EDA are the primary targets.</p></div>
+  </div>
+
+  <div class="section-title">Tool contract — required interface for Phase 6</div>
+  <div class="card" style="background:var(--paper-warm);margin-bottom:24px;">
+    <div class="code-block">
+<span class="cf">def</span> <span class="cd">query_compliance</span>(query: str, city: str) -> dict:
+    <span class="cm">"""
+    Returns:
+      "answer":      str       — synthesised answer with cited source
+      "sources":     list[str] — retrieved passages verbatim
+      "risk_level":  str       — "low" | "medium" | "high"
+      "article_ref": str       — specific regulation article cited
+
+    Risk heuristic:
+      "freeze" | "ban" | "penalty" | "illegal"  → high
+      "registration required" | "cap"            → medium
+      otherwise                                  → low
+    """</span>
+    ...
+    </div>
+  </div>
+
+  <div class="section-title">Retrieval evaluation — target before handoff to Phase 6</div>
+  <div class="table-wrap"><table class="data-table"><thead><tr><th>Test question</th><th>Expected top retrieval</th></tr></thead><tbody>
+    <tr><td>What is the maximum nights per year in Paris?</td><td>90-night annual cap article</td></tr>
+    <tr><td>Can I register a new Airbnb in central Athens?</td><td>AMA central district freeze Dec 2024</td></tr>
+    <tr><td>What insurance is required for Athens STRs?</td><td>Mandatory safety standards article</td></tr>
+    <tr><td>What is the SIRET registration requirement in Paris?</td><td>Loi Le Meur SIRET article</td></tr>
+    <tr><td>What happens if I exceed the 90-night cap in Paris?</td><td>Penalty / enforcement article</td></tr>
+  </tbody></table></div>
+</section>
+
+<!-- ── PHASE 6 ───────────────────────────────────────────────── -->
+<section class="section" id="section-p6">
+  <div class="page-eyebrow">Phase 6</div>
+  <div class="phase-header">
+    <h1 class="page-title" style="margin-bottom:0;">LangGraph Orchestrator</h1>
+    <span class="status-pending">Pending</span>
+  </div>
+  <p class="page-lead">LangGraph directed graph with 5 specialist nodes. Supervisor routes by persona and intent. Shared TypedDict state. Human-in-the-loop approval before investor brief generation. Dynamic pricing layer on top of XGBoost + Prophet.</p>
+
+  <div class="info-banner warn"><span class="bi">⚠️</span><span><strong>Dependency:</strong> Cannot start until tool contracts from Phase 4 (Prophet) and Phase 5 (RAG) are committed to <code>src/tools/</code> and verified. This is the only blocking dependency in the build.</span></div>
+
+  <div class="section-title" style="margin-top:8px;">ARIAState schema</div>
+  <div class="card" style="background:var(--paper-warm);margin-bottom:24px;">
+    <div class="code-block">
+<span class="cf">from</span> typing <span class="cf">import</span> TypedDict, Optional
+
+<span class="cf">class</span> <span class="cd">ARIAState</span>(TypedDict):
+    query:             str
+    persona:           str           <span class="cm"># "investor" | "host" | "developer"</span>
+    city_a:            str
+    city_b:            str
+    intent:            list[str]     <span class="cm"># ["pricing","forecast","risk","compliance","coach"]</span>
+    pricing_output:    Optional[dict]
+    forecast_output:   Optional[dict]
+    risk_output:       Optional[dict]
+    compliance_output: Optional[dict]
+    coach_output:      Optional[str]
+    memo_draft:        Optional[str]
+    approved:          bool
+    listing_id:        Optional[str] <span class="cm"># universal join key across all output CSVs</span>
+    </div>
+  </div>
+
+  <div class="section-title">Dynamic pricing layer</div>
+  <div class="table-wrap" style="margin-bottom:24px;"><table class="data-table"><thead><tr><th>Condition</th><th>Action</th></tr></thead><tbody>
+    <tr><td>Forecast occupancy next 30 days &gt; neighbourhood median</td><td>Raise recommended price 10–15%</td></tr>
+    <tr><td>Forecast occupancy next 30 days &lt; neighbourhood median</td><td>Lower recommended price 5–10%</td></tr>
+    <tr><td>review_velocity_l30d = 0</td><td>Lower price 10% for 2 weeks to restart booking signal</td></tr>
+    <tr><td>risk_probability &gt;0.70 AND underpricing_gap &gt;€15</td><td>Flag as priority coaching target (865 listings in this category)</td></tr>
+  </tbody></table></div>
+
+  <div class="section-title">Query flow example</div>
+  <div class="card" style="background:var(--paper-warm);">
+    <div class="code-block">
+<span class="cm"># Investor: "Which Athens neighbourhood for a €500K STR entry?"</span>
+
+<span class="cf">Supervisor</span>       → persona: "investor", intent: ["pricing","forecast","risk","compliance"]
+
+  <span class="ck">Pricing Agent</span>    → loads xgb_athens_v1.json → SHAP top 3 per neighbourhood
+  <span class="ck">Forecast Agent</span>   → loads prophet_athens_v1.pkl → 12m occupancy + buy/hold signal
+  <span class="ck">Risk Agent</span>       → loads lgb_athens_risk_v1.txt → risk_probability per listing
+  <span class="ck">Compliance Agent</span> → queries ChromaDB → AMA freeze article + risk_level: "high"
+  <span class="ck">Coach Agent</span>      → reads shap_athens_v1.csv → personalised recommendation (GPT-4o)
+
+  <span class="cc">Synthesis Agent</span>  → reads all state fields → investor memo draft (GPT-4o)
+                   → HITL checkpoint → "Approve" button in Streamlit
+                   → ReportLab PDF generated on approval
+    </div>
+  </div>
+</section>
+
+<!-- ── PHASE 7 ───────────────────────────────────────────────── -->
+<section class="section" id="section-p7">
+  <div class="page-eyebrow">Phase 7</div>
+  <div class="phase-header">
+    <h1 class="page-title" style="margin-bottom:0;">Streamlit Demo Interface</h1>
+    <span class="status-pending">Pending</span>
+  </div>
+  <p class="page-lead">3-tab Streamlit app serving three personas. Can be built using existing Phase 2 and 3 CSV outputs — Phases 4–6 outputs slot in as placeholders that get replaced when ready.</p>
+
+  <div class="info-banner good"><span class="bi">💡</span><span><strong>Can start now:</strong> athens_risk_scores_v1.csv and athens_underpricing_v1.csv are already available. Build Tabs 1 and 2 with real data now. Plug in Prophet and LangGraph outputs when those phases complete.</span></div>
+
+  <div class="section-title" style="margin-top:8px;">Tab structure</div>
+  <div class="card card-accent-purple" style="margin-bottom:10px;">
+    <h3>Tab 1 — Investor</h3>
+    <p>Neighbourhood opportunity map (Folium choropleth, colour by opportunity score from EDA). Gross yield calculator (input acquisition price → estimated yield from Phase 2 predicted prices). Risk heatmap from athens_risk_scores_v1.csv. Prophet occupancy forecast chart — 12-month with confidence band (Phase 4 placeholder). AMA compliance flags per neighbourhood (Phase 5 placeholder).</p>
+  </div>
+  <div class="card card-accent-amber" style="margin-bottom:10px;">
+    <h3>Tab 2 — Host</h3>
+    <p>Underpricing gap per listing from athens_underpricing_v1.csv. SHAP feature breakdown from shap_athens_v1.csv — Plotly waterfall of top 5 features. Risk probability from athens_risk_scores_v1.csv with risk band. 3-action coaching plan: pricing (raise X% of gap), quality (if review_score_composite &lt;0.5 → specific fix), velocity (if velocity=0 → lower 10% for 2 weeks). GPT-4o personalised recommendation (Phase 6 placeholder).</p>
+  </div>
+  <div class="card card-accent-teal" style="margin-bottom:24px;">
+    <h3>Tab 3 — Developer</h3>
+    <p>Sweet-spot map — neighbourhoods scoring high on opportunity, low on risk, compliant. 12 entry-point neighbourhoods ranked by combined score from EDA. Gross yield by zone: Centre 2.3%, Near 2.4% (best), Mid 1.8%, Far 2.1%. ZAPPION spotlight: opp=0.955, €15,416/yr revenue, 203 listings in market.</p>
+  </div>
+
+  <div class="section-title">ReportLab PDF — 6 sections</div>
+  <div class="table-wrap"><table class="data-table"><thead><tr><th>Section</th><th>Contents</th></tr></thead><tbody>
+    <tr><td>1. Executive Summary</td><td>City pair, investment thesis, one-sentence recommendation with confidence level</td></tr>
+    <tr><td>2. Market Overview</td><td>Comparative stats: listings, predicted ADR, occupancy, yield by zone</td></tr>
+    <tr><td>3. Pricing Analysis</td><td>Top 5 SHAP price drivers per city, top 3 neighbourhoods with predicted yield band</td></tr>
+    <tr><td>4. Revenue Forecast</td><td>12-month table: base / optimistic (+10%) / downside (−15%) per city</td></tr>
+    <tr><td>5. Platform Health</td><td>865 priority targets, neighbourhood risk scores, at-risk host percentage</td></tr>
+    <tr><td>6. Regulatory Summary</td><td>Compliance status per city, active risk flags, final recommendation with caveats</td></tr>
+  </tbody></table></div>
+</section>
+
+<!-- ── DELIVERABLES ─────────────────────────────────────────── -->
+<section class="section" id="section-deliverables">
+  <div class="page-eyebrow">Final Deliverables</div>
+  <h1 class="page-title">What KPMG sees on presentation day</h1>
+  <p class="page-lead">Four artefacts, each independently impressive, each reinforcing the others. The demo proves it works. The brief proves it produces value. The evaluation proves the numbers mean something.</p>
+
+  <div class="deliverable-card">
+    <div class="deliverable-num">1</div>
+    <div>
+      <h4>Live ARIA demo — full investor query flow</h4>
+      <p>Presenter types: <em>"I have €800,000 to allocate to European short-term rentals. Compare Paris and Athens — which market, which neighbourhood, and what is my projected annual yield under current regulations?"</em> ARIA runs the full 5-agent pipeline. Streamlit right panel updates sequentially: pricing (SHAP waterfall), forecast (12-month confidence band), risk (Folium heatmap), compliance (regulatory flags), coach (GPT-4o recommendation). Presenter clicks "Approve." Formatted PDF downloads. Total runtime: under 45 seconds.</p>
+    </div>
+  </div>
+
+  <div class="deliverable-card">
+    <div class="deliverable-num">2</div>
+    <div>
+      <h4>Investor brief — auto-generated ReportLab PDF</h4>
+      <p>6-section document: Executive Summary → Market Overview (Paris 120,809 listings, Athens 14,242) → Pricing Analysis (SHAP top 5 drivers per city, top 3 recommended neighbourhoods with predicted nightly rate and yield) → Revenue Forecast (12-month table, base/optimistic/downside) → Platform Health (865 priority targets, neighbourhood risk scores) → Regulatory Summary (AMA freeze, Loi Le Meur cap, monitoring requirements, final recommendation with caveats). Footer: "Generated by ARIA — KPMG IE Capstone 2026. Prototype only. Professional due diligence required."</p>
+    </div>
+  </div>
+
+  <div class="deliverable-card">
+    <div class="deliverable-num">3</div>
+    <div>
+      <h4>Model evaluation appendix</h4>
+      <p><strong>XGBoost:</strong> Paris R²=0.588 (above 0.52–0.58 published range), Athens R²=0.676 (target passed), MAE=€29.1 both cities. Predicted-vs-actual scatter. Discuss vintage ceiling for Paris. <strong>LightGBM:</strong> AUC=0.8288, Avg Precision=0.8864, Brier=0.1656, CV stable ±0.0088. Leakage discovery and correction documented. <strong>Prophet:</strong> MAPE at 30/60/90-day horizons. If MAPE &gt;20%, acknowledge directional use only. <strong>RAG:</strong> Precision@3 on 5 held-out questions. Target ≥80%.</p>
+    </div>
+  </div>
+
+  <div class="deliverable-card">
+    <div class="deliverable-num">4</div>
+    <div>
+      <h4>Ethics + governance disclosure</h4>
+      <p><strong>Leakage discovery:</strong> availability_365, review_scores_rating_norm, and availability_pressure were identified as label dimensions (AUC=0.9995 with them included). Corrected to AUC=0.8288. This demonstrates analytical rigour, not failure — and is disclosed transparently. <strong>Label engineering risk:</strong> at_risk_host is a heuristic proxy for churn, not ground truth churn itself. <strong>Model limits:</strong> ARIA produces a decision support brief, not a final investment decision. <strong>HITL as governance:</strong> the approval checkpoint ensures no AI output reaches the client without human review — Trusted AI per KPMG Lighthouse mandate.</p>
+    </div>
+  </div>
+
+  <div class="kpmg-block">
+    <h4>◈ The three questions the KPMG panel will ask — and your answers</h4>
+    <p><strong>"Why XGBoost and not a neural network?"</strong> XGBoost with SHAP is correct for tabular data at this scale (63,520 observed-price Paris rows, 14,242 Athens rows). At this data volume, gradient-boosted trees consistently match or outperform neural networks on structured tabular inputs (Grinsztajn et al., 2022). More critically, SHAP interpretability is non-negotiable for an investor-facing system — a neural network answer without an explanation is a liability in a compliance-adjacent context.</p>
+    <p><strong>"Why are Paris and Athens models separate?"</strong> The EDA confirmed structural divergence: Athens distance effect is 2.8× stronger than Paris (Spearman ρ = −0.473 vs −0.171). SHAP confirms this in the trained models — Athens ranks quality+location (review_score_composite and dist_km at ranks 2–3), Paris ranks size (person_capacity and bedrooms). A combined model would produce worse predictions for both cities by averaging away these structurally different signals. The decision is evidence-based, not arbitrary.</p>
+    <p><strong>"How do you validate the agent's recommendations?"</strong> Three layers: ML models are evaluated on held-out test sets with standard metrics in the evaluation appendix. The RAG compliance agent cites the specific retrieved regulation passage — every claim is traceable to a source. The synthesis agent's output requires HITL human approval before the PDF is generated — the system explicitly acknowledges it requires human review before a recommendation is acted on.</p>
+  </div>
+</section>
+
+</div></div>
+
+<script>
+function show(id, el) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('section-' + id).classList.add('active');
+  if (el) el.classList.add('active');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+</script>
+</body>
+</html>
