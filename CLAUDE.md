@@ -9,7 +9,7 @@
 
 **ARIA** (Agentic Real-estate Intelligence Advisor) is a multi-agent AI system for short-term rental investment intelligence, built in partnership with **KPMG Spain** as an IE Business School Corporate Capstone 2026.
 
-- **Cities:** Paris (120,809 listings) · Athens (14,242 listings)
+- **Cities:** Paris (120,809 listings: 63,520 Maven 2021 + 57,289 IAB 2025) · Athens (14,242 listings) · Total 135,051
 - **Master dataset:** `aria_mega_dataset_v4_1_final.csv` — 135,051 listings × 96 columns
 - **Models:** XGBoost price prediction (Paris + Athens) · LightGBM risk classification (Athens)
 - **Stack:** Python · Jupyter · XGBoost · LightGBM · Prophet · LangGraph · ChromaDB · Streamlit · SHAP · Optuna · Pandas · Seaborn · GPT-4o · ReportLab
@@ -292,4 +292,5 @@ KPMG Capstone/
 ├── rag/                              ← Phase 5
 ├── agents/                           ← Phase 6
 └── app/                              ← Phase 7
+├── docs/                        ← methodology docs, proposals, planner
 ```
