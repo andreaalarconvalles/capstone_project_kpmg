@@ -81,59 +81,31 @@ Final Capstone/
 
 ---
 
+## Project Phases & Team Assignments
+
+> This section is the live status board for the project. The agent updates it whenever a phase is completed or progresses.
+
+| Phase | Owner | Description | Status |
+|---|---|---|---|
+| **Phase 1 — EDA** | Member 1 | Full exploratory data analysis on the mega dataset (135K listings, Paris + Athens). All feature engineering decisions established here. | ✅ Done |
+| **Phase 2 — XGBoost** | Member 1 | Price prediction models for Paris and Athens (26 features, Optuna tuning, SHAP). Output: `paris_predictions_v1.csv`, `athens_predictions_v1.csv`, `shap_*.csv`. | ✅ Done |
+| **Phase 3 — LightGBM** | Member 1 | Athens underpricing risk classification (Optuna, ROC-AUC). Output: `athens_risk_scores_v1.csv`, `athens_underpricing_v1.csv`. | ✅ Done |
+| **Phase 4 — Prophet** | Member 2 | Time-series demand forecasting notebook. Uses mega dataset + `prophet_training_eligible` filter. Does not touch XGBoost or LightGBM. Output: 2 `.pkl` model files + 2 forecast CSVs. | 🔲 Not started |
+| **Phase 5 — RAG Compliance** | Member 3 | Compliance agent using AMA regulatory documents + 137 unlicensed listing IDs from mega dataset. Builds a ChromaDB index independently. Does not touch any model files. | 🔲 Not started |
+| **Phase 6 — LangGraph Orchestrator** | Member 4 | Loads all saved model files and CSVs and orchestrates them into a single agent pipeline. Requires Phases 1–5 to be complete (or mocked). | 🔲 Not started |
+| **Phase 7 — Streamlit MVP** | Member 5 | Full UI layer reading `athens_risk_scores_v1.csv`, `athens_underpricing_v1.csv`, and Prophet forecast CSV. Does not need model files. Can start now with placeholder data. | 🔲 Not started |
+| **Documentation + Presentation** | Member 6 | Methodology document, KPMG presentation slides, and project summary. | 🔲 Not started |
+
+### Status Key
+- ✅ Done — complete and output files committed
+- 🔄 In progress — actively being worked on
+- 🔲 Not started — not yet begun
+- ⏳ Blocked — waiting on another phase
+
+---
+
 ## Key Outputs
 
 - **Price predictions** with SHAP explanations for each listing (Paris + Athens)
 - **Risk scores** flagging underpriced or high-opportunity Athens listings
-- **Underpricing gap analysis** — estimated revenue left on the table per listing
-- **Neighbourhood-level benchmarks** for competitive positioning
-- **Cross-city SHAP comparison** — which features drive price differently between Paris and Athens
-
----
-
-## Getting Started
-
-### Prerequisites
-
-```bash
-pip install pandas numpy scikit-learn xgboost lightgbm shap optuna matplotlib seaborn jupyter
-```
-
-### Run Order
-
-1. **EDA:** `eda/ARIA_EDA_v4_FINAL.ipynb`
-   - Must be run first; establishes feature engineering decisions used downstream.
-
-2. **XGBoost Models:** `eda/ARIA_XGBoost_v1.ipynb`
-   - Requires the EDA notebook to have been run; reads `aria_mega_dataset_v4_1_final.csv`.
-
-3. **LightGBM Risk Model:** `eda/ARIA_LightGBM_v1.ipynb`
-   - Athens risk classification; reads processed dataset and XGBoost outputs.
-
----
-
-## Data Access
-
-Raw and processed data files exceed GitHub's 100MB file limit and are excluded from this repo. To reproduce the full pipeline:
-
-1. Download **Maven Analytics Paris Airbnb dataset** from [Maven Analytics Data Playground](https://www.mavenanalytics.io/data-playground)
-2. Download **Inside Airbnb listings** for Paris and Athens from [insideairbnb.com/get-the-data](http://insideairbnb.com/get-the-data/)
-3. Download **Gyodi & Nawaro (2021)** demand signal data
-4. Place files in `data/raw/` following the structure above
-5. Run the EDA notebook to regenerate `aria_mega_dataset_v4_1_final.csv`
-
----
-
-## Project Context
-
-This capstone was developed as part of the **IE Business School Master's program** in partnership with **KPMG Spain**. The project addresses real-world STR market intelligence needs faced by institutional clients, combining rigorous data engineering with interpretable machine learning to support pricing, investment, and regulatory decisions.
-
-**Team:** Luka Cheishvili et al.  
-**Academic Year:** 2025–2026  
-**Partner:** KPMG Spain
-
----
-
-## License
-
-This project is for academic and research purposes. All data sources are publicly available under their respective licenses. Model outputs and methodology are proprietary to the project team.
+- **Underpricing gap analysis** — estimated re

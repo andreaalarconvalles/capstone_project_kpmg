@@ -86,6 +86,23 @@ The format for README session log entries:
 - [YYYY-MM-DD] Session N: <what was done in 1–2 sentences>
 ```
 
+### Rule 4 — Keep Phase Status Current in README
+
+**Whenever any phase progresses, update the `## Project Phases & Team Assignments` table in `README.md` immediately.**
+
+The status column uses four values only:
+- `✅ Done` — output files committed and verified
+- `🔄 In progress` — actively being worked on this session
+- `🔲 Not started` — not yet begun
+- `⏳ Blocked` — waiting on another phase to complete
+
+When updating a phase:
+1. Change the status emoji and label in the table row
+2. Add a short note to the description if the scope changed (e.g., new output files, revised approach)
+3. Commit the README change immediately — do not batch it with unrelated work
+
+This table is the single source of truth for what the team has shipped and what remains. Keep it honest.
+
 ---
 
 ## Progress Tracker
@@ -257,25 +274,4 @@ Final Capstone/
 │   ├── ARIA_EDA_v4_FINAL.ipynb        ← Run first — establishes all feature decisions
 │   ├── ARIA_XGBoost_v1.ipynb          ← Price prediction (Paris + Athens)
 │   ├── ARIA_LightGBM_v1.ipynb         ← Risk classification (Athens)
-│   └── eda_figures/                   ← Generated visualizations (15+ PNGs)
-├── data/
-│   ├── raw/                           ← Source CSVs (large files gitignored)
-│   ├── processed/                     ← Merged dataset + neighbourhood stats
-│   └── outputs/                       ← Model predictions, risk scores, SHAP CSVs
-├── models/
-│   ├── xgb_paris_v1.json
-│   ├── xgb_athens_v1.json
-│   └── lgb_athens_risk_v1.txt
-└── 00 extra document/                 ← KPMG methodology docs
-```
-
-**Run order:** `ARIA_EDA_v4_FINAL.ipynb` → `ARIA_XGBoost_v1.ipynb` → `ARIA_LightGBM_v1.ipynb`
-
----
-
-## Git Workflow
-
-```bash
-# Always set identity before any commit
-git config user.name "Luka Cheishvili"
-git config user.email "cheishv
+│   └── eda
