@@ -165,7 +165,7 @@ If a question can be answered by reading the codebase or data, the agent explore
 
 ### `/grill-with-docs` — Challenge a plan against documented methodology
 
-**When to use:** You want to stress-test a plan specifically against the existing documented decisions (this `CLAUDE.md`, the EDA notebook decisions, the methodology docs in `00 extra document/`).
+**When to use:** You want to stress-test a plan specifically against the existing documented decisions (this `CLAUDE.md`, the EDA notebook decisions, the methodology docs in `docs/`).
 
 **How it works:** Same as `/grill-me` but the agent actively cross-references with project documentation. If you use a term differently from how it's defined in the methodology docs, the agent calls it out immediately. Decisions that crystallize get written back into this `CLAUDE.md`.
 
@@ -291,6 +291,6 @@ KPMG Capstone/
 ├── models/                           ← trained model files
 ├── rag/                              ← Phase 5
 ├── agents/                           ← Phase 6
-└── app/                              ← Phase 7
-├── docs/                        ← methodology docs, proposals, planner
+├── app/                         ← Phase 7 — Streamlit app
+└── docs/                        ← methodology docs, proposals, planner
 ```
