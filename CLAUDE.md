@@ -7,12 +7,12 @@
 
 ## Project Overview
 
-**ARIA** (Agentic Real-estate Intelligence Advisor) is a machine learning pricing and risk intelligence platform for the short-term rental market, built in partnership with **KPMG Spain** as an IE Business School Corporate Capstone 2026.
+**ARIA** (Agentic Real-estate Intelligence Advisor) is a multi-agent AI system for short-term rental investment intelligence, built in partnership with **KPMG Spain** as an IE Business School Corporate Capstone 2026.
 
 - **Cities:** Paris (120,809 listings) · Athens (14,242 listings)
 - **Master dataset:** `aria_mega_dataset_v4_1_final.csv` — 135,051 listings × 96 columns
 - **Models:** XGBoost price prediction (Paris + Athens) · LightGBM risk classification (Athens)
-- **Stack:** Python · Jupyter · XGBoost · LightGBM · SHAP · Optuna · Pandas · Seaborn
+- **Stack:** Python · Jupyter · XGBoost · LightGBM · Prophet · LangGraph · ChromaDB · Streamlit · SHAP · Optuna · Pandas · Seaborn · GPT-4o · ReportLab
 - **GitHub repo:** https://github.com/lukatcheishvili/capstone_project_kpmg
 
 ---
@@ -107,24 +107,25 @@ This table is the single source of truth for what the team has shipped and what 
 
 ## Progress Tracker
 
-> Updated by the agent after every 5 prompts. Reflects the current state of the project.
+> Updated after every 5 prompts. Reflects the current state of the project.
 
 ### Completed
-- [2026-06-09] Initialized GitHub repo (`capstone_project_kpmg`) and pushed all project files to `main` branch
-- [2026-06-09] Created `README.md` with full project documentation (structure, dataset table, model descriptions, run order, data access instructions)
-- [2026-06-09] Created `.gitignore` excluding large raw/processed CSVs (>50MB) and macOS/Jupyter noise
-- [2026-06-09] Created `CLAUDE.md` with operating rules, skills, and memory tracking
+
+- [2026-06-09] Initialised repo and pushed all project files to main
+- [2026-06-09] Phase 1 EDA COMPLETE (A+/99): 135,051 rows, 41 pipeline steps, 10 figures, at_risk_host label engineered
+- [2026-06-09] Phase 2 XGBoost COMPLETE (A/96): Paris R²=0.588, Athens R²=0.676, 26 features, 2,945 underpriced listings, €4.8M foregone revenue
+- [2026-06-09] Phase 3 LightGBM COMPLETE (A/95): leakage corrected, AUC=0.8288, 865 priority targets, €1.43M opportunity
 
 ### In Progress
-- Nothing currently in progress
 
-### Backlog / To Do
-- Run full EDA notebook and validate all 15+ figures regenerate cleanly
-- Validate XGBoost models (Paris + Athens) produce consistent RMSE on holdout
-- Validate LightGBM risk model ROC-AUC on Athens holdout
-- Build ARIA dashboard / deliverable for KPMG presentation
-- Cross-city SHAP comparison write-up
-- Final KPMG report
+- Phase 4 — Prophet demand forecasting (Member 2) — notebook: ARIA_Prophet_v1.ipynb
+
+### Backlog
+
+- Phase 5 — RAG compliance agent (ChromaDB, AMA + Loi Le Meur, 137 unlicensed listings)
+- Phase 6 — LangGraph orchestrator (5 agents, human-in-the-loop, dynamic pricing layer)
+- Phase 7 — Streamlit MVP (3 tabs: investor, host, developer)
+- KPMG final presentation and methodology document
 
 ---
 
@@ -260,18 +261,35 @@ Use these terms consistently. Do not substitute synonyms.
 | `xgb_price_training_eligible` | Flag = 1 for rows used in XGBoost training |
 | `aria_mega_dataset` | The master merged dataset (`aria_mega_dataset_v4_1_final.csv`) |
 | `neighbourhood_stats` | Neighbourhood-level aggregate benchmark files |
+| `at_risk_host` | Binary label — host showing 3+ of 6 booking decline dimensions |
+| `risk_probability` | LightGBM probability output (0–1) per listing |
+| `high_risk_flag` | Binary — 1 if risk_probability >= 0.70 |
+| `prophet_training_eligible` | Flag = 1 for rows used in Prophet demand forecasting |
+| `neighbourhood_median_price` | Median price per neighbourhood — SHAP rank 1 both city models |
+| `leakage` | Feature used to construct the target label — must never be in FEATURES |
+| `listing_id` | Universal join key across all output CSVs |
 
 ---
 
 ## File Map
 
 ```
-Final Capstone/
-├── CLAUDE.md                          ← You are here
-├── README.md                          ← Project docs + session log
+KPMG Capstone/
+├── CLAUDE.md
+├── README.md
 ├── .gitignore
 ├── eda/
-│   ├── ARIA_EDA_v4_FINAL.ipynb        ← Run first — establishes all feature decisions
-│   ├── ARIA_XGBoost_v1.ipynb          ← Price prediction (Paris + Athens)
-│   ├── ARIA_LightGBM_v1.ipynb         ← Risk classification (Athens)
-│   └── eda
+│   ├── ARIA_EDA_v4_FINAL.ipynb       ← Phase 1 — run FIRST
+│   ├── ARIA_XGBoost_v1.ipynb         ← Phase 2
+│   ├── ARIA_LightGBM_v1.ipynb        ← Phase 3
+│   ├── ARIA_Prophet_v1.ipynb         ← Phase 4 (not started)
+│   └── eda_figures/
+├── data/
+│   ├── raw/
+│   ├── processed/                    ← gitignored
+│   └── outputs/                      ← join key: listing_id
+├── models/                           ← trained model files
+├── rag/                              ← Phase 5
+├── agents/                           ← Phase 6
+└── app/                              ← Phase 7
+```
