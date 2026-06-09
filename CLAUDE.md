@@ -40,10 +40,11 @@ One clarifying question is better than one hour of wasted work.
 
 **When committing or pushing to GitHub, never use Claude's identity as the author.**
 
-Always use:
+This is a multi-contributor project. Always commit under the identity of the human team member who is driving the session. If the active contributor is not known, **ask before committing**.
+
 ```bash
-git config user.name "Luka Cheishvili"
-git config user.email "cheishvililuka.lc@gmail.com"
+git config user.name "<Human contributor's name>"
+git config user.email "<Human contributor's email>"
 ```
 
 Never set the author or committer to anything like "Claude", "claude-ai", "Anthropic", or any AI-related identity. The commit history must reflect only the human team.
