@@ -92,7 +92,7 @@ KPMG Capstone/
 ├── rag/                                     # Phase 5 — ChromaDB index + RAG agent
 ├── agents/                                  # Phase 6 — LangGraph orchestration code
 ├── app/                                     # Phase 7 — Streamlit app
-├── 00 extra document/                       # Supporting methodology docs
+├── docs/                              # Methodology docs, proposals, planner (renamed from 00 extra document/)
 ├── Proposed Ideas/
 ├── KPMG Capstone.pdf
 ├── KPMG Proposal - Regulators.pdf
