@@ -21,6 +21,21 @@
 
 These rules apply to every single interaction. No exceptions.
 
+### Rule 0 — Sync Before Starting
+
+**At the very start of every session, before doing anything else, ensure the local repo is up to date.**
+
+Run:
+```bash
+git pull https://ghp_<TOKEN>@github.com/lukatcheishvili/capstone_project_kpmg.git main
+```
+
+If there are merge conflicts, stop and surface them to the user before proceeding. Do not overwrite or discard any changes. Only continue with the requested work once the local folder is confirmed to be on the latest `main`.
+
+This keeps all collaborators in sync and prevents anyone from building on a stale state.
+
+---
+
 ### Rule 1 — Always Ask Questions
 
 **Ask questions before acting — even for minor things.**
@@ -263,22 +278,4 @@ Final Capstone/
 ```bash
 # Always set identity before any commit
 git config user.name "Luka Cheishvili"
-git config user.email "cheishvililuka.lc@gmail.com"
-
-# Stage and commit
-git add .
-git commit -m "type: short description
-
-Longer explanation if needed."
-
-# Push (token in URL — never hardcode in notebooks)
-git push https://ghp_<TOKEN>@github.com/lukatcheishvili/capstone_project_kpmg.git main
-```
-
-**Commit message types:** `feat:` · `fix:` · `data:` · `model:` · `docs:` · `refactor:` · `analysis:`
-
-**Never commit:**
-- Large raw CSVs (already in `.gitignore`)
-- Notebook outputs/cell outputs if they contain raw data rows
-- API tokens or credentials
-- `.DS_Store` or `.ipynb_checkpoints/`
+git config user.email "cheishv
