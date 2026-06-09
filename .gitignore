@@ -1,0 +1,25 @@
+# Large data files — too big for GitHub (>50MB)
+data/raw/iab_athens_sept2025_listings.csv.csv
+data/raw/iab_paris_2025_listings.csv.csv
+data/raw/maven_airbnb_listings_reviews.csv.csv
+data/processed/aria_mega_dataset_v4_1_final.csv
+
+# macOS
+.DS_Store
+**/.DS_Store
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
+**/.ipynb_checkpoints/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.env
+venv/
+.venv/
+
+# IDE
+.vscode/
+.idea/

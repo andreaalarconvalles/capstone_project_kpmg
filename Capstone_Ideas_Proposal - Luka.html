@@ -1,0 +1,1231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IE Capstone 2026 — Project Ideas Proposal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --ink:         #0d0d0d;
+  --ink-mid:     #3a3a3a;
+  --ink-muted:   #767676;
+  --ink-faint:   #c2c2c2;
+  --paper:       #f8f6f3;
+  --paper-warm:  #f0ebe3;
+  --card:        #ffffff;
+  --rule:        rgba(0,0,0,0.07);
+  --rule-mid:    rgba(0,0,0,0.13);
+
+  --kpmg-blue:   #00338d;
+  --kpmg-teal:   #005b82;
+  --kpmg-purple: #6d2077;
+  --kpmg-cyan:   #0091da;
+  --kpmg-green:  #00a3a1;
+  --kpmg-amber:  #e8891c;
+  --kpmg-red:    #c0392b;
+
+  --c1:  #00338d;  /* idea 1 */
+  --c1l: #dce9ff;
+  --c2:  #005b82;  /* idea 2 */
+  --c2l: #d4edf7;
+  --c3:  #6d2077;  /* idea 3 */
+  --c3l: #f3e5f5;
+  --c4:  #00a3a1;  /* idea 4 */
+  --c4l: #d4f5f5;
+  --c5:  #e8891c;  /* idea 5 */
+  --c5l: #fef3e2;
+
+  --serif: 'DM Serif Display', serif;
+  --sans:  'Outfit', sans-serif;
+  --mono:  'DM Mono', monospace;
+
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 16px;
+  --r-xl: 22px;
+
+  --sh-sm: 0 1px 4px rgba(0,0,0,0.06);
+  --sh-md: 0 4px 16px rgba(0,0,0,0.09);
+  --sh-lg: 0 12px 36px rgba(0,0,0,0.11);
+}
+
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--sans);
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 15px;
+  line-height: 1.75;
+}
+
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: var(--paper-warm); }
+::-webkit-scrollbar-thumb { background: var(--ink-faint); border-radius: 3px; }
+
+/* ── SIDEBAR ───────────────────────────── */
+.shell { display: flex; min-height: 100vh; }
+
+.sidebar {
+  width: 250px;
+  min-height: 100vh;
+  background: var(--kpmg-blue);
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
+  display: flex;
+  flex-direction: column;
+  z-index: 100;
+  overflow-y: auto;
+}
+
+.sidebar-brand {
+  padding: 30px 24px 22px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+.brand-kpmg {
+  font-family: var(--serif);
+  font-size: 22px;
+  color: #fff;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+.brand-sub {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.13em;
+  color: rgba(255,255,255,0.45);
+  margin-top: 5px;
+  font-weight: 500;
+}
+.sidebar-badge {
+  margin: 14px 24px 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 20px;
+  padding: 4px 10px;
+  font-size: 10px;
+  color: rgba(255,255,255,0.7);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 600;
+}
+
+.nav { padding: 22px 0; flex: 1; }
+.nav-label {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: rgba(255,255,255,0.28);
+  font-weight: 700;
+  padding: 0 24px;
+  margin: 18px 0 7px;
+}
+.nav-label:first-child { margin-top: 0; }
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 24px;
+  font-size: 13px;
+  font-weight: 400;
+  color: rgba(255,255,255,0.52);
+  cursor: pointer;
+  transition: all 0.15s;
+  border-left: 3px solid transparent;
+  text-decoration: none;
+}
+.nav-item:hover {
+  color: #fff;
+  background: rgba(255,255,255,0.07);
+  border-left-color: rgba(255,255,255,0.3);
+}
+.nav-item.active {
+  color: #fff;
+  background: rgba(255,255,255,0.1);
+  border-left-color: #fff;
+  font-weight: 600;
+}
+.nav-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.sidebar-footer {
+  padding: 18px 24px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  font-size: 10px;
+  color: rgba(255,255,255,0.28);
+  line-height: 1.5;
+}
+
+/* ── MAIN ──────────────────────────────── */
+.main {
+  margin-left: 250px;
+  flex: 1;
+  min-width: 0;
+}
+
+/* ── HERO ──────────────────────────────── */
+.hero {
+  background: linear-gradient(135deg, var(--kpmg-blue) 0%, #001e5a 60%, #00338d 100%);
+  padding: 64px 64px 56px;
+  position: relative;
+  overflow: hidden;
+}
+.hero::before {
+  content: '';
+  position: absolute;
+  top: -80px; right: -80px;
+  width: 400px; height: 400px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(0,145,218,0.18) 0%, transparent 70%);
+}
+.hero::after {
+  content: '';
+  position: absolute;
+  bottom: -60px; left: 200px;
+  width: 300px; height: 300px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(109,32,119,0.15) 0%, transparent 70%);
+}
+.hero-eyebrow {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: rgba(255,255,255,0.5);
+  font-weight: 600;
+  margin-bottom: 14px;
+}
+.hero-title {
+  font-family: var(--serif);
+  font-size: 48px;
+  color: #fff;
+  line-height: 1.12;
+  max-width: 620px;
+  margin-bottom: 18px;
+  position: relative;
+  z-index: 1;
+}
+.hero-title em {
+  font-style: italic;
+  color: #7ecef4;
+}
+.hero-desc {
+  font-size: 16px;
+  color: rgba(255,255,255,0.65);
+  max-width: 560px;
+  line-height: 1.7;
+  position: relative;
+  z-index: 1;
+  margin-bottom: 36px;
+}
+.hero-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  position: relative;
+  z-index: 1;
+}
+.hero-tag {
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.2);
+  color: rgba(255,255,255,0.8);
+  padding: 5px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+}
+
+/* ── CONTENT AREA ──────────────────────── */
+.content { padding: 48px 64px 80px; }
+
+/* ── SECTION HEADER ────────────────────── */
+.sec-eyebrow {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-weight: 700;
+  color: var(--ink-muted);
+  margin-bottom: 6px;
+}
+.sec-title {
+  font-family: var(--serif);
+  font-size: 32px;
+  color: var(--ink);
+  margin-bottom: 10px;
+  line-height: 1.2;
+}
+.sec-lead {
+  font-size: 15px;
+  color: var(--ink-mid);
+  max-width: 680px;
+  margin-bottom: 36px;
+  line-height: 1.75;
+}
+
+/* ── CONTEXT BOX ───────────────────────── */
+.context-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 48px;
+}
+.context-card {
+  background: var(--card);
+  border-radius: var(--r-lg);
+  border: 1px solid var(--rule-mid);
+  padding: 22px 24px;
+  box-shadow: var(--sh-sm);
+}
+.context-card-label {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-weight: 700;
+  color: var(--ink-muted);
+  margin-bottom: 8px;
+}
+.context-card-title {
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--ink);
+  margin-bottom: 6px;
+}
+.context-card-desc {
+  font-size: 13px;
+  color: var(--ink-mid);
+  line-height: 1.65;
+}
+.taken-badge {
+  display: inline-block;
+  background: #fee2e2;
+  color: #991b1b;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 2px 8px;
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+
+/* ── IDEA CARDS ────────────────────────── */
+.ideas-stack { display: flex; flex-direction: column; gap: 32px; margin-bottom: 64px; }
+
+.idea-card {
+  background: var(--card);
+  border-radius: var(--r-xl);
+  border: 1px solid var(--rule-mid);
+  box-shadow: var(--sh-md);
+  overflow: hidden;
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+.idea-card:hover {
+  box-shadow: var(--sh-lg);
+  transform: translateY(-2px);
+}
+
+.idea-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  padding: 28px 32px 24px;
+  border-bottom: 1px solid var(--rule);
+}
+.idea-number {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 500;
+  padding: 4px 10px;
+  border-radius: var(--r-sm);
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+.idea-header-text { flex: 1; }
+.idea-title {
+  font-family: var(--serif);
+  font-size: 24px;
+  color: var(--ink);
+  line-height: 1.2;
+  margin-bottom: 6px;
+}
+.idea-tagline {
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+.idea-client-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 20px;
+  margin-top: 8px;
+}
+
+.idea-body { padding: 28px 32px; }
+
+.idea-section-label {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  font-weight: 700;
+  color: var(--ink-muted);
+  margin-bottom: 8px;
+  margin-top: 24px;
+}
+.idea-section-label:first-child { margin-top: 0; }
+
+.idea-desc {
+  font-size: 14.5px;
+  color: var(--ink-mid);
+  line-height: 1.75;
+  margin-bottom: 0;
+}
+
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 8px; }
+.three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-top: 8px; }
+
+.mini-card {
+  border-radius: var(--r-md);
+  padding: 14px 16px;
+  font-size: 13px;
+  line-height: 1.55;
+}
+.mini-card strong {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 4px;
+}
+
+.agent-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 8px; }
+.agent-pill {
+  border-radius: var(--r-md);
+  padding: 12px 14px;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+.agent-pill .agent-num {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  display: block;
+  margin-bottom: 3px;
+  opacity: 0.7;
+}
+.agent-pill .agent-name {
+  font-weight: 700;
+  display: block;
+  font-size: 13px;
+  margin-bottom: 3px;
+}
+.agent-pill .agent-desc {
+  font-size: 12px;
+  opacity: 0.75;
+}
+
+.tech-tags { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 8px; }
+.tech-tag {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  padding: 4px 10px;
+  border-radius: 5px;
+  border: 1px solid;
+  font-weight: 500;
+}
+
+.roi-box {
+  border-radius: var(--r-md);
+  padding: 16px 20px;
+  margin-top: 8px;
+  border-left: 4px solid;
+}
+.roi-box p { font-size: 14px; line-height: 1.65; color: var(--ink-mid); }
+.roi-box strong { color: var(--ink); }
+
+.distinct-box {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: var(--r-md);
+  padding: 12px 16px;
+  margin-top: 8px;
+  font-size: 13px;
+  color: #166534;
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+.distinct-box::before { content: '✓'; font-weight: 700; flex-shrink: 0; margin-top: 1px; }
+
+/* ── COMPARISON TABLE ──────────────────── */
+.compare-section { margin-bottom: 64px; }
+.table-wrap {
+  overflow-x: auto;
+  border-radius: var(--r-lg);
+  box-shadow: var(--sh-md);
+  border: 1px solid var(--rule-mid);
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--card);
+  font-size: 13px;
+}
+thead tr {
+  background: var(--kpmg-blue);
+}
+thead th {
+  color: rgba(255,255,255,0.9);
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 14px 18px;
+  text-align: left;
+}
+tbody tr { border-bottom: 1px solid var(--rule); }
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover { background: var(--paper); }
+tbody td {
+  padding: 13px 18px;
+  color: var(--ink-mid);
+  vertical-align: top;
+  line-height: 1.55;
+}
+tbody td:first-child { font-weight: 600; color: var(--ink); }
+.star { color: #f59e0b; }
+.badge-sm {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+/* ── KPMG ALIGNMENT SECTION ────────────── */
+.kpmg-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 64px; }
+.kpmg-card {
+  background: var(--card);
+  border-radius: var(--r-lg);
+  border: 1px solid var(--rule-mid);
+  padding: 22px 22px;
+  box-shadow: var(--sh-sm);
+}
+.kpmg-card-icon { font-size: 26px; margin-bottom: 10px; }
+.kpmg-card-title { font-weight: 700; font-size: 14px; margin-bottom: 6px; color: var(--kpmg-blue); }
+.kpmg-card-desc { font-size: 13px; color: var(--ink-mid); line-height: 1.6; }
+
+/* ── NEXT STEPS ────────────────────────── */
+.steps-list { display: flex; flex-direction: column; gap: 12px; }
+.step-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  background: var(--card);
+  border-radius: var(--r-md);
+  border: 1px solid var(--rule-mid);
+  padding: 16px 20px;
+  box-shadow: var(--sh-sm);
+}
+.step-num {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: var(--kpmg-blue);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.step-text strong { display: block; font-size: 14px; margin-bottom: 3px; color: var(--ink); }
+.step-text span { font-size: 13px; color: var(--ink-mid); }
+
+/* ── FOOTER ────────────────────────────── */
+.footer {
+  background: var(--ink);
+  color: rgba(255,255,255,0.4);
+  padding: 28px 64px;
+  font-size: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.footer strong { color: rgba(255,255,255,0.7); }
+
+/* ── DIVIDER ───────────────────────────── */
+.divider { height: 1px; background: var(--rule-mid); margin: 48px 0; }
+
+/* ── COLOR HELPERS ─────────────────────── */
+.c1 { color: var(--c1); } .bg-c1 { background: var(--c1l); } .border-c1 { border-color: var(--c1); }
+.c2 { color: var(--c2); } .bg-c2 { background: var(--c2l); } .border-c2 { border-color: var(--c2); }
+.c3 { color: var(--c3); } .bg-c3 { background: var(--c3l); } .border-c3 { border-color: var(--c3); }
+.c4 { color: var(--c4); } .bg-c4 { background: var(--c4l); } .border-c4 { border-color: var(--c4); }
+.c5 { color: var(--c5); } .bg-c5 { background: var(--c5l); } .border-c5 { border-color: var(--c5); }
+
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-kpmg">KPMG</div>
+    <div class="brand-sub">IE Capstone 2026</div>
+    <div class="sidebar-badge">Airbnb Use Case</div>
+  </div>
+
+  <nav class="nav">
+    <div class="nav-label">Document</div>
+    <a href="#context" class="nav-item">
+      <span class="nav-dot" style="background:#6b7280"></span>Context &amp; Taken Ideas
+    </a>
+    <a href="#ideas" class="nav-item active">
+      <span class="nav-dot" style="background:#fff"></span>Our 5 Proposals
+    </a>
+    <a href="#compare" class="nav-item">
+      <span class="nav-dot" style="background:#6b7280"></span>Comparison Matrix
+    </a>
+    <a href="#kpmg" class="nav-item">
+      <span class="nav-dot" style="background:#6b7280"></span>KPMG Alignment
+    </a>
+    <a href="#next" class="nav-item">
+      <span class="nav-dot" style="background:#6b7280"></span>Next Steps
+    </a>
+
+    <div class="nav-label">Ideas</div>
+    <a href="#idea1" class="nav-item">
+      <span class="nav-dot" style="background:var(--c1)"></span>Host Revenue Intelligence
+    </a>
+    <a href="#idea2" class="nav-item">
+      <span class="nav-dot" style="background:var(--c2)"></span>Gentrification Warning
+    </a>
+    <a href="#idea3" class="nav-item">
+      <span class="nav-dot" style="background:var(--c3)"></span>AML / Financial Crime
+    </a>
+    <a href="#idea4" class="nav-item">
+      <span class="nav-dot" style="background:var(--c4)"></span>Tourism Demand Forecast
+    </a>
+    <a href="#idea5" class="nav-item">
+      <span class="nav-dot" style="background:var(--c5)"></span>STR Market Entry Advisor
+    </a>
+  </nav>
+
+  <div class="sidebar-footer">
+    IE University · Semester 3<br>
+    KPMG Spain — Lighthouse Practice<br>
+    June 2026
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-eyebrow">IE Capstone 2026 · KPMG Spain Lighthouse</div>
+    <h1 class="hero-title">Five <em>original</em> project directions for the Airbnb Capstone</h1>
+    <p class="hero-desc">Each idea is independently verified against peers' proposals. All five address distinct stakeholders, use different analytical angles, and deliver measurable business value KPMG clients would pay for.</p>
+    <div class="hero-tags">
+      <span class="hero-tag">Generative AI</span>
+      <span class="hero-tag">Multi-Agent Systems</span>
+      <span class="hero-tag">Advanced Analytics</span>
+      <span class="hero-tag">LangGraph</span>
+      <span class="hero-tag">Airbnb Dataset</span>
+      <span class="hero-tag">KPMG Lighthouse</span>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- CONTEXT -->
+    <section id="context">
+      <div class="sec-eyebrow">Section 01 — Context</div>
+      <h2 class="sec-title">What's already been taken</h2>
+      <p class="sec-lead">Two peers have already claimed strong angles. Our proposals must cover different users, problems, and value chains — confirmed below.</p>
+
+      <div class="context-grid">
+        <div class="context-card">
+          <div class="taken-badge">Taken</div>
+          <div class="context-card-title">ARIA — Investment Advisor</div>
+          <div class="context-card-desc">Multi-agent AI for institutional STR fund managers. Paris vs Athens. XGBoost pricing, Prophet occupancy forecasting, LightGBM host risk, RAG compliance. LangGraph orchestration. Outputs: investor brief PDF with SHAP-explained price prediction.</div>
+        </div>
+        <div class="context-card">
+          <div class="taken-badge">Taken</div>
+          <div class="context-card-title">Regulators — Illegal Listing Enforcement</div>
+          <div class="context-card-desc">6-agent AI system for city regulators to detect, score, and prosecute illegal Airbnb listings. Detection, compliance, image analysis, risk scoring, orchestration, and report generation agents. Focus: Paris, Málaga, Rome, Barcelona.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- IDEAS -->
+    <section id="ideas">
+      <div class="sec-eyebrow">Section 02 — Our Proposals</div>
+      <h2 class="sec-title">Five original project ideas</h2>
+      <p class="sec-lead">Each occupies a distinct stakeholder lane, leverages the Airbnb dataset differently, and aligns with a real KPMG service line. All verified as non-overlapping with peers.</p>
+
+      <div class="ideas-stack">
+
+        <!-- IDEA 1 -->
+        <div class="idea-card" id="idea1">
+          <div class="idea-header">
+            <div class="idea-number bg-c1 c1" style="background:var(--c1l);">01</div>
+            <div class="idea-header-text">
+              <div class="idea-title">Host Revenue Intelligence Platform</div>
+              <div class="idea-tagline c1">B2B SaaS Prototype · Property Management</div>
+              <div class="idea-client-badge bg-c1 c1" style="background:var(--c1l);">Client: Airbnb Hosts &amp; Property Managers</div>
+            </div>
+          </div>
+          <div class="idea-body">
+
+            <div class="idea-section-label">The Problem</div>
+            <p class="idea-desc">Individual Airbnb hosts and small property management companies are leaving 20–35% of potential revenue on the table. They set prices manually, ignore demand seasonality, write weak listings, and have no idea how their reviews compare to competitors. Tools like AirDNA and Guesty exist but cost $500–2,000/month — beyond reach for most hosts.</p>
+
+            <div class="idea-section-label">Our Solution</div>
+            <p class="idea-desc">An AI-powered revenue optimization system that acts as a personal revenue manager. It combines dynamic pricing recommendations, NLP-driven listing quality scoring, competitive sentiment benchmarking, and a GenAI coach that rewrites your listing description to maximize conversion.</p>
+
+            <div class="idea-section-label">Agent Architecture</div>
+            <div class="agent-grid">
+              <div class="agent-pill bg-c1">
+                <span class="agent-num">01</span>
+                <span class="agent-name c1">Pricing Agent</span>
+                <span class="agent-desc">XGBoost + SHAP to recommend optimal nightly price. Explains which factors are suppressing your price.</span>
+              </div>
+              <div class="agent-pill bg-c1">
+                <span class="agent-num">02</span>
+                <span class="agent-name c1">Demand Agent</span>
+                <span class="agent-desc">Prophet time-series forecasting. Predicts occupancy 30/60/90 days out with confidence intervals.</span>
+              </div>
+              <div class="agent-pill bg-c1">
+                <span class="agent-num">03</span>
+                <span class="agent-name c1">Sentiment Agent</span>
+                <span class="agent-desc">NLP (BERT/DistilBERT) on reviews. Benchmarks your property against top 10% performers by neighbourhood.</span>
+              </div>
+              <div class="agent-pill bg-c1">
+                <span class="agent-num">04</span>
+                <span class="agent-name c1">Listing Coach Agent</span>
+                <span class="agent-desc">GPT-4o rewrites title, description and amenity list. A/B scores old vs new before recommending.</span>
+              </div>
+              <div class="agent-pill bg-c1">
+                <span class="agent-num">05</span>
+                <span class="agent-name c1">Revenue Simulator</span>
+                <span class="agent-desc">Combines pricing + demand to project monthly revenue under current vs. recommended strategy.</span>
+              </div>
+              <div class="agent-pill bg-c1">
+                <span class="agent-num">06</span>
+                <span class="agent-name c1">Orchestrator</span>
+                <span class="agent-desc">LangGraph supervisor. Routes host query, aggregates outputs into a single Revenue Action Brief PDF.</span>
+              </div>
+            </div>
+
+            <div class="idea-section-label">Tech Stack</div>
+            <div class="tech-tags">
+              <span class="tech-tag c1 border-c1" style="background:var(--c1l);">XGBoost + Optuna</span>
+              <span class="tech-tag c1 border-c1" style="background:var(--c1l);">SHAP explainability</span>
+              <span class="tech-tag c1 border-c1" style="background:var(--c1l);">Prophet forecasting</span>
+              <span class="tech-tag c1 border-c1" style="background:var(--c1l);">DistilBERT / VADER NLP</span>
+              <span class="tech-tag c1 border-c1" style="background:var(--c1l);">GPT-4o listing gen</span>
+              <span class="tech-tag c1 border-c1" style="background:var(--c1l);">LangGraph orchestration</span>
+              <span class="tech-tag c1 border-c1" style="background:var(--c1l);">Streamlit UI</span>
+              <span class="tech-tag c1 border-c1" style="background:var(--c1l);">ReportLab PDF output</span>
+            </div>
+
+            <div class="idea-section-label">Business Outcome &amp; KPMG Angle</div>
+            <div class="roi-box border-c1" style="background:var(--c1l);">
+              <p><strong>Estimated host revenue uplift: 18–30% per property.</strong> At scale, KPMG could offer this as a white-label advisory tool to property management firms (PMCs) managing 10–500 units. Aligns with KPMG's HyperAutomation and AI Factory service lines. Real market comparables: AirDNA ($299/mo), Wheelhouse ($20/mo per listing), PriceLabs ($19.99/mo). A professional-grade KPMG-backed version charging PMCs $99–299/month per portfolio represents a clear commercialization path.</p>
+            </div>
+
+            <div class="distinct-box">Distinct from peers: ARIA targets institutional fund managers deciding where to invest. This targets active hosts already operating — optimizing yield, not making entry decisions. Zero overlap with Regulators (enforcement tool).</div>
+
+          </div>
+        </div>
+
+        <!-- IDEA 2 -->
+        <div class="idea-card" id="idea2">
+          <div class="idea-header">
+            <div class="idea-number" style="background:var(--c2l); color:var(--c2);">02</div>
+            <div class="idea-header-text">
+              <div class="idea-title">Gentrification Early Warning System</div>
+              <div class="idea-tagline c2">ESG Intelligence · Housing Policy · Civic Tech</div>
+              <div class="idea-client-badge" style="background:var(--c2l); color:var(--c2);">Client: City Governments &amp; ESG-Focused Investors</div>
+            </div>
+          </div>
+          <div class="idea-body">
+
+            <div class="idea-section-label">The Problem</div>
+            <p class="idea-desc">Rising Airbnb density is one of the most reliable early signals of neighbourhood gentrification and displacement — yet no city currently uses STR data proactively for housing policy decisions. By the time rents spike visibly, the damage is already done. Barcelona saw rents rise 68% between 2015 and 2026. Málaga now has more tourist beds than resident beds in some districts. Housing authorities are always 18 months behind the data.</p>
+
+            <div class="idea-section-label">Our Solution</div>
+            <p class="idea-desc">A geospatial AI system that ingests Airbnb density, pricing trends, and review growth as forward-looking signals of gentrification pressure. It forecasts displacement risk by neighbourhood 12–24 months out, and generates policy briefs recommending intervention thresholds (rent caps, STR quotas, rezoning flags) for city planners.</p>
+
+            <div class="idea-section-label">Agent Architecture</div>
+            <div class="agent-grid">
+              <div class="agent-pill" style="background:var(--c2l);">
+                <span class="agent-num">01</span>
+                <span class="agent-name c2">Trend Agent</span>
+                <span class="agent-desc">Detects STR density growth trajectories per neighbourhood using rolling time-series analysis.</span>
+              </div>
+              <div class="agent-pill" style="background:var(--c2l);">
+                <span class="agent-num">02</span>
+                <span class="agent-name c2">Displacement Forecast Agent</span>
+                <span class="agent-desc">XGBoost classifier predicts neighbourhoods at high displacement risk within 12–24 months.</span>
+              </div>
+              <div class="agent-pill" style="background:var(--c2l);">
+                <span class="agent-num">03</span>
+                <span class="agent-name c2">Geo Mapping Agent</span>
+                <span class="agent-desc">Folium/GeoPandas choropleth maps. Visualises risk scores overlaid on neighbourhood GeoJSON boundaries.</span>
+              </div>
+              <div class="agent-pill" style="background:var(--c2l);">
+                <span class="agent-num">04</span>
+                <span class="agent-name c2">Policy RAG Agent</span>
+                <span class="agent-desc">ChromaDB + LangChain over housing policy documents. Retrieves relevant precedents per risk flag.</span>
+              </div>
+              <div class="agent-pill" style="background:var(--c2l);">
+                <span class="agent-num">05</span>
+                <span class="agent-name c2">Alert Agent</span>
+                <span class="agent-desc">Monitors threshold triggers (e.g. &gt;15% YoY STR growth) and escalates neighbourhoods for review.</span>
+              </div>
+              <div class="agent-pill" style="background:var(--c2l);">
+                <span class="agent-num">06</span>
+                <span class="agent-name c2">Policy Brief Agent</span>
+                <span class="agent-desc">GPT-4o synthesises findings into an executive briefing for city housing departments.</span>
+              </div>
+            </div>
+
+            <div class="idea-section-label">Tech Stack</div>
+            <div class="tech-tags">
+              <span class="tech-tag c2 border-c2" style="background:var(--c2l);">XGBoost classifier</span>
+              <span class="tech-tag c2 border-c2" style="background:var(--c2l);">Prophet time-series</span>
+              <span class="tech-tag c2 border-c2" style="background:var(--c2l);">GeoPandas + Folium</span>
+              <span class="tech-tag c2 border-c2" style="background:var(--c2l);">ChromaDB RAG</span>
+              <span class="tech-tag c2 border-c2" style="background:var(--c2l);">LangChain + GPT-4o</span>
+              <span class="tech-tag c2 border-c2" style="background:var(--c2l);">LangGraph multi-agent</span>
+              <span class="tech-tag c2 border-c2" style="background:var(--c2l);">Inside Airbnb GeoJSON</span>
+            </div>
+
+            <div class="idea-section-label">Business Outcome &amp; KPMG Angle</div>
+            <div class="roi-box border-c2" style="background:var(--c2l);">
+              <p><strong>ESG and public sector advisory are fast-growing KPMG revenue lines.</strong> Cities like Amsterdam, Lisbon, and Barcelona are actively paying consultants to quantify STR impact on housing. A prototype of this system is a direct pitch to KPMG's ESG practice and their Public Sector advisory arm. Additionally, ESG-focused real estate funds (e.g. impact investors) would pay for early displacement signals to avoid reputational risk in target markets.</p>
+            </div>
+
+            <div class="distinct-box">Distinct from peers: Regulators' tool is reactive enforcement (catch illegal listings today). This is proactive policy intelligence (predict displacement 12–24 months ahead). Different user, different data use, different output. No overlap with ARIA (investment returns focus).</div>
+
+          </div>
+        </div>
+
+        <!-- IDEA 3 -->
+        <div class="idea-card" id="idea3">
+          <div class="idea-header">
+            <div class="idea-number" style="background:var(--c3l); color:var(--c3);">03</div>
+            <div class="idea-header-text">
+              <div class="idea-title">STR Financial Crime Detection System</div>
+              <div class="idea-tagline c3">AML · Forensic Compliance · Financial Crime</div>
+              <div class="idea-client-badge" style="background:var(--c3l); color:var(--c3);">Client: KPMG Forensic Practice · Financial Intelligence Units</div>
+            </div>
+          </div>
+          <div class="idea-body">
+
+            <div class="idea-section-label">The Problem</div>
+            <p class="idea-desc">Short-term rental platforms have become a vector for money laundering. Ghost listings (fake properties that never host a guest), circular booking schemes (where cash is "laundered" through fake bookings), and price manipulation are being used by organised crime. A 2023 FinCEN alert flagged STR platforms as an emerging AML risk. No current tool systematically analyses Airbnb data for financial crime patterns — and this is squarely in KPMG's Forensic &amp; Financial Crime practice.</p>
+
+            <div class="idea-section-label">Our Solution</div>
+            <p class="idea-desc">A multi-agent financial crime detection system that analyses Airbnb listing data for anomalous behavioural patterns consistent with money laundering: ghost listings, price outliers that defy market logic, hosts with implausibly high booking volumes at artificial prices, and accounts with suspicious identity clustering.</p>
+
+            <div class="idea-section-label">Agent Architecture</div>
+            <div class="agent-grid">
+              <div class="agent-pill" style="background:var(--c3l);">
+                <span class="agent-num">01</span>
+                <span class="agent-name c3">Anomaly Detection Agent</span>
+                <span class="agent-desc">Isolation Forest + DBSCAN to flag statistical outliers in pricing, availability, and booking patterns.</span>
+              </div>
+              <div class="agent-pill" style="background:var(--c3l);">
+                <span class="agent-num">02</span>
+                <span class="agent-name c3">Ghost Listing Agent</span>
+                <span class="agent-desc">Cross-references listing age, review count, response rate and availability to detect phantom properties.</span>
+              </div>
+              <div class="agent-pill" style="background:var(--c3l);">
+                <span class="agent-num">03</span>
+                <span class="agent-name c3">Network Graph Agent</span>
+                <span class="agent-desc">NetworkX graph analysis to detect hosts with suspicious identity clustering or circular booking rings.</span>
+              </div>
+              <div class="agent-pill" style="background:var(--c3l);">
+                <span class="agent-num">04</span>
+                <span class="agent-name c3">Risk Scoring Agent</span>
+                <span class="agent-desc">XGBoost classifier assigns AML risk score (0–100) per listing with SHAP-explained contributing factors.</span>
+              </div>
+              <div class="agent-pill" style="background:var(--c3l);">
+                <span class="agent-num">05</span>
+                <span class="agent-name c3">Regulatory RAG Agent</span>
+                <span class="agent-desc">RAG over FATF, FinCEN, and EU AML directives. Cites which regulations are triggered per flag.</span>
+              </div>
+              <div class="agent-pill" style="background:var(--c3l);">
+                <span class="agent-num">06</span>
+                <span class="agent-name c3">SAR Draft Agent</span>
+                <span class="agent-desc">GPT-4o drafts a Suspicious Activity Report (SAR) ready for analyst review and submission.</span>
+              </div>
+            </div>
+
+            <div class="idea-section-label">Tech Stack</div>
+            <div class="tech-tags">
+              <span class="tech-tag c3 border-c3" style="background:var(--c3l);">Isolation Forest</span>
+              <span class="tech-tag c3 border-c3" style="background:var(--c3l);">DBSCAN clustering</span>
+              <span class="tech-tag c3 border-c3" style="background:var(--c3l);">NetworkX graph analysis</span>
+              <span class="tech-tag c3 border-c3" style="background:var(--c3l);">XGBoost + SHAP</span>
+              <span class="tech-tag c3 border-c3" style="background:var(--c3l);">ChromaDB + LangChain RAG</span>
+              <span class="tech-tag c3 border-c3" style="background:var(--c3l);">LangGraph orchestration</span>
+              <span class="tech-tag c3 border-c3" style="background:var(--c3l);">GPT-4o SAR generation</span>
+            </div>
+
+            <div class="idea-section-label">Business Outcome &amp; KPMG Angle</div>
+            <div class="roi-box border-c3" style="background:var(--c3l);">
+              <p><strong>KPMG's Forensic &amp; Financial Crime practice is one of the firm's fastest-growing service lines, globally billed at $2–5M+ per AML engagement.</strong> A working prototype demonstrating AI-assisted SAR generation from STR data is a direct commercial proof-of-concept for financial regulators (FinCEN, EBA, Bank of Spain) and for Airbnb itself, which faces increasing regulatory pressure to implement AML controls. This is the only capstone idea that touches KPMG's forensic practice — making it completely unique.</p>
+            </div>
+
+            <div class="distinct-box">Distinct from peers: The Regulators tool detects illegal tourist licensing (administrative law). This detects financial crime (AML/criminal law). Completely different legal domain, different data signals (financial behaviour patterns vs. listing compliance), different output (SAR vs. enforcement brief). No overlap with ARIA.</div>
+
+          </div>
+        </div>
+
+        <!-- IDEA 4 -->
+        <div class="idea-card" id="idea4">
+          <div class="idea-header">
+            <div class="idea-number" style="background:var(--c4l); color:var(--c4);">04</div>
+            <div class="idea-header-text">
+              <div class="idea-title">Tourism Demand Forecasting for City Infrastructure</div>
+              <div class="idea-tagline c4">Urban Planning · Public Sector · Smart Cities</div>
+              <div class="idea-client-badge" style="background:var(--c4l); color:var(--c4);">Client: City Governments · Tourism Ministries · Urban Planners</div>
+            </div>
+          </div>
+          <div class="idea-body">
+
+            <div class="idea-section-label">The Problem</div>
+            <p class="idea-desc">City governments spend billions on infrastructure planning — metro expansions, waste collection routes, emergency services coverage — based on census data that is 5–10 years old. Airbnb data is in fact the most accurate real-time signal of where tourists are sleeping, in what density, and how that's changing week by week. No city currently uses STR data systematically for infrastructure load forecasting — even though it could reduce planning lag by years.</p>
+
+            <div class="idea-section-label">Our Solution</div>
+            <p class="idea-desc">A demand forecasting intelligence system that uses Airbnb calendar and listing data to predict neighbourhood-level tourist population 30/60/90/365 days ahead. It models the downstream impact on public infrastructure — waste, transit, water, emergency services — and outputs scenario-based infrastructure planning briefs for city operational teams.</p>
+
+            <div class="idea-section-label">Agent Architecture</div>
+            <div class="agent-grid">
+              <div class="agent-pill" style="background:var(--c4l);">
+                <span class="agent-num">01</span>
+                <span class="agent-name c4">Occupancy Forecast Agent</span>
+                <span class="agent-desc">Prophet + SARIMA ensemble. Forecasts tourist-nights per neighbourhood at 30/60/90/365-day horizons.</span>
+              </div>
+              <div class="agent-pill" style="background:var(--c4l);">
+                <span class="agent-num">02</span>
+                <span class="agent-name c4">Load Impact Agent</span>
+                <span class="agent-desc">Translates tourist-nights into infrastructure load estimates (waste kg, transit trips, water litres) using calibrated multipliers.</span>
+              </div>
+              <div class="agent-pill" style="background:var(--c4l);">
+                <span class="agent-num">03</span>
+                <span class="agent-name c4">Spatial Agent</span>
+                <span class="agent-desc">GeoPandas + Folium. Maps infrastructure stress hotspots over time. Highlights high-risk zones before peak season.</span>
+              </div>
+              <div class="agent-pill" style="background:var(--c4l);">
+                <span class="agent-num">04</span>
+                <span class="agent-name c4">Scenario Agent</span>
+                <span class="agent-desc">Monte Carlo simulation of high/base/low tourism scenarios. Quantifies cost of under- vs. over-provisioning.</span>
+              </div>
+              <div class="agent-pill" style="background:var(--c4l);">
+                <span class="agent-num">05</span>
+                <span class="agent-name c4">Policy RAG Agent</span>
+                <span class="agent-desc">Retrieves smart city planning frameworks and EU urban policy regulations relevant to each stress flag.</span>
+              </div>
+              <div class="agent-pill" style="background:var(--c4l);">
+                <span class="agent-num">06</span>
+                <span class="agent-name c4">City Brief Agent</span>
+                <span class="agent-desc">GPT-4o generates structured operations briefing: district by district, season by season, with budget implications.</span>
+              </div>
+            </div>
+
+            <div class="idea-section-label">Tech Stack</div>
+            <div class="tech-tags">
+              <span class="tech-tag c4 border-c4" style="background:var(--c4l);">Prophet + SARIMA</span>
+              <span class="tech-tag c4 border-c4" style="background:var(--c4l);">Monte Carlo simulation</span>
+              <span class="tech-tag c4 border-c4" style="background:var(--c4l);">GeoPandas + Folium</span>
+              <span class="tech-tag c4 border-c4" style="background:var(--c4l);">ChromaDB RAG</span>
+              <span class="tech-tag c4 border-c4" style="background:var(--c4l);">LangGraph agents</span>
+              <span class="tech-tag c4 border-c4" style="background:var(--c4l);">GPT-4o synthesis</span>
+              <span class="tech-tag c4 border-c4" style="background:var(--c4l);">Streamlit dashboard</span>
+            </div>
+
+            <div class="idea-section-label">Business Outcome &amp; KPMG Angle</div>
+            <div class="roi-box border-c4" style="background:var(--c4l);">
+              <p><strong>KPMG's Government &amp; Public Sector practice manages multi-year contracts worth €10–50M+ with city and national governments across Europe.</strong> This prototype is directly pitchable to Madrid, Barcelona, and Lisbon's city infrastructure teams — cities already struggling with overtourism. A 10% improvement in infrastructure pre-positioning based on accurate forecasting translates to millions in avoided emergency spend. This also aligns with EU Smart City 2030 initiatives, where KPMG is an active advisor.</p>
+            </div>
+
+            <div class="distinct-box">Distinct from peers: Regulators enforces housing law. This forecasts infrastructure load for operational planning. Completely different problem domain and client. ARIA is investment advisory; this is urban operations advisory. Distinct data use: calendar.csv availability data (occupancy signals) vs. listing compliance data.</div>
+
+          </div>
+        </div>
+
+        <!-- IDEA 5 -->
+        <div class="idea-card" id="idea5">
+          <div class="idea-header">
+            <div class="idea-number" style="background:var(--c5l); color:var(--c5);">05</div>
+            <div class="idea-header-text">
+              <div class="idea-title">STR Market Entry Advisor for Property Developers</div>
+              <div class="idea-tagline c5">Real Estate Development · Site Selection · ROI Intelligence</div>
+              <div class="idea-client-badge" style="background:var(--c5l); color:var(--c5);">Client: Real Estate Developers · Private Equity RE Funds</div>
+            </div>
+          </div>
+          <div class="idea-body">
+
+            <div class="idea-section-label">The Problem</div>
+            <p class="idea-desc">Real estate developers building new residential or mixed-use projects need to know: which specific neighbourhoods in a city are supply-constrained for short-term rentals relative to actual demand? Getting this wrong means building in an oversaturated market (low yields) or a market with hidden regulatory risk (a ban incoming). Current approaches rely on gut feel, broker opinion, or expensive bespoke consultancy reports that are already 6 months old by the time they arrive.</p>
+
+            <div class="idea-section-label">Our Solution</div>
+            <p class="idea-desc">An AI system that cross-analyses supply/demand imbalances in STR markets, regulatory risk scores, and revenue yield projections to rank neighbourhoods by development opportunity. Given a budget and city preference, it outputs a ranked site selection brief with a go/no-go recommendation backed by evidence, ready for a developer's investment committee.</p>
+
+            <div class="idea-section-label">Agent Architecture</div>
+            <div class="agent-grid">
+              <div class="agent-pill" style="background:var(--c5l);">
+                <span class="agent-num">01</span>
+                <span class="agent-name c5">Supply-Demand Imbalance Agent</span>
+                <span class="agent-desc">Calculates occupancy-to-supply ratio per neighbourhood. Flags where demand exceeds current inventory.</span>
+              </div>
+              <div class="agent-pill" style="background:var(--c5l);">
+                <span class="agent-num">02</span>
+                <span class="agent-name c5">Revenue Yield Agent</span>
+                <span class="agent-desc">XGBoost price prediction + occupancy forecast → projected annual revenue yield per sq.m. by zone.</span>
+              </div>
+              <div class="agent-pill" style="background:var(--c5l);">
+                <span class="agent-num">03</span>
+                <span class="agent-name c5">Regulatory Risk Agent</span>
+                <span class="agent-desc">RAG over local STR regulations + trend analysis. Scores each neighbourhood's 3-year regulatory risk (likelihood of restrictions).</span>
+              </div>
+              <div class="agent-pill" style="background:var(--c5l);">
+                <span class="agent-num">04</span>
+                <span class="agent-name c5">Competitive Saturation Agent</span>
+                <span class="agent-desc">Clustering analysis on existing host profiles. Identifies zones dominated by professional operators vs. accessible to new entrants.</span>
+              </div>
+              <div class="agent-pill" style="background:var(--c5l);">
+                <span class="agent-num">05</span>
+                <span class="agent-name c5">Ranking Agent</span>
+                <span class="agent-desc">Weighted multi-criteria scoring (yield × supply gap × regulatory safety × competition). Produces ranked neighbourhood shortlist.</span>
+              </div>
+              <div class="agent-pill" style="background:var(--c5l);">
+                <span class="agent-num">06</span>
+                <span class="agent-name c5">Site Selection Brief Agent</span>
+                <span class="agent-desc">GPT-4o generates investment committee-ready brief: top 3 sites, rationale, risks, projected 5-year yield.</span>
+              </div>
+            </div>
+
+            <div class="idea-section-label">Tech Stack</div>
+            <div class="tech-tags">
+              <span class="tech-tag c5 border-c5" style="background:var(--c5l);">XGBoost yield prediction</span>
+              <span class="tech-tag c5 border-c5" style="background:var(--c5l);">K-Means / DBSCAN clustering</span>
+              <span class="tech-tag c5 border-c5" style="background:var(--c5l);">Multi-criteria weighted scoring</span>
+              <span class="tech-tag c5 border-c5" style="background:var(--c5l);">ChromaDB regulatory RAG</span>
+              <span class="tech-tag c5 border-c5" style="background:var(--c5l);">LangGraph orchestration</span>
+              <span class="tech-tag c5 border-c5" style="background:var(--c5l);">GPT-4o brief generation</span>
+              <span class="tech-tag c5 border-c5" style="background:var(--c5l);">GeoPandas + Folium maps</span>
+            </div>
+
+            <div class="idea-section-label">Business Outcome &amp; KPMG Angle</div>
+            <div class="roi-box border-c5" style="background:var(--c5l);">
+              <p><strong>Real estate deal advisory is a core KPMG service line — a single residential development project represents €50–500M+ in capital decisions.</strong> Getting site selection right or wrong is worth tens of millions to a developer. KPMG's Real Estate advisory practice regularly supports developers on site feasibility; this AI system turns a 6-week manual analysis into a 10-minute AI-generated brief. Directly pitchable to private equity RE funds and large residential developers across Spain, Portugal, and France.</p>
+            </div>
+
+            <div class="distinct-box">Distinct from ARIA: ARIA advises institutional fund managers on whether to invest in existing STR markets as a fund. This advises property developers on which specific sites to build on. Different user (developer vs. fund manager), different decision (build vs. allocate capital), different ML focus (site scoring vs. portfolio allocation). No overlap with Regulators.</div>
+
+          </div>
+        </div>
+
+      </div><!-- /ideas-stack -->
+    </section>
+
+    <!-- COMPARISON TABLE -->
+    <section id="compare" class="compare-section">
+      <div class="sec-eyebrow">Section 03 — Comparison</div>
+      <h2 class="sec-title">Side-by-side matrix</h2>
+      <p class="sec-lead">Evaluating all five ideas across the dimensions that matter most for KPMG capstone selection.</p>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Idea</th>
+              <th>Primary Client</th>
+              <th>Core ML</th>
+              <th>GenAI Component</th>
+              <th>KPMG Practice</th>
+              <th>Business Impact</th>
+              <th>Complexity</th>
+              <th>Uniqueness</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="badge-sm" style="background:var(--c1l);color:var(--c1);">01</span> Host Revenue Intelligence</td>
+              <td>Property managers / hosts</td>
+              <td>XGBoost, Prophet, NLP</td>
+              <td>GPT-4o listing rewriter + revenue brief</td>
+              <td>HyperAutomation, AI Factory</td>
+              <td><span class="star">★★★★</span>☆</td>
+              <td><span class="star">★★★</span>☆☆</td>
+              <td><span class="star">★★★★</span>☆</td>
+            </tr>
+            <tr>
+              <td><span class="badge-sm" style="background:var(--c2l);color:var(--c2);">02</span> Gentrification Warning</td>
+              <td>City governments, ESG funds</td>
+              <td>XGBoost classifier, Prophet</td>
+              <td>GPT-4o policy brief + RAG over housing docs</td>
+              <td>ESG, Public Sector Advisory</td>
+              <td><span class="star">★★★★</span>☆</td>
+              <td><span class="star">★★★★</span>☆</td>
+              <td><span class="star">★★★★★</span></td>
+            </tr>
+            <tr>
+              <td><span class="badge-sm" style="background:var(--c3l);color:var(--c3);">03</span> AML / Financial Crime</td>
+              <td>KPMG Forensic, FinCEN, regulators</td>
+              <td>Isolation Forest, NetworkX, XGBoost</td>
+              <td>GPT-4o SAR draft + RAG over AML regs</td>
+              <td>Forensic &amp; Financial Crime</td>
+              <td><span class="star">★★★★★</span></td>
+              <td><span class="star">★★★★★</span></td>
+              <td><span class="star">★★★★★</span></td>
+            </tr>
+            <tr>
+              <td><span class="badge-sm" style="background:var(--c4l);color:var(--c4);">04</span> Tourism Demand Forecasting</td>
+              <td>City governments, urban planners</td>
+              <td>Prophet, SARIMA, Monte Carlo</td>
+              <td>GPT-4o infrastructure brief + scenario narrative</td>
+              <td>Government &amp; Public Sector</td>
+              <td><span class="star">★★★★</span>☆</td>
+              <td><span class="star">★★★★</span>☆</td>
+              <td><span class="star">★★★★★</span></td>
+            </tr>
+            <tr>
+              <td><span class="badge-sm" style="background:var(--c5l);color:var(--c5);">05</span> STR Market Entry Advisor</td>
+              <td>RE developers, PE RE funds</td>
+              <td>XGBoost, K-Means, multi-criteria scoring</td>
+              <td>GPT-4o investment committee brief</td>
+              <td>Real Estate Advisory, Deal Advisory</td>
+              <td><span class="star">★★★★★</span></td>
+              <td><span class="star">★★★</span>☆☆</td>
+              <td><span class="star">★★★★</span>☆</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- KPMG ALIGNMENT -->
+    <section id="kpmg">
+      <div class="sec-eyebrow">Section 04 — KPMG Alignment</div>
+      <h2 class="sec-title">How our ideas map to KPMG Lighthouse portfolios</h2>
+      <p class="sec-lead">Each idea is designed to slot into one of KPMG's five Lighthouse service lines — making it pitchable as a real product prototype, not just a student exercise.</p>
+
+      <div class="kpmg-grid">
+        <div class="kpmg-card">
+          <div class="kpmg-card-icon">🤖</div>
+          <div class="kpmg-card-title">Generative AI</div>
+          <div class="kpmg-card-desc">All five ideas use GPT-4o or GPT-4o-mini for output synthesis — revenue briefs, policy documents, SAR drafts, infrastructure briefings, and investment committee memos. These are enterprise GenAI outputs, not toy chatbots.</div>
+        </div>
+        <div class="kpmg-card">
+          <div class="kpmg-card-icon">⚙️</div>
+          <div class="kpmg-card-title">AI Agents</div>
+          <div class="kpmg-card-desc">All five use LangGraph multi-agent orchestration with a supervisor pattern — directly matching KPMG's AI Factory "AI Agents" layer with Hierarchical and Multi-Agent System types.</div>
+        </div>
+        <div class="kpmg-card">
+          <div class="kpmg-card-icon">🛡️</div>
+          <div class="kpmg-card-title">Trusted AI &amp; Governance</div>
+          <div class="kpmg-card-desc">Ideas 03 (AML) and 02 (gentrification) explicitly incorporate HITL review, SHAP explainability, and RAG-cited evidence — demonstrating responsible AI with audit trails. Ideas 01 and 05 use SHAP for all pricing recommendations.</div>
+        </div>
+        <div class="kpmg-card">
+          <div class="kpmg-card-icon">📊</div>
+          <div class="kpmg-card-title">Advanced Analytics</div>
+          <div class="kpmg-card-desc">XGBoost, Prophet, Isolation Forest, DBSCAN, Monte Carlo, SARIMA — each idea uses best-in-class ML appropriate to its specific prediction task, not generic models applied superficially.</div>
+        </div>
+        <div class="kpmg-card">
+          <div class="kpmg-card-icon">🗄️</div>
+          <div class="kpmg-card-title">Data Management</div>
+          <div class="kpmg-card-desc">ChromaDB for all RAG use cases. Structured pipelines from raw Airbnb CSVs → cleaned features → model inputs → agent tool calls. Ideas 02 and 04 add GeoJSON spatial data pipelines on top.</div>
+        </div>
+        <div class="kpmg-card">
+          <div class="kpmg-card-icon">🏗️</div>
+          <div class="kpmg-card-title">New Platform Lab</div>
+          <div class="kpmg-card-desc">Ideas 01 and 05 are explicitly positioned as white-label SaaS prototypes — scalable software architectures designed for real commercialisation, not just academic demonstration.</div>
+        </div>
+      </div>
+    </section>
+
+    <div class="divider"></div>
+
+    <!-- NEXT STEPS -->
+    <section id="next">
+      <div class="sec-eyebrow">Section 05 — Next Steps</div>
+      <h2 class="sec-title">How to move forward</h2>
+      <p class="sec-lead">Once an idea is selected, the project follows a structured 4-week delivery arc matching KPMG's expected capstone format.</p>
+
+      <div class="steps-list">
+        <div class="step-row">
+          <div class="step-num">1</div>
+          <div class="step-text">
+            <strong>Select one idea (or hybrid)</strong>
+            <span>Choose the direction with the strongest team fit and business story. Ideas 03 (AML) and 04 (Infrastructure) are the most unique. Ideas 01 and 05 have the clearest commercial path. Idea 02 has the strongest ESG narrative.</span>
+          </div>
+        </div>
+        <div class="step-row">
+          <div class="step-num">2</div>
+          <div class="step-text">
+            <strong>Download data &amp; define cities (Week 1)</strong>
+            <span>Select two Airbnb cities from Inside Airbnb (insideairbnb.com/get-the-data). Recommended pairs: Paris + Barcelona (Ideas 02, 03, 04) · Paris + Athens (Ideas 01, 05). Download listings.csv, calendar.csv, reviews.csv, neighbourhoods.geojson.</span>
+          </div>
+        </div>
+        <div class="step-row">
+          <div class="step-num">3</div>
+          <div class="step-text">
+            <strong>Build ML models &amp; tool contracts (Week 2)</strong>
+            <span>Train and validate core ML models (XGBoost/Prophet/clustering). Define tool contracts (TypedDict schemas) before building LangGraph agents. Gate: all models independently testable before agent integration.</span>
+          </div>
+        </div>
+        <div class="step-row">
+          <div class="step-num">4</div>
+          <div class="step-text">
+            <strong>Build agents &amp; Streamlit UI (Week 3)</strong>
+            <span>LangGraph supervisor + specialist agents + synthesis agent. Streamlit demo with HITL approval button. Feature freeze end of Week 3 — no new agents or data sources after this point.</span>
+          </div>
+        </div>
+        <div class="step-row">
+          <div class="step-num">5</div>
+          <div class="step-text">
+            <strong>Evaluate, stress test &amp; build KPMG deck (Week 4)</strong>
+            <span>15 stress-test queries. Document routing accuracy. Finalise ReportLab PDF output. Build 12–15 slide KPMG presentation. Rehearsal session. Live demo ready.</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </div><!-- /content -->
+
+  <footer class="footer">
+    <div><strong>IE Capstone 2026 — KPMG Spain Lighthouse</strong> · Airbnb Use Case · Project Ideas Proposal</div>
+    <div>Generated June 2026 · For internal team use only</div>
+  </footer>
+
+</main>
+</div>
+
+</body>
+</html>
