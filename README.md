@@ -352,3 +352,4 @@ Status key: ✅ Done · 🔄 In progress · 🔲 Not started · ⏳ Blocked
 - [2026-06-09] Session 4: Phase 3 LightGBM complete (A/95). Leakage discovered and corrected. AUC=0.8288. 865 priority targets. €1.43M opportunity.
 - [2026-06-09] Session 5: README completely rewritten to reflect all 7 phases. CLAUDE.md updated. Placeholder folders created.
 - [2026-06-10] Session 6: Built the ARIA agent-chat UI in `Stage 7 - UI Interface/` from the claude.ai/design handoff — React/HTML prototype + a faithful Streamlit app (5 agents, scripted demos, reasoning traces, Plotly dark charts, pseudo-choropleth map, model picker, hybrid live-Gemini mode). Verified via Streamlit AppTest (no exceptions).
+- [2026-06-10] Session 7: Fixed Streamlit Cloud dependency installation by adding a root-level `requirements.txt`, avoiding installer parsing issues caused by the nested app folder path with spaces and a hyphen.
