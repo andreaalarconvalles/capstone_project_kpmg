@@ -139,6 +139,7 @@ This table is the single source of truth for what the team has shipped and what 
 - [2026-06-10] Landing data status polish: added a Live Data Status panel under the prompt cards to fill the lower-left landing space with dataset, model, and forecast readiness signals.
 - [2026-06-10] Landing panel alignment: stretched the landing page columns so the Live Data Status box aligns with the bottom of the Agent Signals box.
 - [2026-06-10] Stage 7 UI asset organization: moved tracked UI support files from the repo root into `Stage 7 - UI Interface/`, while keeping root `vercel.json` as the Vercel deployment pointer.
+- [2026-06-10] Composer layout polish: moved the prompt input into a full-width top row and placed the attach, agent, model, engine, and send controls below.
 
 ### In Progress
 
@@ -182,6 +183,7 @@ This table is the single source of truth for what the team has shipped and what 
 - [2026-06-10] Session 25: Added a Live Data Status panel to the Vercel landing page so the lower-left area shows dataset freshness, portfolio load, model readiness, and forecast coverage.
 - [2026-06-10] Session 26: Aligned the landing page panel bottoms by stretching the two-column row and allowing the Live Data Status panel to fill the remaining lower-left height.
 - [2026-06-10] Session 27: Consolidated tracked UI support assets under `Stage 7 - UI Interface/`: moved the Phase 7 `app/` notes folder, Streamlit `.streamlit` config, and root Streamlit requirements into Stage 7; root `vercel.json` remains as the Vercel pointer.
+- [2026-06-10] Session 28: Reworked the Vercel composer so the prompt input spans the full top row, with the attach, agent picker, model picker, engine chip, and send button arranged on the row below.
 
 ---
 

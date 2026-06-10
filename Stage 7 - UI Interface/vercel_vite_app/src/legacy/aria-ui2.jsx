@@ -122,13 +122,9 @@ const Composer = React.forwardRef(function Composer({
   return (
     <div style={{ width: "100%", maxWidth: 768, margin: "0 auto" }}>
       <div className="aria-elev" style={{
-        background: C2.s1, border: `1px solid ${C2.hair}`, borderRadius: 24, padding: "8px 8px 8px 8px",
+        background: C2.s1, border: `1px solid ${C2.hair}`, borderRadius: 24, padding: "10px 10px 8px",
       }}>
-        <div style={{ display: "flex", alignItems: "flex-end", gap: 6 }}>
-          <button className="aria-focus" title="Attach" tabIndex={-1}
-            style={{ width: 38, height: 38, borderRadius: 100, display: "grid", placeItems: "center", color: C2.muted, flexShrink: 0 }}>
-            <Icon name="Plus" size={20} />
-          </button>
+        <div style={{ display: "flex", alignItems: "flex-start", width: "100%", padding: "0 6px 6px" }}>
           <textarea ref={taRef} value={value} rows={1}
             onChange={(e) => { setValue(e.target.value); grow(e.target); }}
             onKeyDown={(e) => {
@@ -136,29 +132,20 @@ const Composer = React.forwardRef(function Composer({
             }}
             placeholder={`Ask ${agent.name}…`}
             style={{
-              flex: 1, background: "transparent", border: "none", outline: "none", color: C2.ink,
-              fontSize: 15.5, lineHeight: 1.45, padding: "9px 4px", maxHeight: 200, minHeight: 22,
+              width: "100%", background: "transparent", border: "none", outline: "none", color: C2.ink,
+              fontSize: 15.5, lineHeight: 1.45, padding: "8px 0", maxHeight: 200, minHeight: 32,
+              resize: "none",
             }} />
-          <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
-            {streaming ? (
-              <button className="aria-focus" onClick={onStop} title="Stop generating"
-                style={{ width: 38, height: 38, borderRadius: 100, display: "grid", placeItems: "center", background: C2.ink, color: C2.canvas }}>
-                <span style={{ width: 11, height: 11, borderRadius: 3, background: C2.canvas }} />
-              </button>
-            ) : (
-              <button className="aria-focus" onClick={onSend} disabled={!value.trim()} title="Send"
-                style={{
-                  width: 38, height: 38, borderRadius: 100, display: "grid", placeItems: "center",
-                  background: value.trim() ? C2.cta : C2.s2, color: value.trim() ? C2.ctaText : C2.muted,
-                  transition: "background 0.15s", cursor: value.trim() ? "pointer" : "default",
-                }}>
-                <Icon name="ArrowUp" size={19} sw={2.4} />
-              </button>
-            )}
-          </div>
         </div>
         {/* bottom controls row */}
-        <div style={{ display: "flex", alignItems: "center", gap: 8, rowGap: 6, flexWrap: "wrap", padding: "4px 4px 2px 4px" }}>
+        <div style={{
+          display: "flex", alignItems: "center", gap: 8, rowGap: 6, flexWrap: "wrap",
+          padding: "7px 0 0", borderTop: `1px solid ${C2.hairSoft}`,
+        }}>
+          <button className="aria-focus" title="Attach" tabIndex={-1}
+            style={{ width: 34, height: 34, borderRadius: 100, display: "grid", placeItems: "center", color: C2.muted, flexShrink: 0 }}>
+            <Icon name="Plus" size={19} />
+          </button>
           <AgentPicker agentId={agent.id} agents={agents} onPick={onPickAgent} />
           <span style={{ width: 1, height: 18, background: C2.hair }} />
           <ModelPicker modelId={modelId} onPick={setModelId} />
@@ -174,6 +161,22 @@ const Composer = React.forwardRef(function Composer({
                 <Icon name="X" size={13} />
               </button>
             </div>
+          )}
+          <div style={{ flex: "1 1 auto", minWidth: 8 }} />
+          {streaming ? (
+            <button className="aria-focus" onClick={onStop} title="Stop generating"
+              style={{ width: 36, height: 36, borderRadius: 100, display: "grid", placeItems: "center", background: C2.ink, color: C2.canvas, flexShrink: 0 }}>
+              <span style={{ width: 11, height: 11, borderRadius: 3, background: C2.canvas }} />
+            </button>
+          ) : (
+            <button className="aria-focus" onClick={onSend} disabled={!value.trim()} title="Send"
+              style={{
+                width: 36, height: 36, borderRadius: 100, display: "grid", placeItems: "center", flexShrink: 0,
+                background: value.trim() ? C2.cta : C2.s2, color: value.trim() ? C2.ctaText : C2.muted,
+                transition: "background 0.15s", cursor: value.trim() ? "pointer" : "default",
+              }}>
+              <Icon name="ArrowUp" size={18} sw={2.4} />
+            </button>
           )}
         </div>
       </div>
