@@ -251,9 +251,9 @@ function StatusMetric({ icon, accent, label, value, meta }) {
       </div>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 11.5, color: C2.muted, fontWeight: 500 }}>{label}</div>
-        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10, minWidth: 0, marginTop: 2 }}>
-          <span style={{ fontSize: 13.5, color: C2.ink, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{value}</span>
-          <span style={{ fontSize: 11.5, color: C2.muted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", textAlign: "right" }}>{meta}</span>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 2, minWidth: 0, marginTop: 2 }}>
+          <span style={{ fontSize: 13.5, color: C2.ink, fontWeight: 600, lineHeight: 1.2 }}>{value}</span>
+          <span style={{ fontSize: 11.5, color: C2.muted, lineHeight: 1.25 }}>{meta}</span>
         </div>
       </div>
     </div>
@@ -294,7 +294,7 @@ function LiveDataStatus() {
       </div>
       <div style={{
         display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gridAutoRows: "1fr",
-        columnGap: 18, rowGap: 0, flex: 1, alignContent: "stretch",
+        columnGap: 20, rowGap: 2, flex: 1, alignContent: "stretch",
       }}>
         {items.map((item) => <StatusMetric key={item.label} {...item} />)}
       </div>

@@ -142,6 +142,7 @@ This table is the single source of truth for what the team has shipped and what 
 - [2026-06-10] Composer layout polish: moved the prompt input into a full-width top row and placed the attach, agent, model, engine, and send controls below.
 - [2026-06-10] Landing layout correction: moved the full-width prompt composer above the cover-page cards and aligned the prompt, status, KPI, and signal cards below it.
 - [2026-06-10] Composer attachment polish: made the plus button open a desktop photo picker with image previews, and removed the landing-card header strip for cleaner box alignment.
+- [2026-06-10] Live Data Status readability: stacked metric values and details so the Model stack text no longer truncates with ellipses.
 
 ### In Progress
 
@@ -188,6 +189,7 @@ This table is the single source of truth for what the team has shipped and what 
 - [2026-06-10] Session 28: Reworked the Vercel composer so the prompt input spans the full top row, with the attach, agent picker, model picker, engine chip, and send button arranged on the row below.
 - [2026-06-10] Session 29: Corrected the Vercel landing layout so the prompt composer spans the top of the cover page, while suggested prompts, Live Data Status, portfolio KPIs, and Agent Signals align in the card grid underneath.
 - [2026-06-10] Session 30: Connected the composer plus button to a multi-image desktop upload picker with preview chips/removal controls, and removed the Suggested analyses / Portfolio snapshot header strip above the landing cards.
+- [2026-06-10] Session 31: Updated the Live Data Status metric layout so value/detail text wraps on stacked lines, making `3 engines ready` and `XGB · LGBM · Prophet` fully visible.
 
 ---
 
