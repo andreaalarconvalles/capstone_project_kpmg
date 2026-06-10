@@ -1,20 +1,12 @@
 # Stage 7 — ARIA Platform UI
 
-**Vercel website:** [https://capstone-project-kpmg-iarimooha-lukatcheishvilis-projects.vercel.app/](https://capstone-project-kpmg-iarimooha-lukatcheishvilis-projects.vercel.app/)
-
-[![Launch ARIA Platform UI](https://img.shields.io/badge/Launch%20ARIA%20Platform%20UI-Streamlit-ff4b4b?style=for-the-badge&logo=streamlit&logoColor=white)](https://capstoneprojectkpmg.streamlit.app/)
-
-> **Live demo:** click the badge above to open the deployed ARIA Platform UI directly:
-> [capstoneprojectkpmg.streamlit.app](https://capstoneprojectkpmg.streamlit.app/).
-> No redeploy step is required. To run it on your own machine instead, see
-> [Run the Streamlit app](#run-the-streamlit-app-recommended) below — it opens at
-> **http://localhost:8501**.
+**Live Vercel website:** [https://capstone-project-kpmg-iarimooha-lukatcheishvilis-projects.vercel.app/](https://capstone-project-kpmg-iarimooha-lukatcheishvilis-projects.vercel.app/)
 
 The front-end MVP for **ARIA** (Airbnb Revenue Intelligence & Analytics) — a ChatGPT-style,
 multi-agent AI platform built for the IE Business School × KPMG Spain Capstone 2026.
-The Streamlit deployment now embeds the exact Claude Design React prototype so the deployed
-demo keeps the same layout, styling, animations, sidebar, composer, model picker, and agent
-experience as the original design handoff.
+The current public demo is deployed through Vercel from `vercel_vite_app/`, preserving the
+Claude Design layout, styling, animations, sidebar, composer, model picker, and agent
+experience in a Vite React build.
 
 Five KPMG-proposed agents on one interface, each selectable like a custom GPT:
 
@@ -58,7 +50,7 @@ Stage 7 - UI Interface/
     └── src/
 ```
 
-## Run the Streamlit app (recommended)
+## Run the legacy Streamlit host (optional)
 
 ```bash
 cd "Stage 7 - UI Interface/streamlit_app"
@@ -68,7 +60,7 @@ streamlit run app.py
 
 Opens at `http://localhost:8501`.
 
-For Streamlit Community Cloud, set the main module to:
+For a Streamlit Community Cloud compatibility deployment, set the main module to:
 
 ```text
 Stage 7 - UI Interface/streamlit_app/app.py
