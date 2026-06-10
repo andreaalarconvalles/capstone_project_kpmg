@@ -1,8 +1,8 @@
 """Embed the checked-in ARIA React prototype inside Streamlit.
 
 The Claude Design handoff is a static HTML page plus local JSX modules. Streamlit
-components run in an iframe, so the JSX modules are inlined before rendering to
-avoid brittle relative asset loading on Streamlit Community Cloud.
+serves a generated static HTML build and displays it in an iframe. This avoids
+large srcdoc payloads, which can render as a blank page on Streamlit Cloud.
 """
 
 from __future__ import annotations
@@ -48,7 +48,8 @@ STREAMLIT_FRAME_CSS = """
   }
 
   iframe,
-  iframe[title="streamlit.components.v1.html"] {
+  iframe[title="streamlit.components.v1.html"],
+  iframe[title="streamlit.components.v1.iframe"] {
     position: fixed !important;
     inset: 0 !important;
     width: 100vw !important;
@@ -57,6 +58,22 @@ STREAMLIT_FRAME_CSS = """
     border: 0 !important;
     display: block !important;
     background: #ffffff !important;
+  }
+
+  .aria-static-launch {
+    position: fixed;
+    right: 16px;
+    bottom: 16px;
+    z-index: 100000;
+    border-radius: 999px;
+    padding: 9px 13px;
+    background: rgba(11, 11, 12, 0.82);
+    color: #ffffff !important;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    text-decoration: none !important;
+    font: 600 12px "Inter", system-ui, sans-serif;
+    letter-spacing: 0;
+    backdrop-filter: blur(12px);
   }
 </style>
 """
@@ -93,6 +110,10 @@ def _prototype_dir() -> Path:
     return Path(__file__).resolve().parents[1] / "prototype"
 
 
+def _repo_root() -> Path:
+    return Path(__file__).resolve().parents[2]
+
+
 def _read_text(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
@@ -126,6 +147,13 @@ def build_inlined_prototype_html() -> str:
     return html_doc
 
 
+def write_static_prototype() -> str:
+    static_path = _repo_root() / "streamlit_app" / "static" / "aria" / "index.html"
+    static_path.parent.mkdir(parents=True, exist_ok=True)
+    static_path.write_text(build_inlined_prototype_html(), encoding="utf-8")
+    return "/app/static/aria/index.html"
+
+
 def render_prototype_app() -> None:
     st.set_page_config(
         page_title="ARIA - Airbnb Revenue Intelligence & Analytics",
@@ -136,9 +164,15 @@ def render_prototype_app() -> None:
     st.markdown(STREAMLIT_FRAME_CSS, unsafe_allow_html=True)
 
     try:
-        prototype_html = build_inlined_prototype_html()
+        prototype_url = write_static_prototype()
     except Exception as exc:  # pragma: no cover - visible deployment fallback
         st.error(f"Unable to load the ARIA prototype: {exc}")
         return
 
-    components.html(prototype_html, height=1200, scrolling=False)
+    st.markdown(
+        f'<a class="aria-static-launch" href="{prototype_url}" target="_self">'
+        "Open full app"
+        "</a>",
+        unsafe_allow_html=True,
+    )
+    components.iframe(prototype_url, height=1200, scrolling=False)

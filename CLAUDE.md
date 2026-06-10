@@ -120,6 +120,7 @@ This table is the single source of truth for what the team has shipped and what 
 - [2026-06-10] Streamlit Cloud deployment hardening: added no-spaces wrapper entrypoint `streamlit_app/app.py`, duplicated `streamlit_app/requirements.txt`, and updated Stage 7 README badge/docs to use the wrapper path.
 - [2026-06-10] Stage 7 design fidelity update: synced the React prototype from the ZIP handoff and replaced the native Streamlit recreation with a Streamlit host that embeds the exact Claude Design prototype full-page.
 - [2026-06-10] Stage 7 deployment hotfix: reverted the embedded prototype renderer from `st.iframe` to the classic Streamlit HTML component because the newer API showed a blank page on Streamlit Cloud.
+- [2026-06-10] Stage 7 white-screen fix: generated the React prototype into `streamlit_app/static/aria/index.html`, enabled Streamlit static serving, and iframed the static URL instead of sending the full app through an inline HTML payload.
 
 ### In Progress
 

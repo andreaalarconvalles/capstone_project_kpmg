@@ -1,0 +1,2462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ARIA — Airbnb Revenue Intelligence &amp; Analytics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300..700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    /* Framer system — defaults to LIGHT (light mode is the default); JS swaps these on toggle */
+    --canvas: #ffffff;
+    --surface-1: #f4f4f5;
+    --surface-2: #e9e9eb;
+    --hairline: #e4e4e7;
+    --hairline-soft: #efeff1;
+    --ink: #0b0b0c;
+    --ink-muted: #6b6b73;
+    --accent-blue: #0099ff;
+    --grad-violet: #6a4cf5;
+    --grad-magenta: #d44df0;
+    --grad-orange: #ff7a3d;
+    --grad-coral: #ff5577;
+    --grad-teal: #1fd1c7;
+    --success: #16a34a;
+    --scroll-thumb: #cfcfd4;
+
+    --r-row: 10px;
+    --r-card: 16px;
+    --r-tile: 30px;
+    --pill: 100px;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; }
+  body {
+    background: var(--canvas);
+    color: var(--ink);
+    font-family: "Inter", system-ui, -apple-system, sans-serif;
+    font-size: 15px;
+    line-height: 1.3;
+    letter-spacing: -0.15px;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    overflow: hidden;
+  }
+  #root { height: 100vh; }
+
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--scroll-thumb, #2a2a2a); border-radius: 100px; border: 2px solid var(--canvas); }
+  ::-webkit-scrollbar-thumb:hover { background: var(--ink-muted, #2e2e2e); }
+  * { scrollbar-width: thin; scrollbar-color: var(--scroll-thumb, #2a2a2a) transparent; }
+
+  button { font-family: inherit; letter-spacing: -0.14px; cursor: pointer; border: none; background: none; color: inherit; }
+  input, textarea { font-family: inherit; letter-spacing: -0.15px; }
+  textarea { resize: none; }
+  ::placeholder { color: var(--ink-muted); opacity: 1; }
+
+  .aria-focus:focus-visible { outline: none; box-shadow: 0 0 0 1px rgba(0,153,255,0.45), 0 0 0 4px rgba(0,153,255,0.12); }
+
+  @keyframes ariaFadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  @keyframes ariaFadeIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes ariaSpin { to { transform: rotate(360deg); } }
+  @keyframes ariaBlink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
+  @keyframes ariaScaleIn { from { opacity: 0; transform: translateY(8px) scale(0.97); } to { opacity: 1; transform: none; } }
+  @keyframes ariaPulse { 0%,100% { opacity: 0.55; } 50% { opacity: 1; } }
+
+  .aria-spin { animation: ariaSpin 0.8s linear infinite; }
+  .aria-cursor { display: inline-block; width: 7px; height: 1.05em; margin-left: 1px; background: var(--ink); vertical-align: -2px; animation: ariaBlink 1s step-end infinite; border-radius: 1px; }
+  /* Entrance animations only run once the document is actually visible — so content
+     is never frozen-hidden in a background/offscreen tab. Resting state is visible. */
+  body.anim-on .aria-fadeup { animation: ariaFadeUp 0.4s cubic-bezier(0.22,1,0.36,1) both; }
+  body.anim-on .aria-fadein { animation: ariaFadeIn 0.5s ease both; }
+  body.anim-on .aria-scalein { animation: ariaScaleIn 0.16s cubic-bezier(0.22,1,0.36,1) both; }
+
+  /* Markdown-ish answer styling */
+  .aria-prose strong { font-weight: 600; color: var(--ink); }
+  .aria-prose em { color: var(--ink); font-style: normal; background: var(--surface-2); padding: 1px 5px; border-radius: 5px; font-size: 13.5px; }
+
+  @media print {
+    body { overflow: visible; background: #fff; }
+    .no-print { display: none !important; }
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+  (function () {
+    function on() { document.body && document.body.classList.add("anim-on"); }
+    if (document.visibilityState === "visible") on();
+    else document.addEventListener("visibilitychange", function h() {
+      if (document.visibilityState === "visible") { on(); document.removeEventListener("visibilitychange", h); }
+    });
+  })();
+</script>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/prop-types@15.8.1/prop-types.min.js"></script>
+<script src="https://unpkg.com/recharts@2.13.3/umd/Recharts.js"></script>
+<script src="https://unpkg.com/lucide@0.456.0/dist/umd/lucide.min.js"></script>
+
+<script type="text/babel" data-source="tweaks-panel.jsx">
+// @ds-adherence-ignore -- omelette starter scaffold (raw elements/hex/px by design)
+
+/* BEGIN USAGE */
+// tweaks-panel.jsx
+// Reusable Tweaks shell + form-control helpers.
+// Exports (to window): useTweaks, TweaksPanel, TweakSection, TweakRow, TweakSlider,
+//   TweakToggle, TweakRadio, TweakSelect, TweakText, TweakNumber, TweakColor, TweakButton.
+//
+// Owns the host protocol (listens for __activate_edit_mode / __deactivate_edit_mode,
+// posts __edit_mode_available / __edit_mode_set_keys / __edit_mode_dismissed) so
+// individual prototypes don't re-roll it. Ships a consistent set of controls so you
+// don't hand-draw <input type="range">, segmented radios, steppers, etc.
+//
+// Usage (in an HTML file that loads React + Babel):
+//
+//   const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+//     "primaryColor": "#D97757",
+//     "palette": ["#D97757", "#29261b", "#f6f4ef"],
+//     "fontSize": 16,
+//     "density": "regular",
+//     "dark": false
+//   }/*EDITMODE-END*/;
+//
+//   function App() {
+//     const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+//     return (
+//       <div style={{ fontSize: t.fontSize, color: t.primaryColor }}>
+//         Hello
+//         <TweaksPanel>
+//           <TweakSection label="Typography" />
+//           <TweakSlider label="Font size" value={t.fontSize} min={10} max={32} unit="px"
+//                        onChange={(v) => setTweak('fontSize', v)} />
+//           <TweakRadio  label="Density" value={t.density}
+//                        options={['compact', 'regular', 'comfy']}
+//                        onChange={(v) => setTweak('density', v)} />
+//           <TweakSection label="Theme" />
+//           <TweakColor  label="Primary" value={t.primaryColor}
+//                        options={['#D97757', '#2A6FDB', '#1F8A5B', '#7A5AE0']}
+//                        onChange={(v) => setTweak('primaryColor', v)} />
+//           <TweakColor  label="Palette" value={t.palette}
+//                        options={[['#D97757', '#29261b', '#f6f4ef'],
+//                                  ['#475569', '#0f172a', '#f1f5f9']]}
+//                        onChange={(v) => setTweak('palette', v)} />
+//           <TweakToggle label="Dark mode" value={t.dark}
+//                        onChange={(v) => setTweak('dark', v)} />
+//         </TweaksPanel>
+//       </div>
+//     );
+//   }
+//
+// TweakRadio is the segmented control for 2–3 short options (auto-falls-back to
+// TweakSelect past ~16/~10 chars per label); reach for TweakSelect directly when
+// options are many or long. For color tweaks always curate 3-4 options rather than
+// a free picker; an option can also be a whole 2–5 color palette (the stored value
+// is the array). The Tweak* controls are a floor, not a ceiling — build custom
+// controls inside the panel if a tweak calls for UI they don't cover.
+/* END USAGE */
+// ─────────────────────────────────────────────────────────────────────────────
+
+const __TWEAKS_STYLE = `
+  .twk-panel{position:fixed;right:16px;bottom:16px;z-index:2147483646;width:280px;
+    max-height:calc(100vh - 32px);display:flex;flex-direction:column;
+    transform:scale(var(--dc-inv-zoom,1));transform-origin:bottom right;
+    background:rgba(250,249,247,.78);color:#29261b;
+    -webkit-backdrop-filter:blur(24px) saturate(160%);backdrop-filter:blur(24px) saturate(160%);
+    border:.5px solid rgba(255,255,255,.6);border-radius:14px;
+    box-shadow:0 1px 0 rgba(255,255,255,.5) inset,0 12px 40px rgba(0,0,0,.18);
+    font:11.5px/1.4 ui-sans-serif,system-ui,-apple-system,sans-serif;overflow:hidden}
+  .twk-hd{display:flex;align-items:center;justify-content:space-between;
+    padding:10px 8px 10px 14px;cursor:move;user-select:none}
+  .twk-hd b{font-size:12px;font-weight:600;letter-spacing:.01em}
+  .twk-x{appearance:none;border:0;background:transparent;color:rgba(41,38,27,.55);
+    width:22px;height:22px;border-radius:6px;cursor:default;font-size:13px;line-height:1}
+  .twk-x:hover{background:rgba(0,0,0,.06);color:#29261b}
+  .twk-body{padding:2px 14px 14px;display:flex;flex-direction:column;gap:10px;
+    overflow-y:auto;overflow-x:hidden;min-height:0;
+    scrollbar-width:thin;scrollbar-color:rgba(0,0,0,.15) transparent}
+  .twk-body::-webkit-scrollbar{width:8px}
+  .twk-body::-webkit-scrollbar-track{background:transparent;margin:2px}
+  .twk-body::-webkit-scrollbar-thumb{background:rgba(0,0,0,.15);border-radius:4px;
+    border:2px solid transparent;background-clip:content-box}
+  .twk-body::-webkit-scrollbar-thumb:hover{background:rgba(0,0,0,.25);
+    border:2px solid transparent;background-clip:content-box}
+  .twk-row{display:flex;flex-direction:column;gap:5px}
+  .twk-row-h{flex-direction:row;align-items:center;justify-content:space-between;gap:10px}
+  .twk-lbl{display:flex;justify-content:space-between;align-items:baseline;
+    color:rgba(41,38,27,.72)}
+  .twk-lbl>span:first-child{font-weight:500}
+  .twk-val{color:rgba(41,38,27,.5);font-variant-numeric:tabular-nums}
+
+  .twk-sect{font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+    color:rgba(41,38,27,.45);padding:10px 0 0}
+  .twk-sect:first-child{padding-top:0}
+
+  .twk-field{appearance:none;box-sizing:border-box;width:100%;min-width:0;height:26px;padding:0 8px;
+    border:.5px solid rgba(0,0,0,.1);border-radius:7px;
+    background:rgba(255,255,255,.6);color:inherit;font:inherit;outline:none}
+  .twk-field:focus{border-color:rgba(0,0,0,.25);background:rgba(255,255,255,.85)}
+  select.twk-field{padding-right:22px;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path fill='rgba(0,0,0,.5)' d='M0 0h10L5 6z'/></svg>");
+    background-repeat:no-repeat;background-position:right 8px center}
+
+  .twk-slider{appearance:none;-webkit-appearance:none;width:100%;height:4px;margin:6px 0;
+    border-radius:999px;background:rgba(0,0,0,.12);outline:none}
+  .twk-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;
+    width:14px;height:14px;border-radius:50%;background:#fff;
+    border:.5px solid rgba(0,0,0,.12);box-shadow:0 1px 3px rgba(0,0,0,.2);cursor:default}
+  .twk-slider::-moz-range-thumb{width:14px;height:14px;border-radius:50%;
+    background:#fff;border:.5px solid rgba(0,0,0,.12);box-shadow:0 1px 3px rgba(0,0,0,.2);cursor:default}
+
+  .twk-seg{position:relative;display:flex;padding:2px;border-radius:8px;
+    background:rgba(0,0,0,.06);user-select:none}
+  .twk-seg-thumb{position:absolute;top:2px;bottom:2px;border-radius:6px;
+    background:rgba(255,255,255,.9);box-shadow:0 1px 2px rgba(0,0,0,.12);
+    transition:left .15s cubic-bezier(.3,.7,.4,1),width .15s}
+  .twk-seg.dragging .twk-seg-thumb{transition:none}
+  .twk-seg button{appearance:none;position:relative;z-index:1;flex:1;border:0;
+    background:transparent;color:inherit;font:inherit;font-weight:500;min-height:22px;
+    border-radius:6px;cursor:default;padding:4px 6px;line-height:1.2;
+    overflow-wrap:anywhere}
+
+  .twk-toggle{position:relative;width:32px;height:18px;border:0;border-radius:999px;
+    background:rgba(0,0,0,.15);transition:background .15s;cursor:default;padding:0}
+  .twk-toggle[data-on="1"]{background:#34c759}
+  .twk-toggle i{position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;
+    background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .15s}
+  .twk-toggle[data-on="1"] i{transform:translateX(14px)}
+
+  .twk-num{display:flex;align-items:center;box-sizing:border-box;min-width:0;height:26px;padding:0 0 0 8px;
+    border:.5px solid rgba(0,0,0,.1);border-radius:7px;background:rgba(255,255,255,.6)}
+  .twk-num-lbl{font-weight:500;color:rgba(41,38,27,.6);cursor:ew-resize;
+    user-select:none;padding-right:8px}
+  .twk-num input{flex:1;min-width:0;height:100%;border:0;background:transparent;
+    font:inherit;font-variant-numeric:tabular-nums;text-align:right;padding:0 8px 0 0;
+    outline:none;color:inherit;-moz-appearance:textfield}
+  .twk-num input::-webkit-inner-spin-button,.twk-num input::-webkit-outer-spin-button{
+    -webkit-appearance:none;margin:0}
+  .twk-num-unit{padding-right:8px;color:rgba(41,38,27,.45)}
+
+  .twk-btn{appearance:none;height:26px;padding:0 12px;border:0;border-radius:7px;
+    background:rgba(0,0,0,.78);color:#fff;font:inherit;font-weight:500;cursor:default}
+  .twk-btn:hover{background:rgba(0,0,0,.88)}
+  .twk-btn.secondary{background:rgba(0,0,0,.06);color:inherit}
+  .twk-btn.secondary:hover{background:rgba(0,0,0,.1)}
+
+  .twk-swatch{appearance:none;-webkit-appearance:none;width:56px;height:22px;
+    border:.5px solid rgba(0,0,0,.1);border-radius:6px;padding:0;cursor:default;
+    background:transparent;flex-shrink:0}
+  .twk-swatch::-webkit-color-swatch-wrapper{padding:0}
+  .twk-swatch::-webkit-color-swatch{border:0;border-radius:5.5px}
+  .twk-swatch::-moz-color-swatch{border:0;border-radius:5.5px}
+
+  .twk-chips{display:flex;gap:6px}
+  .twk-chip{position:relative;appearance:none;flex:1;min-width:0;height:46px;
+    padding:0;border:0;border-radius:6px;overflow:hidden;cursor:default;
+    box-shadow:0 0 0 .5px rgba(0,0,0,.12),0 1px 2px rgba(0,0,0,.06);
+    transition:transform .12s cubic-bezier(.3,.7,.4,1),box-shadow .12s}
+  .twk-chip:hover{transform:translateY(-1px);
+    box-shadow:0 0 0 .5px rgba(0,0,0,.18),0 4px 10px rgba(0,0,0,.12)}
+  .twk-chip[data-on="1"]{box-shadow:0 0 0 1.5px rgba(0,0,0,.85),
+    0 2px 6px rgba(0,0,0,.15)}
+  .twk-chip>span{position:absolute;top:0;bottom:0;right:0;width:34%;
+    display:flex;flex-direction:column;box-shadow:-1px 0 0 rgba(0,0,0,.1)}
+  .twk-chip>span>i{flex:1;box-shadow:0 -1px 0 rgba(0,0,0,.1)}
+  .twk-chip>span>i:first-child{box-shadow:none}
+  .twk-chip svg{position:absolute;top:6px;left:6px;width:13px;height:13px;
+    filter:drop-shadow(0 1px 1px rgba(0,0,0,.3))}
+`;
+
+// ── useTweaks ───────────────────────────────────────────────────────────────
+// Single source of truth for tweak values. setTweak persists via the host
+// (__edit_mode_set_keys → host rewrites the EDITMODE block on disk).
+function useTweaks(defaults) {
+  const [values, setValues] = React.useState(defaults);
+  // Accepts either setTweak('key', value) or setTweak({ key: value, ... }) so a
+  // useState-style call doesn't write a "[object Object]" key into the persisted
+  // JSON block.
+  const setTweak = React.useCallback((keyOrEdits, val) => {
+    const edits = typeof keyOrEdits === 'object' && keyOrEdits !== null
+      ? keyOrEdits : { [keyOrEdits]: val };
+    setValues((prev) => ({ ...prev, ...edits }));
+    window.parent.postMessage({ type: '__edit_mode_set_keys', edits }, '*');
+    // Same-window signal so in-page listeners (deck-stage rail thumbnails)
+    // can react — the parent message only reaches the host, not peers.
+    window.dispatchEvent(new CustomEvent('tweakchange', { detail: edits }));
+  }, []);
+  return [values, setTweak];
+}
+
+// ── TweaksPanel ─────────────────────────────────────────────────────────────
+// Floating shell. Registers the protocol listener BEFORE announcing
+// availability — if the announce ran first, the host's activate could land
+// before our handler exists and the toolbar toggle would silently no-op.
+// The close button posts __edit_mode_dismissed so the host's toolbar toggle
+// flips off in lockstep; the host echoes __deactivate_edit_mode back which
+// is what actually hides the panel.
+function TweaksPanel({ title = 'Tweaks', children }) {
+  const [open, setOpen] = React.useState(false);
+  const dragRef = React.useRef(null);
+  const offsetRef = React.useRef({ x: 16, y: 16 });
+  const PAD = 16;
+
+  const clampToViewport = React.useCallback(() => {
+    const panel = dragRef.current;
+    if (!panel) return;
+    const w = panel.offsetWidth, h = panel.offsetHeight;
+    const maxRight = Math.max(PAD, window.innerWidth - w - PAD);
+    const maxBottom = Math.max(PAD, window.innerHeight - h - PAD);
+    offsetRef.current = {
+      x: Math.min(maxRight, Math.max(PAD, offsetRef.current.x)),
+      y: Math.min(maxBottom, Math.max(PAD, offsetRef.current.y)),
+    };
+    panel.style.right = offsetRef.current.x + 'px';
+    panel.style.bottom = offsetRef.current.y + 'px';
+  }, []);
+
+  React.useEffect(() => {
+    if (!open) return;
+    clampToViewport();
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', clampToViewport);
+      return () => window.removeEventListener('resize', clampToViewport);
+    }
+    const ro = new ResizeObserver(clampToViewport);
+    ro.observe(document.documentElement);
+    return () => ro.disconnect();
+  }, [open, clampToViewport]);
+
+  React.useEffect(() => {
+    const onMsg = (e) => {
+      const t = e?.data?.type;
+      if (t === '__activate_edit_mode') setOpen(true);
+      else if (t === '__deactivate_edit_mode') setOpen(false);
+    };
+    window.addEventListener('message', onMsg);
+    window.parent.postMessage({ type: '__edit_mode_available' }, '*');
+    return () => window.removeEventListener('message', onMsg);
+  }, []);
+
+  const dismiss = () => {
+    setOpen(false);
+    window.parent.postMessage({ type: '__edit_mode_dismissed' }, '*');
+  };
+
+  const onDragStart = (e) => {
+    const panel = dragRef.current;
+    if (!panel) return;
+    const r = panel.getBoundingClientRect();
+    const sx = e.clientX, sy = e.clientY;
+    const startRight = window.innerWidth - r.right;
+    const startBottom = window.innerHeight - r.bottom;
+    const move = (ev) => {
+      offsetRef.current = {
+        x: startRight - (ev.clientX - sx),
+        y: startBottom - (ev.clientY - sy),
+      };
+      clampToViewport();
+    };
+    const up = () => {
+      window.removeEventListener('mousemove', move);
+      window.removeEventListener('mouseup', up);
+    };
+    window.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', up);
+  };
+
+  if (!open) return null;
+  return (
+    <>
+      <style>{__TWEAKS_STYLE}</style>
+      <div ref={dragRef} className="twk-panel" data-omelette-chrome=""
+           style={{ right: offsetRef.current.x, bottom: offsetRef.current.y }}>
+        <div className="twk-hd" onMouseDown={onDragStart}>
+          <b>{title}</b>
+          <button className="twk-x" aria-label="Close tweaks"
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onClick={dismiss}>✕</button>
+        </div>
+        <div className="twk-body">
+          {children}
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ── Layout helpers ──────────────────────────────────────────────────────────
+
+function TweakSection({ label, children }) {
+  return (
+    <>
+      <div className="twk-sect">{label}</div>
+      {children}
+    </>
+  );
+}
+
+function TweakRow({ label, value, children, inline = false }) {
+  return (
+    <div className={inline ? 'twk-row twk-row-h' : 'twk-row'}>
+      <div className="twk-lbl">
+        <span>{label}</span>
+        {value != null && <span className="twk-val">{value}</span>}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+// ── Controls ────────────────────────────────────────────────────────────────
+
+function TweakSlider({ label, value, min = 0, max = 100, step = 1, unit = '', onChange }) {
+  return (
+    <TweakRow label={label} value={`${value}${unit}`}>
+      <input type="range" className="twk-slider" min={min} max={max} step={step}
+             value={value} onChange={(e) => onChange(Number(e.target.value))} />
+    </TweakRow>
+  );
+}
+
+function TweakToggle({ label, value, onChange }) {
+  return (
+    <div className="twk-row twk-row-h">
+      <div className="twk-lbl"><span>{label}</span></div>
+      <button type="button" className="twk-toggle" data-on={value ? '1' : '0'}
+              role="switch" aria-checked={!!value}
+              onClick={() => onChange(!value)}><i /></button>
+    </div>
+  );
+}
+
+function TweakRadio({ label, value, options, onChange }) {
+  const trackRef = React.useRef(null);
+  const [dragging, setDragging] = React.useState(false);
+  // The active value is read by pointer-move handlers attached for the lifetime
+  // of a drag — ref it so a stale closure doesn't fire onChange for every move.
+  const valueRef = React.useRef(value);
+  valueRef.current = value;
+
+  // Segments wrap mid-word once per-segment width runs out. The track is
+  // ~248px (280 panel − 28 body pad − 4 seg pad), each button loses 12px
+  // to its own padding, and 11.5px system-ui averages ~6.3px/char — so 2
+  // options fit ~16 chars each, 3 fit ~10. Past that (or >3 options), fall
+  // back to a dropdown rather than wrap.
+  const labelLen = (o) => String(typeof o === 'object' ? o.label : o).length;
+  const maxLen = options.reduce((m, o) => Math.max(m, labelLen(o)), 0);
+  const fitsAsSegments = maxLen <= ({ 2: 16, 3: 10 }[options.length] ?? 0);
+  if (!fitsAsSegments) {
+    // <select> emits strings — map back to the original option value so the
+    // fallback stays type-preserving (numbers, booleans) like the segment path.
+    const resolve = (s) => {
+      const m = options.find((o) => String(typeof o === 'object' ? o.value : o) === s);
+      return m === undefined ? s : typeof m === 'object' ? m.value : m;
+    };
+    return <TweakSelect label={label} value={value} options={options}
+                        onChange={(s) => onChange(resolve(s))} />;
+  }
+  const opts = options.map((o) => (typeof o === 'object' ? o : { value: o, label: o }));
+  const idx = Math.max(0, opts.findIndex((o) => o.value === value));
+  const n = opts.length;
+
+  const segAt = (clientX) => {
+    const r = trackRef.current.getBoundingClientRect();
+    const inner = r.width - 4;
+    const i = Math.floor(((clientX - r.left - 2) / inner) * n);
+    return opts[Math.max(0, Math.min(n - 1, i))].value;
+  };
+
+  const onPointerDown = (e) => {
+    setDragging(true);
+    const v0 = segAt(e.clientX);
+    if (v0 !== valueRef.current) onChange(v0);
+    const move = (ev) => {
+      if (!trackRef.current) return;
+      const v = segAt(ev.clientX);
+      if (v !== valueRef.current) onChange(v);
+    };
+    const up = () => {
+      setDragging(false);
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  };
+
+  return (
+    <TweakRow label={label}>
+      <div ref={trackRef} role="radiogroup" onPointerDown={onPointerDown}
+           className={dragging ? 'twk-seg dragging' : 'twk-seg'}>
+        <div className="twk-seg-thumb"
+             style={{ left: `calc(2px + ${idx} * (100% - 4px) / ${n})`,
+                      width: `calc((100% - 4px) / ${n})` }} />
+        {opts.map((o) => (
+          <button key={o.value} type="button" role="radio" aria-checked={o.value === value}>
+            {o.label}
+          </button>
+        ))}
+      </div>
+    </TweakRow>
+  );
+}
+
+function TweakSelect({ label, value, options, onChange }) {
+  return (
+    <TweakRow label={label}>
+      <select className="twk-field" value={value} onChange={(e) => onChange(e.target.value)}>
+        {options.map((o) => {
+          const v = typeof o === 'object' ? o.value : o;
+          const l = typeof o === 'object' ? o.label : o;
+          return <option key={v} value={v}>{l}</option>;
+        })}
+      </select>
+    </TweakRow>
+  );
+}
+
+function TweakText({ label, value, placeholder, onChange }) {
+  return (
+    <TweakRow label={label}>
+      <input className="twk-field" type="text" value={value} placeholder={placeholder}
+             onChange={(e) => onChange(e.target.value)} />
+    </TweakRow>
+  );
+}
+
+function TweakNumber({ label, value, min, max, step = 1, unit = '', onChange }) {
+  const clamp = (n) => {
+    if (min != null && n < min) return min;
+    if (max != null && n > max) return max;
+    return n;
+  };
+  const startRef = React.useRef({ x: 0, val: 0 });
+  const onScrubStart = (e) => {
+    e.preventDefault();
+    startRef.current = { x: e.clientX, val: value };
+    const decimals = (String(step).split('.')[1] || '').length;
+    const move = (ev) => {
+      const dx = ev.clientX - startRef.current.x;
+      const raw = startRef.current.val + dx * step;
+      const snapped = Math.round(raw / step) * step;
+      onChange(clamp(Number(snapped.toFixed(decimals))));
+    };
+    const up = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  };
+  return (
+    <div className="twk-num">
+      <span className="twk-num-lbl" onPointerDown={onScrubStart}>{label}</span>
+      <input type="number" value={value} min={min} max={max} step={step}
+             onChange={(e) => onChange(clamp(Number(e.target.value)))} />
+      {unit && <span className="twk-num-unit">{unit}</span>}
+    </div>
+  );
+}
+
+// Relative-luminance contrast pick — checkmarks drawn over a swatch need to
+// read on both #111 and #fafafa without per-option configuration. Hex input
+// only (#rgb / #rrggbb); named or rgb()/hsl() colors fall through to "light".
+function __twkIsLight(hex) {
+  const h = String(hex).replace('#', '');
+  const x = h.length === 3 ? h.replace(/./g, (c) => c + c) : h.padEnd(6, '0');
+  const n = parseInt(x.slice(0, 6), 16);
+  if (Number.isNaN(n)) return true;
+  const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  return r * 299 + g * 587 + b * 114 > 148000;
+}
+
+const __TwkCheck = ({ light }) => (
+  <svg viewBox="0 0 14 14" aria-hidden="true">
+    <path d="M3 7.2 5.8 10 11 4.2" fill="none" strokeWidth="2.2"
+          strokeLinecap="round" strokeLinejoin="round"
+          stroke={light ? 'rgba(0,0,0,.78)' : '#fff'} />
+  </svg>
+);
+
+// TweakColor — curated color/palette picker. Each option is either a single
+// hex string or an array of 1-5 hex strings; the card adapts — a lone color
+// renders solid, a palette renders colors[0] as the hero (left ~2/3) with the
+// rest stacked in a sharp column on the right. onChange emits the
+// option in the shape it was passed (string stays string, array stays array).
+// Without options it falls back to the native color input for back-compat.
+function TweakColor({ label, value, options, onChange }) {
+  if (!options || !options.length) {
+    return (
+      <div className="twk-row twk-row-h">
+        <div className="twk-lbl"><span>{label}</span></div>
+        <input type="color" className="twk-swatch" value={value}
+               onChange={(e) => onChange(e.target.value)} />
+      </div>
+    );
+  }
+  // Native <input type=color> emits lowercase hex per the HTML spec, so
+  // compare case-insensitively. String() guards JSON.stringify(undefined),
+  // which returns the primitive undefined (no .toLowerCase).
+  const key = (o) => String(JSON.stringify(o)).toLowerCase();
+  const cur = key(value);
+  return (
+    <TweakRow label={label}>
+      <div className="twk-chips" role="radiogroup">
+        {options.map((o, i) => {
+          const colors = Array.isArray(o) ? o : [o];
+          const [hero, ...rest] = colors;
+          const sup = rest.slice(0, 4);
+          const on = key(o) === cur;
+          return (
+            <button key={i} type="button" className="twk-chip" role="radio"
+                    aria-checked={on} data-on={on ? '1' : '0'}
+                    aria-label={colors.join(', ')} title={colors.join(' · ')}
+                    style={{ background: hero }}
+                    onClick={() => onChange(o)}>
+              {sup.length > 0 && (
+                <span>
+                  {sup.map((c, j) => <i key={j} style={{ background: c }} />)}
+                </span>
+              )}
+              {on && <__TwkCheck light={__twkIsLight(hero)} />}
+            </button>
+          );
+        })}
+      </div>
+    </TweakRow>
+  );
+}
+
+function TweakButton({ label, onClick, secondary = false }) {
+  return (
+    <button type="button" className={secondary ? 'twk-btn secondary' : 'twk-btn'}
+            onClick={onClick}>{label}</button>
+  );
+}
+
+Object.assign(window, {
+  useTweaks, TweaksPanel, TweakSection, TweakRow,
+  TweakSlider, TweakToggle, TweakRadio, TweakSelect,
+  TweakText, TweakNumber, TweakColor, TweakButton,
+});
+
+</script>
+<script type="text/babel" data-source="aria-data.jsx">
+/* ARIA — data layer: theme, agents, seeded conversations, scripted demo scripts */
+
+const ARIA = {
+  c: {
+    /* defaults to LIGHT (Framer-faithful inversion); applyTheme() swaps these live */
+    canvas: "#ffffff", s1: "#f4f4f5", s2: "#e9e9eb",
+    hair: "#e4e4e7", hairSoft: "#efeff1",
+    ink: "#0b0b0c", inkSoft: "#26262b", muted: "#6b6b73", blue: "#0099ff",
+    violet: "#6a4cf5", magenta: "#d44df0", orange: "#ff7a3d",
+    coral: "#ff5577", teal: "#1fd1c7", success: "#16a34a", scrollThumb: "#cfcfd4",
+  },
+  /* live UI tweak state (mutated by the Tweaks panel, read at render/stream time) */
+  ui: { fontSize: 15, density: "regular", streamSpeed: "normal", traceCollapse: true },
+};
+
+const AGENTS = [
+  {
+    id: "host-revenue", name: "Host Revenue Intelligence",
+    tagline: "Your personal revenue manager", icon: "Coins",
+    accent: ARIA.c.violet, emoji: "💶",
+    chips: [
+      "Why is my listing underpriced vs the neighbourhood?",
+      "Forecast my occupancy for the next 90 days",
+      "Rewrite my listing description to convert better",
+      "Simulate revenue: current vs recommended pricing",
+    ],
+  },
+  {
+    id: "gentrification", name: "Gentrification Early Warning",
+    tagline: "Displacement risk 12–24 months ahead", icon: "Building2",
+    accent: ARIA.c.magenta, emoji: "🏘️",
+    chips: [
+      "Which Athens neighbourhoods show displacement risk in the next 12 months?",
+      "Show STR density growth by dist_zone",
+      "Draft a policy brief for the city housing department",
+      "What intervention thresholds should Paris adopt?",
+    ],
+  },
+  {
+    id: "crime", name: "STR Financial Crime Detection",
+    tagline: "AML anomaly & SAR intelligence", icon: "Fingerprint",
+    accent: ARIA.c.coral, emoji: "🕵️",
+    chips: [
+      "Flag listings with ghost-listing patterns in Paris",
+      "Show the top AML risk scores with SHAP explanations",
+      "Any circular booking network signals?",
+      "Draft a SAR for listing #48213",
+    ],
+  },
+  {
+    id: "demand", name: "Tourism Demand Forecast",
+    tagline: "Infrastructure load intelligence", icon: "TrainFront",
+    accent: ARIA.c.orange, emoji: "🚇",
+    chips: [
+      "Forecast tourist-nights in central Athens for peak season",
+      "Which districts hit infrastructure stress in August?",
+      "Translate occupancy into waste & transit load",
+      "Run high/base/low scenario for summer 2026",
+    ],
+  },
+  {
+    id: "market", name: "Market Entry Advisor",
+    tagline: "Site selection & ROI intelligence", icon: "Hammer",
+    accent: ARIA.c.teal, emoji: "🏗️",
+    chips: [
+      "Which Paris arrondissements are supply-constrained?",
+      "Rank Athens neighbourhoods by projected STR yield",
+      "Where is regulatory risk too high to build?",
+      "Compare Paris vs Athens for a 50-unit portfolio",
+    ],
+  },
+];
+
+const AGENT_BY_ID = Object.fromEntries(AGENTS.map((a) => [a.id, a]));
+
+const MODELS = [
+  { group: "AI Models", items: [
+    { id: "gemini-2.5-pro", name: "Gemini 2.5 Pro", desc: "Deep analysis", default: true, ml: false },
+    { id: "gemini-2.5-flash", name: "Gemini 2.5 Flash", desc: "Fast responses", ml: false },
+  ]},
+  { group: "ARIA Analysis Engines", badge: "ML", items: [
+    { id: "xgboost-pricing-v1", name: "XGBoost Pricing v1", desc: "Price prediction · Paris + Athens", ml: true, chip: "XGBoost Pricing" },
+    { id: "lightgbm-risk-v1", name: "LightGBM Risk v1", desc: "Underpricing risk · Athens", ml: true, chip: "LightGBM Risk" },
+    { id: "prophet-forecast", name: "Prophet Forecast", desc: "Occupancy 30/90d", ml: true, chip: "Prophet Forecast" },
+  ]},
+];
+const MODEL_BY_ID = Object.fromEntries(MODELS.flatMap((g) => g.items).map((m) => [m.id, m]));
+
+/* ---------- Scripted demo scripts ----------
+   key: `${agentId}::${prompt}`  →  { trace:[{node,detail}], blocks:[...], brief:{title,kpis} } */
+
+const T = (node, detail) => ({ node, detail });
+
+const SCRIPTS = {
+  /* ============ HOST REVENUE ============ */
+  "host-revenue::Why is my listing underpriced vs the neighbourhood?": {
+    trace: [
+      T("Orchestrator", "routing to Host Revenue Intelligence"),
+      T("Pricing Agent", "loading XGBoost Pricing v1 · 23 comparables in dist_zone=centre"),
+      T("SHAP Explainer", "attributing top price drivers"),
+      T("Demand Agent", "cross-checking 90-day occupancy"),
+      T("Orchestrator", "composing brief"),
+    ],
+    blocks: [
+      { type: "text", text: "Your listing is priced at **€118/night**, but XGBoost Pricing v1 predicts a fair market value of **€147/night** for a comparable unit in `dist_zone=centre`. That's an **underpricing gap of €29 (+24.6%)** versus 23 nearby comparables with similar `accommodates` and `review_scores_rating`." },
+      { type: "chart", chart: { kind: "shap", title: "Top SHAP drivers of predicted price_eur" } },
+      { type: "text", text: "The model attributes most of the gap to three features: your central `dist_zone` (+€21 SHAP value) and `accommodates=4` (+€13) push fair value **up**, while a below-median `review_scores_rating` of 4.62 and short `host_tenure_days` pull it slightly **down**. None of these justify the current discount — you're leaving margin on the table, not pricing for risk." },
+      { type: "text", text: "**Recommendation:** lift base price to **€142** (a conservative 96% of predicted) and enable a weekend uplift. Estimated annual impact at your current 71% occupancy: **+€6,400/yr**. Want me to export a one-page pricing brief?" },
+    ],
+    brief: { title: "Pricing Brief — Listing underpricing analysis", kpis: [
+      { label: "Current price", value: "€118" }, { label: "Fair value (XGBoost)", value: "€147" },
+      { label: "Underpricing gap", value: "+€29 · 24.6%" }, { label: "Est. annual uplift", value: "+€6,400" },
+    ]},
+  },
+  "host-revenue::Simulate revenue: current vs recommended pricing": {
+    trace: [
+      T("Orchestrator", "routing to Host Revenue Intelligence"),
+      T("Pricing Agent", "XGBoost Pricing v1 · scenario grid"),
+      T("Demand Agent", "Prophet occupancy elasticity 30/90d"),
+      T("Orchestrator", "running revenue simulation"),
+    ],
+    blocks: [
+      { type: "text", text: "I simulated 12 months of revenue under your **current €118** flat rate versus the **recommended €142 base** with dynamic weekend pricing, holding the Prophet-forecast occupancy curve constant and applying a modest demand elasticity." },
+      { type: "chart", chart: { kind: "revsim", title: "Monthly revenue — current vs recommended (€)" } },
+      { type: "text", text: "Recommended pricing wins in every month, with the spread widening across the **Jun–Sep** peak where central-Paris demand is least price-sensitive. Cumulative gross revenue rises from **€30,600** to **€37,000** — a **+€6,400 (+20.9%)** uplift — while occupancy dips only 2.3pts, well inside the elasticity band. The trade is clearly favourable. I can export this as a PDF brief for your records." },
+    ],
+    brief: { title: "Revenue Simulation Brief", kpis: [
+      { label: "Current (12mo)", value: "€30,600" }, { label: "Recommended (12mo)", value: "€37,000" },
+      { label: "Net uplift", value: "+€6,400 · 20.9%" }, { label: "Occupancy delta", value: "−2.3 pts" },
+    ]},
+  },
+
+  /* ============ GENTRIFICATION ============ */
+  "gentrification::Which Athens neighbourhoods show displacement risk in the next 12 months?": {
+    trace: [
+      T("Orchestrator", "routing to Gentrification Early Warning"),
+      T("Density Agent", "STR density Δ across neighbourhood_stats"),
+      T("Risk Model", "LightGBM Risk v1 · 12-month displacement score"),
+      T("Geo Agent", "rendering choropleth"),
+      T("Orchestrator", "composing brief"),
+    ],
+    blocks: [
+      { type: "text", text: "Across the **14,242 Athens listings**, three central neighbourhoods cross the early-warning threshold (displacement risk score **> 0.70**) on a 12-month horizon. The signal is driven by accelerating STR density in `dist_zone=centre` combined with rising median `price_eur` and falling long-let supply." },
+      { type: "map", map: { city: "Athens", title: "Displacement risk by neighbourhood" } },
+      { type: "chart", chart: { kind: "riskbar", title: "12-month displacement risk score" } },
+      { type: "text", text: "**Koukaki (0.84)** is the sharpest mover — STR density up 31% year-on-year with a 19% `price_eur` increase. **Exarchia (0.76)** and **Plaka (0.71)** follow. By contrast, outer zones like Kypseli stay below 0.45. These three account for **62% of net new entire-home listings** in the period — the classic precursor to resident displacement. I'd recommend monitoring at monthly cadence and can draft a policy brief for the housing department." },
+    ],
+    brief: { title: "Displacement Early-Warning Brief — Athens", kpis: [
+      { label: "Neighbourhoods > 0.70", value: "3" }, { label: "Top risk: Koukaki", value: "0.84" },
+      { label: "STR density Δ (Koukaki)", value: "+31% YoY" }, { label: "Net new entire-homes", value: "62% in 3 areas" },
+    ]},
+  },
+  "gentrification::Show STR density growth by dist_zone": {
+    trace: [
+      T("Orchestrator", "routing to Gentrification Early Warning"),
+      T("Density Agent", "aggregating listings by dist_zone"),
+      T("Trend Agent", "fitting 24-month density trend"),
+      T("Orchestrator", "composing brief"),
+    ],
+    blocks: [
+      { type: "text", text: "Here's STR density growth indexed across the four `dist_zone` bands (centre / mid / outer / far) over the trailing 24 months, normalised to listings per 1,000 dwellings." },
+      { type: "chart", chart: { kind: "trend", title: "STR density index by dist_zone (24mo)" } },
+      { type: "text", text: "Growth is heavily concentrated: **`centre` density rose 28%** while **`far` was essentially flat (+3%)**. The `mid` zone (+16%) is the one to watch — it shows the steepest *second-derivative*, meaning displacement pressure is now migrating outward from the saturated core. This spatial diffusion pattern is the same one that preceded displacement in Plaka two years ago. Intervention thresholds should therefore be zone-specific rather than city-wide." },
+    ],
+    brief: { title: "STR Density Trend Brief — Athens by dist_zone", kpis: [
+      { label: "Centre growth (24mo)", value: "+28%" }, { label: "Mid growth", value: "+16%" },
+      { label: "Far growth", value: "+3%" }, { label: "Diffusion signal", value: "Centre → Mid" },
+    ]},
+  },
+
+  /* ============ CRIME ============ */
+  "crime::Show the top AML risk scores with SHAP explanations": {
+    trace: [
+      T("Orchestrator", "routing to STR Financial Crime Detection"),
+      T("Anomaly Agent", "Isolation Forest scoring 120,809 Paris listings"),
+      T("SHAP Explainer", "explaining top anomalies"),
+      T("AML Agent", "mapping to typologies"),
+      T("Orchestrator", "composing brief"),
+    ],
+    blocks: [
+      { type: "text", text: "Isolation Forest flagged **47 Paris listings** above the AML risk threshold (anomaly score **> 0.80**). Here are the five highest, with SHAP attributions tying each score to concrete features rather than a black-box flag." },
+      { type: "chart", chart: { kind: "anomaly", title: "Top AML anomaly scores · Paris" } },
+      { type: "text", text: "Listing **#48213 (0.94)** dominates: SHAP attributes the score to an implausible `host_tenure_days=11` paired with 9 active listings, near-zero `review_scores_rating` despite 140 bookings, and `price_eur` 3.2× the `dist_zone` median — a textbook **ghost-listing / layering** signature. Three of the five share a payment-cluster fingerprint suggesting a common controller. These warrant a Suspicious Activity Report. I can draft a SAR for #48213 on request." },
+    ],
+    brief: { title: "AML Anomaly Brief — Paris", kpis: [
+      { label: "Listings > 0.80", value: "47" }, { label: "Top score: #48213", value: "0.94" },
+      { label: "Shared payment cluster", value: "3 of 5" }, { label: "Typology", value: "Ghost-listing / layering" },
+    ]},
+  },
+  "crime::Draft a SAR for listing #48213": {
+    trace: [
+      T("Orchestrator", "routing to STR Financial Crime Detection"),
+      T("Anomaly Agent", "retrieving #48213 feature vector"),
+      T("AML Agent", "matching FATF typologies"),
+      T("Drafting Agent", "composing SAR narrative"),
+    ],
+    blocks: [
+      { type: "text", text: "**DRAFT — Suspicious Activity Report**\n\n**Subject:** Listing #48213 (entire home, `dist_zone=centre`, Paris). **Filing basis:** automated AML anomaly score **0.94** (Isolation Forest), SHAP-explained." },
+      { type: "chart", chart: { kind: "riskdist", title: "#48213 vs population risk distribution" } },
+      { type: "text", text: "**Narrative:** The account exhibits behaviour inconsistent with legitimate short-term letting. Within 11 days of registration (`host_tenure_days=11`) the host operated 9 simultaneous listings priced at 3.2× the neighbourhood median, recording 140 bookings yet near-zero `review_scores_rating` — a pattern consistent with **placement and layering of illicit funds** through fictitious occupancy. Payment metadata links the account to two further flagged listings under distinct identities. **Recommended action:** freeze payouts pending review and escalate to the FIU. *This is an AI-generated draft for analyst review and must be validated before filing.*" },
+    ],
+    brief: { title: "Suspicious Activity Report (DRAFT) — #48213", kpis: [
+      { label: "Anomaly score", value: "0.94" }, { label: "host_tenure_days", value: "11" },
+      { label: "Linked listings", value: "2" }, { label: "Status", value: "Analyst review" },
+    ]},
+  },
+
+  /* ============ DEMAND ============ */
+  "demand::Forecast tourist-nights in central Athens for peak season": {
+    trace: [
+      T("Orchestrator", "routing to Tourism Demand Forecast"),
+      T("Forecast Agent", "Prophet · tourist-nights, 90-day horizon"),
+      T("Confidence Agent", "80% prediction interval"),
+      T("Orchestrator", "composing brief"),
+    ],
+    blocks: [
+      { type: "text", text: "Prophet forecasts tourist-nights for `dist_zone=centre` Athens across the **Jun–Sep** peak, derived from occupancy × capacity across the 14,242-listing base with an 80% confidence band." },
+      { type: "chart", chart: { kind: "forecast", title: "Forecast tourist-nights · central Athens (80% CI)" } },
+      { type: "text", text: "The central forecast peaks at **~214,000 tourist-nights in August**, up **18% year-on-year**, with the confidence band widening to ±9% as the horizon extends. July and August together represent **47% of full-year demand** concentrated in the core. This level approaches the historical infrastructure-stress line for water and waste services. I can translate these nights into transit and waste load, or run high/base/low scenarios for summer 2026." },
+    ],
+    brief: { title: "Tourist-Nights Forecast Brief — Central Athens", kpis: [
+      { label: "August peak", value: "~214k nights" }, { label: "YoY growth", value: "+18%" },
+      { label: "Jul+Aug share", value: "47% of year" }, { label: "Confidence", value: "80% CI · ±9%" },
+    ]},
+  },
+  "demand::Which districts hit infrastructure stress in August?": {
+    trace: [
+      T("Orchestrator", "routing to Tourism Demand Forecast"),
+      T("Forecast Agent", "district-level August load"),
+      T("Load Agent", "mapping nights → water/waste/transit index"),
+      T("Geo Agent", "rendering stress map"),
+      T("Orchestrator", "composing brief"),
+    ],
+    blocks: [
+      { type: "text", text: "I converted the August tourist-night forecast into a composite **infrastructure stress index** (water, waste, transit) per district, where **1.0 = design capacity**. Four central districts are projected to exceed it." },
+      { type: "map", map: { city: "Athens", title: "August infrastructure stress index", metric: "stress" } },
+      { type: "chart", chart: { kind: "stress", title: "August infrastructure stress index by district" } },
+      { type: "text", text: "**Koukaki (1.28)** and **Plaka (1.21)** breach capacity most severely, driven by transit load at metro Akropoli and waste collection frequency. **Monastiraki (1.14)** and **Syntagma (1.06)** follow. Outer districts stay comfortably under 0.8. The actionable lever is staggered waste pickup and temporary transit frequency boosts in those four zones for the 6-week peak — far cheaper than capital works. Want the scenario run for summer 2026?" },
+    ],
+    brief: { title: "Infrastructure Stress Brief — Athens, August", kpis: [
+      { label: "Districts > 1.0", value: "4" }, { label: "Peak: Koukaki", value: "1.28" },
+      { label: "Primary driver", value: "Transit + waste" }, { label: "Recommended", value: "Staggered services" },
+    ]},
+  },
+
+  /* ============ MARKET ============ */
+  "market::Rank Athens neighbourhoods by projected STR yield": {
+    trace: [
+      T("Orchestrator", "routing to Market Entry Advisor"),
+      T("Yield Agent", "ADR × occupancy − cost across neighbourhood_stats"),
+      T("Risk Agent", "regulatory + saturation discount"),
+      T("Orchestrator", "composing brief"),
+    ],
+    blocks: [
+      { type: "text", text: "I ranked Athens neighbourhoods by **projected net STR yield** — XGBoost-predicted ADR × Prophet occupancy, less operating cost, then discounted for regulatory and saturation risk." },
+      { type: "chart", chart: { kind: "yield", title: "Projected net STR yield by neighbourhood (%)" } },
+      { type: "text", text: "**Pangrati (11.4%)** tops the ranking: strong ADR, below-core saturation, and no current licence moratorium. **Kypseli (10.6%)** and **Mets (9.8%)** follow as gentrifying-but-not-saturated plays. Core tourist zones like Plaka post lower *net* yield (7.1%) — high ADR is offset by saturation and regulatory risk. For a value-add thesis, Pangrati and Kypseli offer the best risk-adjusted entry. I can compare a 50-unit portfolio here against Paris." },
+    ],
+    brief: { title: "STR Yield Ranking Brief — Athens", kpis: [
+      { label: "Top: Pangrati", value: "11.4% net" }, { label: "Runner-up: Kypseli", value: "10.6%" },
+      { label: "Core (Plaka)", value: "7.1% net" }, { label: "Thesis", value: "Gentrifying, unsaturated" },
+    ]},
+  },
+  "market::Which Paris arrondissements are supply-constrained?": {
+    trace: [
+      T("Orchestrator", "routing to Market Entry Advisor"),
+      T("Supply Agent", "supply vs predicted demand · 120,809 listings"),
+      T("Gap Agent", "computing constraint index by arrondissement"),
+      T("Orchestrator", "composing brief"),
+    ],
+    blocks: [
+      { type: "text", text: "Across the **120,809 Paris listings** I computed a supply–demand gap per arrondissement: predicted demand (search + occupancy pressure) minus active entire-home supply. Positive = under-supplied." },
+      { type: "chart", chart: { kind: "supplygap", title: "Supply–demand gap by arrondissement (index)" } },
+      { type: "text", text: "The **19th (+0.41)** and **20th (+0.37)** are the most supply-constrained — robust demand growth with comparatively thin entire-home supply and lighter regulatory friction than the centre. The **11th (+0.22)** is a secondary opportunity. By contrast the **1st–4th** run deeply negative: saturated and regulation-capped. For new entry, the eastern arrondissements offer the cleanest constraint-driven upside. I can rank these by projected yield or compare against Athens next." },
+    ],
+    brief: { title: "Supply Constraint Brief — Paris", kpis: [
+      { label: "Most constrained: 19th", value: "+0.41" }, { label: "Runner-up: 20th", value: "+0.37" },
+      { label: "Avoid", value: "1st–4th (saturated)" }, { label: "Secondary", value: "11th · +0.22" },
+    ]},
+  },
+};
+
+/* Generic fallback for free-form / unscripted prompts */
+function genericScript(agent, prompt) {
+  return {
+    trace: [
+      T("Orchestrator", `routing to ${agent.name}`),
+      T("Retrieval Agent", "querying 135,051-listing master dataset"),
+      T("Analysis Agent", "applying XGBoost / LightGBM / SHAP"),
+      T("Orchestrator", "composing answer"),
+    ],
+    blocks: [
+      { type: "text", text: `Working from the ARIA master dataset (**135,051 listings × 96 columns** — Paris 120,809, Athens 14,242), here's how **${agent.name}** reads your question.\n\nI don't have a pre-scored brief for this exact query in demo mode, but the relevant signals — \`price_eur\`, \`dist_zone\`, \`risk score\`, and SHAP attributions — all point in a consistent direction. For a fully grounded, numbers-cited answer, switch off Demo mode in Settings and add a Gemini API key, or pick one of the suggested prompts to see a complete scripted analysis with charts.` },
+    ],
+    brief: { title: `${agent.name} — Analysis`, kpis: [
+      { label: "Master dataset", value: "135,051" }, { label: "Paris", value: "120,809" },
+      { label: "Athens", value: "14,242" }, { label: "Columns", value: "96" },
+    ]},
+  };
+}
+
+function getScript(agentId, prompt) {
+  return SCRIPTS[`${agentId}::${prompt}`] || null;
+}
+
+/* ---------- Seeded conversation history ---------- */
+const SEED_CONVERSATIONS = [
+  { id: "c1", agentId: "host-revenue", title: "Underpricing vs neighbourhood", group: "Today",
+    prompt: "Why is my listing underpriced vs the neighbourhood?" },
+  { id: "c2", agentId: "demand", title: "Central Athens peak forecast", group: "Today",
+    prompt: "Forecast tourist-nights in central Athens for peak season" },
+  { id: "c3", agentId: "crime", title: "Top AML risk scores", group: "Today",
+    prompt: "Show the top AML risk scores with SHAP explanations" },
+  { id: "c4", agentId: "gentrification", title: "Athens displacement risk", group: "Yesterday",
+    prompt: "Which Athens neighbourhoods show displacement risk in the next 12 months?" },
+  { id: "c5", agentId: "market", title: "Paris supply-constrained zones", group: "Yesterday",
+    prompt: "Which Paris arrondissements are supply-constrained?" },
+  { id: "c6", agentId: "host-revenue", title: "Revenue simulation", group: "Previous 7 days",
+    prompt: "Simulate revenue: current vs recommended pricing" },
+  { id: "c7", agentId: "demand", title: "August infrastructure stress", group: "Previous 7 days",
+    prompt: "Which districts hit infrastructure stress in August?" },
+  { id: "c8", agentId: "market", title: "Athens yield ranking", group: "Previous 7 days",
+    prompt: "Rank Athens neighbourhoods by projected STR yield" },
+];
+
+/* ---------- Theme palettes (dark = default Framer; light = Framer-faithful inversion) ---------- */
+const PALETTES = {
+  dark: {
+    canvas: "#090909", s1: "#141414", s2: "#1c1c1c", hair: "#262626", hairSoft: "#1a1a1a",
+    ink: "#ffffff", inkSoft: "#ededed", muted: "#999999", success: "#22c55e", scrollThumb: "#2a2a2a",
+  },
+  light: {
+    canvas: "#ffffff", s1: "#f4f4f5", s2: "#e9e9eb", hair: "#e4e4e7", hairSoft: "#efeff1",
+    ink: "#0b0b0c", inkSoft: "#26262b", muted: "#6b6b73", success: "#16a34a", scrollThumb: "#cfcfd4",
+  },
+};
+
+function applyTheme(mode) {
+  const p = PALETTES[mode] || PALETTES.dark;
+  Object.assign(ARIA.c, p); // accent-blue + gradients stay constant across themes
+  const r = document.documentElement.style;
+  r.setProperty("--canvas", p.canvas);
+  r.setProperty("--surface-1", p.s1);
+  r.setProperty("--surface-2", p.s2);
+  r.setProperty("--hairline", p.hair);
+  r.setProperty("--hairline-soft", p.hairSoft);
+  r.setProperty("--ink", p.ink);
+  r.setProperty("--ink-muted", p.muted);
+  r.setProperty("--scroll-thumb", p.scrollThumb);
+  document.documentElement.dataset.theme = mode;
+}
+
+Object.assign(window, {
+  ARIA, AGENTS, AGENT_BY_ID, MODELS, MODEL_BY_ID,
+  SCRIPTS, getScript, genericScript, SEED_CONVERSATIONS, PALETTES, applyTheme,
+});
+
+</script>
+<script type="text/babel" data-source="aria-charts.jsx">
+/* ARIA — charts: recharts dark-themed visualizations + SVG pseudo-choropleth map */
+
+const {
+  ResponsiveContainer, BarChart, Bar, LineChart, Line, AreaChart, Area, ComposedChart,
+  XAxis, YAxis, CartesianGrid, Tooltip, Cell, ReferenceLine,
+} = Recharts;
+
+const CC = ARIA.c;
+
+/* ---------- shared theme bits ---------- */
+const axisTick = { fill: CC.muted, fontSize: 11, letterSpacing: -0.2 };
+const gridStroke = CC.s2;
+
+function ChartTip({ active, payload, label, suffix = "", labelKey }) {
+  if (!active || !payload || !payload.length) return null;
+  return (
+    <div style={{
+      background: CC.s2, border: `1px solid ${CC.hair}`, borderRadius: 10,
+      padding: "8px 11px", fontSize: 12.5, color: CC.ink, boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
+      letterSpacing: -0.15,
+    }}>
+      {label != null && <div style={{ color: CC.muted, marginBottom: 4 }}>{labelKey ? payload[0].payload[labelKey] : label}</div>}
+      {payload.map((p, i) => (
+        <div key={i} style={{ display: "flex", alignItems: "center", gap: 7, marginTop: i ? 3 : 0 }}>
+          <span style={{ width: 8, height: 8, borderRadius: 2, background: p.color || p.fill || CC.ink }} />
+          <span style={{ color: CC.muted }}>{p.name}</span>
+          <span style={{ marginLeft: "auto", fontWeight: 600 }}>{typeof p.value === "number" ? p.value.toLocaleString() : p.value}{suffix}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ChartCard({ title, height = 248, children }) {
+  return (
+    <div className="aria-fadein" style={{
+      background: CC.s1, border: `1px solid ${CC.hair}`, borderRadius: 16,
+      padding: "16px 16px 8px", margin: "4px 0 2px",
+    }}>
+      {title && <div style={{ fontSize: 12.5, color: CC.muted, fontWeight: 500, marginBottom: 12, letterSpacing: -0.13 }}>{title}</div>}
+      <div style={{ width: "100%", height }}>
+        <ResponsiveContainer width="100%" height="100%">{children}</ResponsiveContainer>
+      </div>
+    </div>
+  );
+}
+
+/* ---------- datasets ---------- */
+const DATA = {
+  shap: [
+    { f: "dist_zone=centre", v: 21 },
+    { f: "accommodates=4", v: 13 },
+    { f: "neighbourhood_stats", v: 8 },
+    { f: "host_tenure_days", v: -4 },
+    { f: "review_scores_rating", v: -7 },
+  ],
+  revsim: [
+    { m: "Jan", cur: 2100, rec: 2380 }, { m: "Feb", cur: 2050, rec: 2330 },
+    { m: "Mar", cur: 2300, rec: 2680 }, { m: "Apr", cur: 2520, rec: 2990 },
+    { m: "May", cur: 2700, rec: 3260 }, { m: "Jun", cur: 2950, rec: 3680 },
+    { m: "Jul", cur: 3250, rec: 4120 }, { m: "Aug", cur: 3300, rec: 4180 },
+    { m: "Sep", cur: 2880, rec: 3520 }, { m: "Oct", cur: 2550, rec: 3010 },
+    { m: "Nov", cur: 2150, rec: 2450 }, { m: "Dec", cur: 2350, rec: 2700 },
+  ],
+  riskbar: [
+    { n: "Koukaki", v: 0.84 }, { n: "Exarchia", v: 0.76 }, { n: "Plaka", v: 0.71 },
+    { n: "Pangrati", v: 0.58 }, { n: "Mets", v: 0.49 }, { n: "Kypseli", v: 0.43 },
+  ],
+  trend: [
+    { q: "Q1", centre: 100, mid: 100, outer: 100, far: 100 },
+    { q: "Q2", centre: 107, mid: 104, outer: 102, far: 100 },
+    { q: "Q3", centre: 114, mid: 108, outer: 104, far: 101 },
+    { q: "Q4", centre: 119, mid: 112, outer: 105, far: 101 },
+    { q: "Q5", centre: 124, mid: 115, outer: 107, far: 102 },
+    { q: "Q6", centre: 128, mid: 116, outer: 108, far: 103 },
+  ],
+  anomaly: [
+    { n: "#48213", v: 0.94 }, { n: "#71902", v: 0.89 }, { n: "#33518", v: 0.86 },
+    { n: "#60274", v: 0.83 }, { n: "#19847", v: 0.81 },
+  ],
+  riskdist: [
+    { b: "0.0", v: 41 }, { b: "0.2", v: 28 }, { b: "0.4", v: 16 },
+    { b: "0.6", v: 8 }, { b: "0.8", v: 4 }, { b: "0.94", v: 1, flag: true },
+  ],
+  forecast: (() => {
+    const base = [120, 138, 176, 214, 168, 132];
+    const m = ["Apr", "May", "Jun", "Jul", "Aug", "Sep"];
+    return base.map((y, i) => ({
+      m: m[i], y, band: [Math.round(y * 0.91), Math.round(y * 1.09)], lo: Math.round(y * 0.91), hi: Math.round(y * 1.09),
+    }));
+  })(),
+  stress: [
+    { n: "Koukaki", v: 1.28 }, { n: "Plaka", v: 1.21 }, { n: "Monastiraki", v: 1.14 },
+    { n: "Syntagma", v: 1.06 }, { n: "Pangrati", v: 0.79 }, { n: "Kypseli", v: 0.62 },
+  ],
+  yield: [
+    { n: "Pangrati", v: 11.4 }, { n: "Kypseli", v: 10.6 }, { n: "Mets", v: 9.8 },
+    { n: "Exarchia", v: 8.9 }, { n: "Koukaki", v: 7.9 }, { n: "Plaka", v: 7.1 },
+  ],
+  supplygap: [
+    { n: "19th", v: 0.41 }, { n: "20th", v: 0.37 }, { n: "11th", v: 0.22 },
+    { n: "18th", v: 0.12 }, { n: "12th", v: 0.04 }, { n: "1st–4th", v: -0.28 },
+  ],
+};
+
+/* Athens neighbourhood layout for the pseudo-choropleth (risk + stress metrics) */
+const MAP_NODES = [
+  { name: "Koukaki", risk: 0.84, stress: 1.28, x: 1, y: 2 },
+  { name: "Plaka", risk: 0.71, stress: 1.21, x: 2, y: 2 },
+  { name: "Monastiraki", risk: 0.66, stress: 1.14, x: 2, y: 1 },
+  { name: "Syntagma", risk: 0.63, stress: 1.06, x: 3, y: 1 },
+  { name: "Exarchia", risk: 0.76, stress: 0.88, x: 3, y: 0 },
+  { name: "Mets", risk: 0.49, stress: 0.71, x: 3, y: 3 },
+  { name: "Pangrati", risk: 0.58, stress: 0.79, x: 4, y: 2 },
+  { name: "Kypseli", risk: 0.43, stress: 0.62, x: 1, y: 0 },
+  { name: "Gazi", risk: 0.52, stress: 0.74, x: 0, y: 1 },
+  { name: "Petralona", risk: 0.38, stress: 0.55, x: 0, y: 2 },
+  { name: "Ampelokipoi", risk: 0.31, stress: 0.48, x: 4, y: 0 },
+  { name: "Neos Kosmos", risk: 0.35, stress: 0.5, x: 2, y: 3 },
+];
+
+/* lerp current surface-2 -> coral by value 0..1 */
+function hexToRgb(h) {
+  const x = String(h).replace("#", "");
+  const n = x.length === 3 ? x.replace(/./g, (c) => c + c) : x;
+  return [parseInt(n.slice(0, 2), 16), parseInt(n.slice(2, 4), 16), parseInt(n.slice(4, 6), 16)];
+}
+function riskColor(t) {
+  t = Math.max(0, Math.min(1, t));
+  const a = hexToRgb(ARIA.c.s2), b = [255, 85, 119];
+  const e = Math.pow(t, 0.85);
+  const c = a.map((v, i) => Math.round(v + (b[i] - v) * e));
+  return `rgb(${c[0]},${c[1]},${c[2]})`;
+}
+
+/* ---------- map component ---------- */
+function NeighbourhoodMap({ city = "Athens", title, metric = "risk" }) {
+  const [hover, setHover] = React.useState(null);
+  const cell = 84, gap = 10, cols = 5, rows = 4;
+  const W = cols * cell + (cols - 1) * gap;
+  const H = rows * cell + (rows - 1) * gap;
+  const vals = MAP_NODES.map((n) => n[metric]);
+  const max = Math.max(...vals);
+  return (
+    <div className="aria-fadein" style={{
+      background: CC.s1, border: `1px solid ${CC.hair}`, borderRadius: 16, padding: 16, margin: "4px 0 2px",
+    }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 12 }}>
+        <div style={{ fontSize: 12.5, color: CC.muted, fontWeight: 500, letterSpacing: -0.13 }}>{title}</div>
+        <div style={{ fontSize: 11.5, color: CC.muted, display: "flex", alignItems: "center", gap: 7 }}>
+          low
+          <span style={{ width: 64, height: 7, borderRadius: 4, background: `linear-gradient(90deg, ${riskColor(0.05)}, ${riskColor(0.55)}, ${riskColor(1)})` }} />
+          high
+        </div>
+      </div>
+      <div style={{ position: "relative", width: "100%", display: "flex", justifyContent: "center" }}>
+        <svg viewBox={`-6 -6 ${W + 12} ${H + 12}`} width="100%" style={{ maxWidth: W + 12, overflow: "visible" }}>
+          {MAP_NODES.map((n) => {
+            const t = n[metric] / (metric === "stress" ? 1.3 : 1);
+            const px = n.x * (cell + gap), py = n.y * (cell + gap);
+            const active = hover && hover.name === n.name;
+            const over = metric === "stress" && n.stress > 1;
+            return (
+              <g key={n.name}
+                 onMouseEnter={() => setHover(n)} onMouseLeave={() => setHover(null)}
+                 style={{ cursor: "default" }}>
+                <rect x={px} y={py} width={cell} height={cell} rx={14}
+                  fill={riskColor(t)}
+                  stroke={active ? CC.ink : over ? "rgba(255,85,119,0.7)" : CC.hair}
+                  strokeWidth={active ? 1.5 : 1}
+                  style={{ transition: "stroke 0.15s, transform 0.15s", transformOrigin: `${px + cell / 2}px ${py + cell / 2}px`, transform: active ? "scale(1.04)" : "none" }} />
+                <text x={px + cell / 2} y={py + cell / 2 - 4} textAnchor="middle"
+                  fontSize="10.5" fontWeight="500" fill={t > 0.5 ? "#fff" : CC.muted}
+                  style={{ pointerEvents: "none", letterSpacing: -0.2 }}>{n.name}</text>
+                <text x={px + cell / 2} y={py + cell / 2 + 12} textAnchor="middle"
+                  fontSize="12" fontWeight="600" fill={t > 0.5 ? "#fff" : CC.ink}
+                  style={{ pointerEvents: "none" }}>{metric === "stress" ? n.stress.toFixed(2) : n.risk.toFixed(2)}</text>
+              </g>
+            );
+          })}
+        </svg>
+        {hover && (
+          <div style={{
+            position: "absolute", top: -2, right: -2, background: CC.s2, border: `1px solid ${CC.hair}`,
+            borderRadius: 10, padding: "8px 11px", fontSize: 12.5, pointerEvents: "none",
+            boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
+          }}>
+            <div style={{ fontWeight: 600 }}>{hover.name}</div>
+            <div style={{ color: CC.muted, marginTop: 2 }}>
+              {metric === "stress" ? `stress ${hover.stress.toFixed(2)}× capacity` : `risk score ${hover.risk.toFixed(2)}`}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ---------- chart dispatcher ---------- */
+function ChartBlock({ chart }) {
+  const { kind, title } = chart;
+
+  if (kind === "shap") {
+    return (
+      <ChartCard title={title} height={220}>
+        <BarChart data={DATA.shap} layout="vertical" margin={{ left: 8, right: 24, top: 4, bottom: 4 }} barCategoryGap="28%">
+          <CartesianGrid horizontal={false} stroke={gridStroke} />
+          <XAxis type="number" tick={axisTick} axisLine={false} tickLine={false} domain={[-10, 24]} />
+          <YAxis type="category" dataKey="f" tick={axisTick} axisLine={false} tickLine={false} width={132} />
+          <ReferenceLine x={0} stroke={CC.hair} />
+          <Tooltip cursor={{ fill: "rgba(255,255,255,0.03)" }} content={<ChartTip suffix=" €" />} />
+          <Bar dataKey="v" name="SHAP value" radius={4} isAnimationActive>
+            {DATA.shap.map((d, i) => <Cell key={i} fill={d.v >= 0 ? CC.violet : CC.muted} />)}
+          </Bar>
+        </BarChart>
+      </ChartCard>
+    );
+  }
+
+  if (kind === "revsim") {
+    return (
+      <ChartCard title={title}>
+        <LineChart data={DATA.revsim} margin={{ left: 4, right: 16, top: 6, bottom: 2 }}>
+          <CartesianGrid vertical={false} stroke={gridStroke} />
+          <XAxis dataKey="m" tick={axisTick} axisLine={false} tickLine={false} />
+          <YAxis tick={axisTick} axisLine={false} tickLine={false} width={42} />
+          <Tooltip cursor={{ stroke: CC.hair }} content={<ChartTip suffix=" €" />} />
+          <Line type="monotone" dataKey="cur" name="Current €118" stroke={CC.muted} strokeWidth={2} dot={false} />
+          <Line type="monotone" dataKey="rec" name="Recommended €142" stroke={CC.violet} strokeWidth={2.5} dot={false} />
+        </LineChart>
+      </ChartCard>
+    );
+  }
+
+  if (kind === "riskbar" || kind === "stress" || kind === "yield" || kind === "supplygap" || kind === "anomaly") {
+    const map = {
+      riskbar: { data: DATA.riskbar, color: CC.magenta, suffix: "", dom: [0, 1], ref: 0.7, refLabel: "warn 0.70" },
+      stress: { data: DATA.stress, color: CC.orange, suffix: "×", dom: [0, 1.4], ref: 1, refLabel: "capacity 1.0" },
+      yield: { data: DATA.yield, color: CC.teal, suffix: "%", dom: [0, 13] },
+      supplygap: { data: DATA.supplygap, color: CC.teal, suffix: "", dom: [-0.35, 0.5], ref: 0 },
+      anomaly: { data: DATA.anomaly, color: CC.coral, suffix: "", dom: [0, 1], ref: 0.8, refLabel: "AML 0.80" },
+    }[kind];
+    return (
+      <ChartCard title={title} height={232}>
+        <BarChart data={map.data} margin={{ left: 4, right: 16, top: 8, bottom: 2 }} barCategoryGap="30%">
+          <CartesianGrid vertical={false} stroke={gridStroke} />
+          <XAxis dataKey="n" tick={axisTick} axisLine={false} tickLine={false} interval={0} />
+          <YAxis tick={axisTick} axisLine={false} tickLine={false} width={40} domain={map.dom} />
+          {map.ref != null && <ReferenceLine y={map.ref} stroke="rgba(255,255,255,0.22)" strokeDasharray="4 4"
+            label={{ value: map.refLabel, fill: CC.muted, fontSize: 10.5, position: "right" }} />}
+          <Tooltip cursor={{ fill: "rgba(255,255,255,0.03)" }} content={<ChartTip suffix={map.suffix} />} />
+          <Bar dataKey="v" name={title} radius={[5, 5, 0, 0]} isAnimationActive>
+            {map.data.map((d, i) => {
+              let fill = map.color;
+              if (kind === "supplygap") fill = d.v >= 0 ? CC.teal : CC.muted;
+              if (kind === "anomaly" && d.n === "#48213") fill = CC.coral;
+              else if (kind === "anomaly") fill = "rgba(255,85,119,0.55)";
+              return <Cell key={i} fill={fill} />;
+            })}
+          </Bar>
+        </BarChart>
+      </ChartCard>
+    );
+  }
+
+  if (kind === "riskdist") {
+    return (
+      <ChartCard title={title} height={210}>
+        <BarChart data={DATA.riskdist} margin={{ left: 4, right: 16, top: 8, bottom: 2 }} barCategoryGap="22%">
+          <CartesianGrid vertical={false} stroke={gridStroke} />
+          <XAxis dataKey="b" tick={axisTick} axisLine={false} tickLine={false} />
+          <YAxis tick={axisTick} axisLine={false} tickLine={false} width={36} />
+          <Tooltip cursor={{ fill: "rgba(255,255,255,0.03)" }} content={<ChartTip suffix="%" />} />
+          <Bar dataKey="v" name="share of listings" radius={[5, 5, 0, 0]}>
+            {DATA.riskdist.map((d, i) => <Cell key={i} fill={d.flag ? CC.coral : "rgba(153,153,153,0.45)"} />)}
+          </Bar>
+        </BarChart>
+      </ChartCard>
+    );
+  }
+
+  if (kind === "trend") {
+    const lines = [
+      { k: "centre", c: CC.magenta }, { k: "mid", c: CC.orange },
+      { k: "outer", c: CC.muted }, { k: "far", c: "#555" },
+    ];
+    return (
+      <ChartCard title={title}>
+        <LineChart data={DATA.trend} margin={{ left: 4, right: 16, top: 6, bottom: 2 }}>
+          <CartesianGrid vertical={false} stroke={gridStroke} />
+          <XAxis dataKey="q" tick={axisTick} axisLine={false} tickLine={false} />
+          <YAxis tick={axisTick} axisLine={false} tickLine={false} width={40} domain={[95, 130]} />
+          <Tooltip cursor={{ stroke: CC.hair }} content={<ChartTip />} />
+          {lines.map((l) => (
+            <Line key={l.k} type="monotone" dataKey={l.k} name={l.k} stroke={l.c}
+              strokeWidth={l.k === "centre" ? 2.5 : 2} dot={false} />
+          ))}
+        </LineChart>
+      </ChartCard>
+    );
+  }
+
+  if (kind === "forecast") {
+    return (
+      <ChartCard title={title}>
+        <ComposedChart data={DATA.forecast} margin={{ left: 4, right: 16, top: 6, bottom: 2 }}>
+          <CartesianGrid vertical={false} stroke={gridStroke} />
+          <XAxis dataKey="m" tick={axisTick} axisLine={false} tickLine={false} />
+          <YAxis tick={axisTick} axisLine={false} tickLine={false} width={42} unit="k" />
+          <Tooltip cursor={{ stroke: CC.hair }} content={<ChartTip suffix="k nights" />} />
+          <Area type="monotone" dataKey="hi" name="upper 80%" stroke="none" fill="rgba(255,122,61,0.14)" isAnimationActive={false} />
+          <Area type="monotone" dataKey="lo" name="lower 80%" stroke="none" fill={CC.canvas || "#090909"} isAnimationActive={false} />
+          <Line type="monotone" dataKey="y" name="forecast" stroke={CC.orange} strokeWidth={2.5} dot={{ r: 2.5, fill: CC.orange }} />
+        </ComposedChart>
+      </ChartCard>
+    );
+  }
+
+  return null;
+}
+
+Object.assign(window, { ChartBlock, NeighbourhoodMap });
+
+</script>
+<script type="text/babel" data-source="aria-ui.jsx">
+/* ARIA — UI components: Icon, Sidebar, Composer, ModelPicker, Settings, ReasoningTrace, Message */
+
+const C = ARIA.c;
+
+/* ---------- Icon (lucide UMD → React svg) ---------- */
+function Icon({ name, size = 18, sw = 1.9, className, style, color }) {
+  const lib = window.lucide || {};
+  const node = lib.icons && lib.icons[name] || lib[name];
+  const children = node && (Array.isArray(node[2]) ? node[2] : node);
+  if (!children) return <span style={{ display: "inline-block", width: size, height: size }} />;
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24"
+    fill="none" stroke={color || "currentColor"} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round"
+    className={className} style={{ flexShrink: 0, ...style }}>
+      {children.map((ch, i) => React.createElement(ch[0], { key: i, ...ch[1] }))}
+    </svg>);
+
+}
+
+/* radial gradient tile for an agent identity */
+function AgentTile({ accent, icon, size = 34, radius = 11, iconSize }) {
+  return (
+    <div style={{
+      width: size, height: size, borderRadius: radius, flexShrink: 0,
+      display: "grid", placeItems: "center",
+      background: `radial-gradient(120% 120% at 30% 20%, ${accent} 0%, ${accent}cc 38%, ${accent}33 100%)`,
+      boxShadow: `inset 0 1px 0 rgba(255,255,255,0.25)`
+    }}>
+      <Icon name={icon} size={iconSize || Math.round(size * 0.5)} color="#fff" sw={2} />
+    </div>);
+
+}
+
+/* ---------- Sidebar ---------- */
+function SidebarRow({ active, children, onClick, onMouseEnter, onMouseLeave, style }) {
+  return (
+    <div onClick={onClick} onMouseEnter={onMouseEnter} onMouseLeave={onMouseLeave}
+    className="aria-focus" tabIndex={0}
+    style={{
+      display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", borderRadius: 10,
+      cursor: "pointer", background: active ? C.s2 : "transparent",
+      transition: "background 0.12s", userSelect: "none", ...style
+    }}
+    onKeyDown={(e) => {if (e.key === "Enter") onClick && onClick();}}>
+      {children}
+    </div>);
+
+}
+
+function Sidebar({
+  collapsed, onToggle, agents, activeAgentId, onPickAgent, onNewChat,
+  conversations, activeConvId, onPickConv, onRenameConv, onDeleteConv,
+  search, setSearch, onOpenSettings, apiKey, onApiKey
+}) {
+  const [hoverConv, setHoverConv] = React.useState(null);
+  const [editing, setEditing] = React.useState(null);
+  const [editVal, setEditVal] = React.useState("");
+
+  const groups = ["Today", "Yesterday", "Previous 7 days"];
+  const filtered = conversations.filter((c) =>
+  !search || c.title.toLowerCase().includes(search.toLowerCase()));
+
+  if (collapsed) {
+    return (
+      <div style={{
+        width: 60, flexShrink: 0, background: C.s1, borderRight: `1px solid ${C.hairSoft}`,
+        display: "flex", flexDirection: "column", alignItems: "center", padding: "14px 0", gap: 8
+      }}>
+        <button className="aria-focus" onClick={onToggle} title="Expand"
+        style={{ width: 36, height: 36, borderRadius: 9, display: "grid", placeItems: "center", color: C.muted }}>
+          <Icon name="PanelLeft" size={19} />
+        </button>
+        <button className="aria-focus" onClick={onNewChat} title="New chat"
+        style={{ width: 36, height: 36, borderRadius: 100, display: "grid", placeItems: "center", background: C.ink, color: C.canvas, marginTop: 4 }}>
+          <Icon name="Plus" size={19} sw={2.2} />
+        </button>
+        <div style={{ height: 10 }} />
+        <button className="aria-focus" onClick={onOpenSettings} title={apiKey ? "Access key set · Live" : "Add access key"}
+        style={{ width: 36, height: 36, borderRadius: 9, display: "grid", placeItems: "center", color: apiKey ? C.success : C.muted, border: `1px solid ${C.hair}` }}>
+          <Icon name="KeyRound" size={17} />
+        </button>
+        <div style={{ marginTop: "auto" }}>
+          <button className="aria-focus" onClick={onOpenSettings} title="Settings"
+          style={{ width: 36, height: 36, borderRadius: 9, display: "grid", placeItems: "center", color: C.muted }}>
+            <Icon name="Settings" size={19} />
+          </button>
+        </div>
+      </div>);
+
+  }
+
+  return (
+    <div style={{
+      width: 268, flexShrink: 0, background: C.s1, borderRight: `1px solid ${C.hairSoft}`,
+      display: "flex", flexDirection: "column", height: "100%"
+    }}>
+      {/* header */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 16px 8px" }}>
+        <button className="aria-focus" onClick={onNewChat} title="New chat"
+        style={{ display: "flex", alignItems: "center", gap: 9, padding: 0, borderRadius: 8 }}>
+          <div style={{
+            width: 26, height: 26, borderRadius: 8,
+            background: `conic-gradient(from 210deg, ${C.violet}, ${C.magenta}, ${C.coral}, ${C.orange}, ${C.violet})`,
+            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.3)"
+          }} />
+          <span style={{ fontSize: 17, fontWeight: 600, letterSpacing: -0.6 }}>ARIA</span>
+        </button>
+        <button className="aria-focus" onClick={onToggle} title="Collapse sidebar"
+        style={{ width: 32, height: 32, borderRadius: 8, display: "grid", placeItems: "center", color: C.muted }}>
+          <Icon name="PanelLeftClose" size={19} />
+        </button>
+      </div>
+
+      {/* new chat */}
+      <div style={{ padding: "4px 12px 8px" }}>
+        <button className="aria-focus" onClick={onNewChat}
+        style={{
+          width: "100%", display: "flex", alignItems: "center", gap: 9, justifyContent: "center",
+          background: C.ink, color: C.canvas, borderRadius: 100, padding: "9px 14px",
+          fontSize: 14, fontWeight: 600, letterSpacing: -0.2
+        }}>
+          <Icon name="Plus" size={17} sw={2.4} /> New chat
+        </button>
+      </div>
+
+      {/* search */}
+      <div style={{ padding: "2px 12px 10px" }}>
+        <div style={{ position: "relative" }}>
+          <Icon name="Search" size={15} color={C.muted}
+          style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)" }} />
+          <input className="aria-focus" value={search} onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search chats"
+          style={{
+            width: "100%", background: C.canvas, border: `1px solid ${C.hair}`, color: C.ink,
+            borderRadius: 10, padding: "8px 10px 8px 32px", fontSize: 13.5, outline: "none"
+          }} />
+        </div>
+      </div>
+
+      <div style={{ overflowY: "auto", flex: 1, padding: "0 8px 10px" }}>
+        {/* access key */}
+        <div style={{ fontSize: 12, color: C.muted, fontWeight: 500, letterSpacing: -0.13, padding: "8px 8px 6px" }}>ACCESS KEY</div>
+        <div style={{ padding: "0 8px 4px" }}>
+          <div style={{ position: "relative" }}>
+            <Icon name="KeyRound" size={14.5} color={apiKey ? C.success : C.muted}
+            style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)" }} />
+            <input className="aria-focus" type="password" value={apiKey || ""}
+            onChange={(e) => onApiKey(e.target.value)}
+            placeholder="Paste Vertex / Google key"
+            autoComplete="off" spellCheck={false}
+            style={{ width: "100%", background: C.canvas, border: `1px solid ${apiKey ? C.success + "55" : C.hair}`, color: C.ink, borderRadius: 10, padding: "9px 10px 9px 32px", fontSize: 13, outline: "none", letterSpacing: apiKey ? "2px" : "normal" }} />
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 7, padding: "8px 4px 2px", fontSize: 11.5, color: C.muted }}>
+            <span style={{ width: 6, height: 6, borderRadius: 4, background: apiKey ? C.success : C.orange, flexShrink: 0 }} />
+            {apiKey ? "Live · ARIA Agent" : "Demo mode — scripted responses"}
+          </div>
+        </div>
+
+        {/* conversations */}
+        <div style={{ fontSize: 12, color: C.muted, fontWeight: 500, letterSpacing: -0.13, padding: "16px 8px 6px" }}>CONVERSATIONS</div>
+        {groups.map((g) => {
+          const rows = filtered.filter((c) => c.group === g);
+          if (!rows.length) return null;
+          return (
+            <div key={g}>
+              <div style={{ fontSize: 11.5, color: C.muted, padding: "8px 8px 3px", letterSpacing: -0.1 }}>{g}</div>
+              {rows.map((c) => {
+                const a = AGENT_BY_ID[c.agentId];
+                const isEdit = editing === c.id;
+                return (
+                  <SidebarRow key={c.id} active={activeConvId === c.id}
+                  onClick={() => !isEdit && onPickConv(c.id)}
+                  onMouseEnter={() => setHoverConv(c.id)} onMouseLeave={() => setHoverConv(null)}
+                  style={{ paddingRight: 6 }}>
+                    <AgentTile accent={a.accent} icon={a.icon} size={22} radius={6} iconSize={12} />
+                    {isEdit ?
+                    <input autoFocus value={editVal} onChange={(e) => setEditVal(e.target.value)}
+                    onClick={(e) => e.stopPropagation()}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {onRenameConv(c.id, editVal.trim() || c.title);setEditing(null);}
+                      if (e.key === "Escape") setEditing(null);
+                    }}
+                    onBlur={() => {onRenameConv(c.id, editVal.trim() || c.title);setEditing(null);}}
+                    style={{ flex: 1, minWidth: 0, background: C.canvas, border: `1px solid ${C.blue}`, color: C.ink, borderRadius: 6, padding: "3px 6px", fontSize: 13, outline: "none" }} /> :
+
+                    <span style={{ fontSize: 13, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", flex: 1, color: activeConvId === c.id ? C.ink : C.muted }}>{c.title}</span>
+                    }
+                    {!isEdit && hoverConv === c.id &&
+                    <div style={{ display: "flex", gap: 2, marginLeft: "auto" }}>
+                        <button className="aria-focus" title="Rename"
+                      onClick={(e) => {e.stopPropagation();setEditing(c.id);setEditVal(c.title);}}
+                      style={{ width: 24, height: 24, borderRadius: 6, display: "grid", placeItems: "center", color: C.muted }}>
+                          <Icon name="Pencil" size={13.5} />
+                        </button>
+                        <button className="aria-focus" title="Delete"
+                      onClick={(e) => {e.stopPropagation();onDeleteConv(c.id);}}
+                      style={{ width: 24, height: 24, borderRadius: 6, display: "grid", placeItems: "center", color: C.muted }}>
+                          <Icon name="Trash2" size={13.5} />
+                        </button>
+                      </div>
+                    }
+                  </SidebarRow>);
+
+              })}
+            </div>);
+
+        })}
+        {!filtered.length &&
+        <div style={{ fontSize: 12.5, color: C.muted, padding: "10px 8px" }}>No chats match "{search}"</div>
+        }
+      </div>
+
+      {/* user card */}
+      <div style={{ borderTop: `1px solid ${C.hairSoft}`, padding: 10, display: "flex", alignItems: "center", gap: 10 }}>
+        <div style={{ width: 32, height: 32, borderRadius: 100, background: `linear-gradient(135deg, ${C.violet}, ${C.magenta})`, display: "grid", placeItems: "center", fontSize: 14, fontWeight: 600, color: "#fff", flexShrink: 0 }}>L</div>
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div style={{ fontSize: 13.5, fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>Luka Tcheishvili</div>
+          <div style={{ fontSize: 11.5, color: C.muted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>IE × KPMG Capstone</div>
+        </div>
+        <button className="aria-focus" onClick={onOpenSettings} title="Settings"
+        style={{ width: 32, height: 32, borderRadius: 8, display: "grid", placeItems: "center", color: C.muted }}>
+          <Icon name="Settings" size={18} />
+        </button>
+      </div>
+    </div>);
+
+}
+
+/* ---------- rich text (markdown-ish, streaming-safe) ---------- */
+function renderInline(text) {
+  const parts = text.split(/(\*\*[^*]+\*\*|`[^`]+`|\*[^*]+\*)/g);
+  return parts.map((p, i) => {
+    if (!p) return null;
+    if (p.startsWith("**") && p.endsWith("**")) return <strong key={i}>{p.slice(2, -2)}</strong>;
+    if (p.startsWith("`") && p.endsWith("`")) return <em key={i}>{p.slice(1, -1)}</em>;
+    if (p.startsWith("*") && p.endsWith("*") && p.length > 2) return <span key={i} style={{ color: C.muted }}>{p.slice(1, -1)}</span>;
+    return <React.Fragment key={i}>{p}</React.Fragment>;
+  });
+}
+function RichText({ text, cursor }) {
+  const paras = text.split("\n\n");
+  return (
+    <div className="aria-prose" style={{ fontSize: ARIA.ui && ARIA.ui.fontSize || 15, lineHeight: 1.62, letterSpacing: -0.15, color: C.inkSoft }}>
+      {paras.map((p, i) =>
+      <p key={i} style={{ margin: i ? "0 0 12px" : "0 0 12px", textWrap: "pretty" }}>
+          {renderInline(p)}
+          {cursor && i === paras.length - 1 && <span className="aria-cursor" />}
+        </p>
+      )}
+    </div>);
+
+}
+
+/* ---------- Reasoning trace ---------- */
+function ReasoningTrace({ steps, doneCount, running, elapsed }) {
+  const [open, setOpen] = React.useState(true);
+  const finished = !running && doneCount >= steps.length;
+  React.useEffect(() => {if (finished && ARIA.ui && ARIA.ui.traceCollapse) {const t = setTimeout(() => setOpen(false), 700);return () => clearTimeout(t);}}, [finished]);
+
+  return (
+    <div style={{ border: `1px solid ${C.hair}`, borderRadius: 12, background: C.s1, marginBottom: 14, overflow: "hidden" }}>
+      <button onClick={() => setOpen(!open)} className="aria-focus"
+      style={{ width: "100%", display: "flex", alignItems: "center", gap: 9, padding: "10px 13px", color: C.ink }}>
+        {running ?
+        <Icon name="Loader" size={15} className="aria-spin" color={C.blue} /> :
+        <Icon name="Sparkles" size={15} color={C.success} />}
+        <span style={{ fontSize: 13.5, fontWeight: 500 }}>
+          {finished ? `Ran ${steps.length} agents · ${elapsed}s` : "Reasoning"}
+        </span>
+        <Icon name="ChevronDown" size={16} color={C.muted}
+        style={{ marginLeft: "auto", transform: open ? "none" : "rotate(-90deg)", transition: "transform 0.2s" }} />
+      </button>
+      {open &&
+      <div style={{ padding: "2px 13px 12px 13px", borderTop: `1px solid ${C.hairSoft}` }}>
+          {steps.map((s, i) => {
+          const isDone = i < doneCount;
+          const isActive = i === doneCount && running;
+          const shown = i <= doneCount;
+          if (!shown) return null;
+          return (
+            <div key={i} className="aria-fadeup" style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "7px 0" }}>
+                <div style={{ width: 18, marginTop: 1, display: "grid", placeItems: "center" }}>
+                  {isDone ? <Icon name="Check" size={14} color={C.success} sw={2.4} /> :
+                isActive ? <Icon name="Loader" size={14} className="aria-spin" color={C.blue} /> :
+                <span style={{ width: 6, height: 6, borderRadius: 4, background: C.muted, opacity: 0.5 }} />}
+                </div>
+                <div style={{ fontSize: 13, lineHeight: 1.4 }}>
+                  <span style={{ fontWeight: 500, color: isDone || isActive ? C.ink : C.muted }}>{s.node}</span>
+                  <span style={{ color: C.muted }}> → {s.detail}</span>
+                </div>
+              </div>);
+
+        })}
+        </div>
+      }
+    </div>);
+
+}
+
+Object.assign(window, { Icon, AgentTile, Sidebar, RichText, renderInline, ReasoningTrace });
+</script>
+<script type="text/babel" data-source="aria-ui2.jsx">
+/* ARIA — UI part 2: Composer, ModelPicker, Settings, EmptyState, PDF brief */
+
+const C2 = ARIA.c;
+
+/* ---------- Model picker (opens upward) ---------- */
+function ModelPicker({ modelId, onPick }) {
+  const [open, setOpen] = React.useState(false);
+  const ref = React.useRef(null);
+  const cur = MODEL_BY_ID[modelId];
+  React.useEffect(() => {
+    const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, []);
+  return (
+    <div ref={ref} style={{ position: "relative" }}>
+      <button className="aria-focus" onClick={() => setOpen((o) => !o)}
+        style={{
+          display: "flex", alignItems: "center", gap: 6, padding: "6px 10px", borderRadius: 100,
+          background: open ? C2.s2 : "transparent", color: C2.ink, fontSize: 13, fontWeight: 500,
+          transition: "background 0.12s",
+        }}>
+        {cur.ml ? <Icon name="Cpu" size={14.5} color={C2.muted} /> : <Icon name="Sparkles" size={14.5} color={C2.muted} />}
+        {cur.name}
+        <Icon name="ChevronDown" size={14} color={C2.muted} style={{ transform: open ? "rotate(180deg)" : "none", transition: "transform 0.18s" }} />
+      </button>
+      {open && (
+        <div className="aria-scalein" style={{
+          position: "absolute", bottom: "calc(100% + 8px)", left: 0, width: 296, transformOrigin: "bottom left",
+          background: C2.s2, border: `1px solid ${C2.hair}`, borderRadius: 14, padding: 6,
+          boxShadow: "0 -1px 0 rgba(255,255,255,0.06) inset, 0 18px 50px rgba(0,0,0,0.6)", zIndex: 40,
+        }}>
+          {MODELS.map((g) => (
+            <div key={g.group}>
+              <div style={{ display: "flex", alignItems: "center", gap: 7, padding: "9px 10px 5px", fontSize: 11.5, color: C2.muted, fontWeight: 500, letterSpacing: -0.1 }}>
+                {g.group}
+                {g.badge && <span style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: 0.3, color: C2.teal, border: `1px solid ${C2.teal}55`, borderRadius: 5, padding: "1px 5px" }}>{g.badge}</span>}
+              </div>
+              {g.items.map((m) => (
+                <button key={m.id} className="aria-focus" onClick={() => { onPick(m.id); setOpen(false); }}
+                  style={{
+                    width: "100%", display: "flex", alignItems: "center", gap: 11, padding: "9px 10px", borderRadius: 10,
+                    background: modelId === m.id ? C2.s1 : "transparent", textAlign: "left", color: C2.ink,
+                  }}
+                  onMouseEnter={(e) => { if (modelId !== m.id) e.currentTarget.style.background = "rgba(255,255,255,0.04)"; }}
+                  onMouseLeave={(e) => { if (modelId !== m.id) e.currentTarget.style.background = "transparent"; }}>
+                  {m.ml ? <Icon name="Cpu" size={16} color={C2.muted} /> : <Icon name="Sparkles" size={16} color={C2.muted} />}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13.5, fontWeight: 500 }}>{m.name}{m.default && <span style={{ color: C2.muted, fontWeight: 400 }}> · default</span>}</div>
+                    <div style={{ fontSize: 12, color: C2.muted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.desc}</div>
+                  </div>
+                  {modelId === m.id && <Icon name="Check" size={15} color={C2.blue} sw={2.4} />}
+                </button>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ---------- Agent picker (opens upward, mirrors ModelPicker) ---------- */
+function AgentPicker({ agentId, agents, onPick }) {
+  const [open, setOpen] = React.useState(false);
+  const ref = React.useRef(null);
+  const cur = agents.find((a) => a.id === agentId) || agents[0];
+  React.useEffect(() => {
+    const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, []);
+  return (
+    <div ref={ref} style={{ position: "relative" }}>
+      <button className="aria-focus" onClick={() => setOpen((o) => !o)}
+        style={{
+          display: "flex", alignItems: "center", gap: 8, padding: "5px 10px 5px 6px", borderRadius: 100,
+          background: open ? C2.s2 : "transparent", color: C2.ink, fontSize: 13, fontWeight: 500,
+          transition: "background 0.12s",
+        }}>
+        <AgentTile accent={cur.accent} icon={cur.icon} size={22} radius={7} iconSize={12} />
+        {cur.name}
+        <Icon name="ChevronDown" size={14} color={C2.muted} style={{ transform: open ? "rotate(180deg)" : "none", transition: "transform 0.18s" }} />
+      </button>
+      {open && (
+        <div className="aria-scalein" style={{
+          position: "absolute", bottom: "calc(100% + 8px)", left: 0, width: 322, transformOrigin: "bottom left",
+          background: C2.s2, border: `1px solid ${C2.hair}`, borderRadius: 14, padding: 6,
+          boxShadow: "0 -1px 0 rgba(255,255,255,0.06) inset, 0 18px 50px rgba(0,0,0,0.6)", zIndex: 40,
+        }}>
+          <div style={{ padding: "9px 10px 5px", fontSize: 11.5, color: C2.muted, fontWeight: 500, letterSpacing: -0.1 }}>AGENTS</div>
+          {agents.map((a) => (
+            <button key={a.id} className="aria-focus" onClick={() => { onPick(a.id); setOpen(false); }}
+              style={{
+                width: "100%", display: "flex", alignItems: "center", gap: 11, padding: "9px 10px", borderRadius: 10,
+                background: agentId === a.id ? C2.s1 : "transparent", textAlign: "left", color: C2.ink,
+              }}
+              onMouseEnter={(e) => { if (agentId !== a.id) e.currentTarget.style.background = "rgba(255,255,255,0.04)"; }}
+              onMouseLeave={(e) => { if (agentId !== a.id) e.currentTarget.style.background = "transparent"; }}>
+              <AgentTile accent={a.accent} icon={a.icon} size={28} radius={8} iconSize={15} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13.5, fontWeight: 500 }}>{a.name}</div>
+                <div style={{ fontSize: 12, color: C2.muted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{a.tagline}</div>
+              </div>
+              {agentId === a.id && <Icon name="Check" size={15} color={C2.blue} sw={2.4} />}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ---------- Composer ---------- */
+const Composer = React.forwardRef(function Composer({
+  agent, agents, onPickAgent, value, setValue, onSend, streaming, onStop, modelId, setModelId,
+}, ref) {
+  const taRef = ref || React.useRef(null);
+  const engine = MODEL_BY_ID[modelId];
+  const grow = (el) => { if (!el) return; el.style.height = "auto"; el.style.height = Math.min(el.scrollHeight, 200) + "px"; };
+
+  return (
+    <div style={{ width: "100%", maxWidth: 768, margin: "0 auto" }}>
+      <div style={{
+        background: C2.s1, border: `1px solid ${C2.hair}`, borderRadius: 24, padding: "8px 8px 8px 8px",
+        boxShadow: "0 8px 30px rgba(0,0,0,0.35)",
+      }}>
+        <div style={{ display: "flex", alignItems: "flex-end", gap: 6 }}>
+          <button className="aria-focus" title="Attach" tabIndex={-1}
+            style={{ width: 38, height: 38, borderRadius: 100, display: "grid", placeItems: "center", color: C2.muted, flexShrink: 0 }}>
+            <Icon name="Plus" size={20} />
+          </button>
+          <textarea ref={taRef} value={value} rows={1}
+            onChange={(e) => { setValue(e.target.value); grow(e.target); }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); onSend(); }
+            }}
+            placeholder={`Ask ${agent.name}…`}
+            style={{
+              flex: 1, background: "transparent", border: "none", outline: "none", color: C2.ink,
+              fontSize: 15.5, lineHeight: 1.45, padding: "9px 4px", maxHeight: 200, minHeight: 22,
+            }} />
+          <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
+            {streaming ? (
+              <button className="aria-focus" onClick={onStop} title="Stop generating"
+                style={{ width: 38, height: 38, borderRadius: 100, display: "grid", placeItems: "center", background: C2.ink, color: C2.canvas }}>
+                <span style={{ width: 11, height: 11, borderRadius: 3, background: C2.canvas }} />
+              </button>
+            ) : (
+              <button className="aria-focus" onClick={onSend} disabled={!value.trim()} title="Send"
+                style={{
+                  width: 38, height: 38, borderRadius: 100, display: "grid", placeItems: "center",
+                  background: value.trim() ? C2.ink : C2.s2, color: value.trim() ? C2.canvas : C2.muted,
+                  transition: "background 0.15s", cursor: value.trim() ? "pointer" : "default",
+                }}>
+                <Icon name="ArrowUp" size={19} sw={2.4} />
+              </button>
+            )}
+          </div>
+        </div>
+        {/* bottom controls row */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8, rowGap: 6, flexWrap: "wrap", padding: "4px 4px 2px 4px" }}>
+          <AgentPicker agentId={agent.id} agents={agents} onPick={onPickAgent} />
+          <span style={{ width: 1, height: 18, background: C2.hair }} />
+          <ModelPicker modelId={modelId} onPick={setModelId} />
+          {engine.ml && (
+            <div className="aria-scalein" style={{
+              display: "flex", alignItems: "center", gap: 6, padding: "4px 9px", borderRadius: 100,
+              background: C2.s2, border: `1px solid ${C2.hair}`, fontSize: 12, color: C2.ink,
+            }}>
+              <span style={{ width: 6, height: 6, borderRadius: 4, background: C2.teal }} />
+              Engine: {engine.chip}
+              <button onClick={() => setModelId("gemini-2.5-pro")} title="Remove engine"
+                style={{ display: "grid", placeItems: "center", color: C2.muted, marginLeft: 1 }}>
+                <Icon name="X" size={13} />
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+      <div style={{ textAlign: "center", fontSize: 11.5, color: C2.muted, marginTop: 9, letterSpacing: -0.1 }}>
+        ARIA can make mistakes. Verify critical pricing decisions. — IE × KPMG Capstone 2026
+      </div>
+    </div>
+  );
+});
+
+/* ---------- Empty state ---------- */
+function EmptyState({ agent, onChip, composer }) {
+  return (
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", padding: "20px 24px 36px", overflowY: "auto" }}>
+      <div style={{ width: "100%", maxWidth: 768, display: "flex", flexDirection: "column", alignItems: "center" }}>
+        <AgentTile accent={agent.accent} icon={agent.icon} size={58} radius={18} iconSize={28} />
+        <div style={{ fontSize: 15, fontWeight: 500, marginTop: 16, letterSpacing: -0.2 }}>{agent.name}</div>
+        <div style={{ fontSize: 13.5, color: C2.muted, marginTop: 3 }}>{agent.tagline}</div>
+        <h1 style={{ fontSize: 32, fontWeight: 500, letterSpacing: -1, lineHeight: 1.13, margin: "26px 0 26px", textAlign: "center" }}>
+          What should we analyze today?
+        </h1>
+        <div style={{ width: "100%", marginBottom: 22 }}>{composer}</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, width: "100%", maxWidth: 768 }}>
+          {agent.chips.map((c) => (
+            <button key={c} className="aria-focus" onClick={() => onChip(c)}
+              style={{
+                display: "flex", alignItems: "center", gap: 10, textAlign: "left", padding: "13px 15px",
+                borderRadius: 14, background: C2.s1, border: `1px solid ${C2.hair}`, color: C2.inkSoft,
+                fontSize: 13.5, lineHeight: 1.35, transition: "background 0.13s, border-color 0.13s",
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = C2.s2; e.currentTarget.style.borderColor = "#333"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = C2.s1; e.currentTarget.style.borderColor = C2.hair; }}>
+              <Icon name="ArrowUpRight" size={15} color={agent.accent} style={{ marginTop: 1 }} />
+              <span style={{ textWrap: "pretty" }}>{c}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ---------- Settings modal ---------- */
+function SettingsModal({ open, onClose, settings, setSettings }) {
+  const [tab, setTab] = React.useState("api");
+  const [testState, setTestState] = React.useState("idle"); // idle | testing | ok | fail
+  if (!open) return null;
+
+  const set = (k, v) => setSettings((s) => ({ ...s, [k]: v }));
+  const testConn = () => {
+    setTestState("testing");
+    setTimeout(() => setTestState(settings.apiKey.trim().length > 12 ? "ok" : "fail"), 1100);
+  };
+
+  const field = { background: C2.canvas, border: `1px solid ${C2.hair}`, color: C2.ink, borderRadius: 10, padding: "10px 12px", fontSize: 14, outline: "none", width: "100%" };
+  const labelS = { fontSize: 12.5, color: C2.muted, fontWeight: 500, marginBottom: 7, display: "block", letterSpacing: -0.1 };
+
+  return (
+    <div className="aria-fadein no-print" onMouseDown={onClose}
+      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(3px)", display: "grid", placeItems: "center", zIndex: 100, padding: 24 }}>
+      <div className="aria-scalein" onMouseDown={(e) => e.stopPropagation()}
+        style={{
+          width: 560, maxWidth: "100%", maxHeight: "86vh", overflow: "hidden", display: "flex", flexDirection: "column",
+          background: C2.s2, borderRadius: 18, border: `1px solid ${C2.hair}`,
+          boxShadow: "0 -1px 0 rgba(255,255,255,0.10) inset, 0 30px 80px rgba(0,0,0,0.7)",
+        }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 18px", borderBottom: `1px solid ${C2.hairSoft}` }}>
+          <div style={{ fontSize: 16, fontWeight: 600, letterSpacing: -0.3 }}>Settings</div>
+          <button className="aria-focus" onClick={onClose} style={{ width: 32, height: 32, borderRadius: 8, display: "grid", placeItems: "center", color: C2.muted }}>
+            <Icon name="X" size={18} />
+          </button>
+        </div>
+        <div style={{ display: "flex", gap: 4, padding: "12px 18px 0" }}>
+          {[["api", "API & Models"], ["about", "About"]].map(([k, l]) => (
+            <button key={k} onClick={() => setTab(k)} className="aria-focus"
+              style={{ padding: "7px 13px", borderRadius: 100, fontSize: 13.5, fontWeight: 500,
+                background: tab === k ? C2.s1 : "transparent", color: tab === k ? C2.ink : C2.muted }}>{l}</button>
+          ))}
+        </div>
+
+        <div style={{ padding: 18, overflowY: "auto" }}>
+          {tab === "api" ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <div>
+                <label style={labelS}>Google API key (Vertex AI / Gemini)</label>
+                <input type="password" value={settings.apiKey} onChange={(e) => { set("apiKey", e.target.value); setTestState("idle"); }}
+                  placeholder="AIza…" className="aria-focus" style={field} />
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <div>
+                  <label style={labelS}>GCP project ID</label>
+                  <input value={settings.project} onChange={(e) => set("project", e.target.value)} placeholder="aria-capstone-2026" className="aria-focus" style={field} />
+                </div>
+                <div>
+                  <label style={labelS}>Region</label>
+                  <select value={settings.region} onChange={(e) => set("region", e.target.value)} className="aria-focus" style={{ ...field, appearance: "none" }}>
+                    <option>europe-west1</option><option>europe-west4</option><option>us-central1</option>
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label style={labelS}>Default model</label>
+                <select value={settings.defaultModel} onChange={(e) => set("defaultModel", e.target.value)} className="aria-focus" style={{ ...field, appearance: "none" }}>
+                  <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
+                  <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+                </select>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <button onClick={testConn} className="aria-focus"
+                  style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 16px", borderRadius: 100, background: C2.s1, border: `1px solid ${C2.hair}`, color: C2.ink, fontSize: 13.5, fontWeight: 500 }}>
+                  {testState === "testing" && <Icon name="Loader" size={15} className="aria-spin" />}
+                  Test connection
+                </button>
+                {testState === "ok" && <span style={{ display: "flex", alignItems: "center", gap: 6, color: C2.success, fontSize: 13.5 }}><Icon name="CircleCheck" size={16} /> Connected</span>}
+                {testState === "fail" && <span style={{ display: "flex", alignItems: "center", gap: 6, color: C2.coral, fontSize: 13.5 }}><Icon name="CircleX" size={16} /> Failed — check key</span>}
+              </div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "13px 14px", borderRadius: 12, background: C2.s1, border: `1px solid ${C2.hair}` }}>
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 500 }}>Demo mode</div>
+                  <div style={{ fontSize: 12.5, color: C2.muted, marginTop: 2 }}>{settings.demoMode ? "Scripted responses (no API calls)" : "Live Gemini API responses"}</div>
+                </div>
+                <button onClick={() => set("demoMode", !settings.demoMode)} className="aria-focus"
+                  style={{ width: 46, height: 27, borderRadius: 100, background: settings.demoMode ? C2.s2 : C2.success, border: `1px solid ${C2.hair}`, position: "relative", transition: "background 0.18s", flexShrink: 0 }}>
+                  <span style={{ position: "absolute", top: 2, left: settings.demoMode ? 2 : 21, width: 21, height: 21, borderRadius: 100, background: C2.ink, transition: "left 0.18s" }} />
+                </button>
+              </div>
+              <div style={{ fontSize: 12, color: C2.muted, lineHeight: 1.5 }}>
+                Plain API keys call the Generative Language endpoint directly from the browser. True Vertex AI OAuth is out of MVP scope — the key field accepts a Gemini API key regardless.
+              </div>
+            </div>
+          ) : (
+            <div style={{ fontSize: 14.5, lineHeight: 1.65, color: C2.inkSoft }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 11, marginBottom: 14 }}>
+                <div style={{ width: 30, height: 30, borderRadius: 9, background: `conic-gradient(from 210deg, ${C2.violet}, ${C2.magenta}, ${C2.coral}, ${C2.orange}, ${C2.violet})` }} />
+                <span style={{ fontSize: 17, fontWeight: 600, letterSpacing: -0.4 }}>ARIA</span>
+              </div>
+              <p style={{ marginTop: 0 }}>
+                <strong>ARIA</strong> (Airbnb Revenue Intelligence &amp; Analytics) is a multi-agent platform that unifies five proposed KPMG AI systems — host revenue, gentrification early-warning, STR financial-crime detection, tourism demand forecasting, and market-entry advisory — over one master dataset of <strong>135,051 listings × 96 columns</strong> (Paris 120,809 · Athens 14,242), with XGBoost pricing, LightGBM risk, and SHAP explainability.
+              </p>
+              <p style={{ color: C2.muted, marginBottom: 0 }}>IE Business School × KPMG Spain — Capstone 2026.</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ---------- PDF brief export ---------- */
+function exportBrief(agent, prompt, brief) {
+  const win = window.open("", "_blank", "width=820,height=1000");
+  if (!win) return;
+  const kpis = brief.kpis.map((k) => `
+    <div style="border:1px solid #e3e3e3;border-radius:12px;padding:14px 16px">
+      <div style="font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:#888">${k.label}</div>
+      <div style="font-size:22px;font-weight:600;margin-top:6px;letter-spacing:-.5px">${k.value}</div>
+    </div>`).join("");
+  win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${brief.title}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:Inter,system-ui,sans-serif;color:#111;padding:54px 60px;letter-spacing:-.2px}
+    .tag{display:inline-flex;align-items:center;gap:8px;font-size:12px;color:#666;border:1px solid #e3e3e3;border-radius:100px;padding:5px 12px}
+    h1{font-size:30px;font-weight:600;letter-spacing:-1px;margin:18px 0 6px;line-height:1.15}
+    .meta{color:#888;font-size:13px;margin-bottom:26px}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:28px}
+    .q{font-size:14px;color:#444;background:#f6f6f6;border-radius:12px;padding:14px 16px;margin-bottom:20px}
+    .foot{margin-top:40px;padding-top:18px;border-top:1px solid #e3e3e3;color:#999;font-size:11.5px;display:flex;justify-content:space-between}
+    @media print{body{padding:32px 40px}}
+  </style></head><body>
+    <span class="tag">● ARIA · ${agent.name}</span>
+    <h1>${brief.title}</h1>
+    <div class="meta">Generated ${new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })} · Demo brief</div>
+    <div class="q"><strong>Query:</strong> ${prompt}</div>
+    <div class="grid">${kpis}</div>
+    <p style="color:#555;font-size:13.5px;line-height:1.6">Grounded in the ARIA master dataset — 135,051 listings × 96 columns (Paris 120,809 · Athens 14,242). Models: XGBoost pricing, LightGBM risk classification, Prophet occupancy forecasting, SHAP explainability, Optuna tuning.</p>
+    <div class="foot"><span>IE Business School × KPMG Spain — Capstone 2026</span><span>ARIA Platform · Confidential demo</span></div>
+    <script>setTimeout(()=>window.print(),350)<\/script>
+  
+<script>
+  (function () {
+    function fitToViewport() {
+      try {
+        var frame = window.frameElement;
+        if (!frame) return;
+        frame.style.width = "100vw";
+        frame.style.height = window.parent.innerHeight + "px";
+        frame.style.minHeight = window.parent.innerHeight + "px";
+      } catch (error) {}
+    }
+    fitToViewport();
+    window.addEventListener("resize", fitToViewport);
+  })();
+</script>
+
+</body></html>`);
+  win.document.close();
+}
+
+Object.assign(window, { ModelPicker, AgentPicker, Composer, EmptyState, SettingsModal, exportBrief });
+
+</script>
+<script type="text/babel" data-source="aria-main.jsx">
+/* ARIA — app root: orchestration, streaming engine, hybrid Gemini call */
+
+const CA = ARIA.c;
+const { useState, useRef, useEffect, useCallback } = React;
+
+const elapsedFor = (steps) => (steps.length * 0.74 + 0.4).toFixed(1);
+
+/* build a fully-rendered (done) assistant message from a script */
+function builtMessage(agentId, prompt) {
+  const s = getScript(agentId, prompt) || genericScript(AGENT_BY_ID[agentId], prompt);
+  return {
+    role: "assistant", agentId, prompt, trace: s.trace, blocks: s.blocks, brief: s.brief,
+    traceDone: s.trace.length, traceRunning: false, progress: { block: s.blocks.length, text: "" },
+    done: true, elapsed: elapsedFor(s.trace),
+  };
+}
+
+/* ---------- answer renderer ---------- */
+function AnswerView({ m, live, onCopy, onRegen, onExport }) {
+  const prog = m.progress || { block: m.blocks.length, text: "" };
+  const blocks = [];
+  for (let bi = 0; bi < m.blocks.length; bi++) {
+    const block = m.blocks[bi];
+    if (bi > prog.block) break;
+    if (block.type === "text") {
+      const full = bi < prog.block || m.done;
+      const text = full ? block.text : prog.text;
+      if (!text) continue;
+      blocks.push(<RichText key={bi} text={text} cursor={!full && live} />);
+    } else if (block.type === "chart") {
+      blocks.push(<ChartBlock key={bi} chart={block.chart} />);
+    } else if (block.type === "map") {
+      blocks.push(<NeighbourhoodMap key={bi} {...block.map} />);
+    }
+  }
+  return (
+    <div>
+      <ReasoningTrace steps={m.trace} doneCount={m.traceDone} running={m.traceRunning} elapsed={m.elapsed} />
+      {blocks}
+      {m.done && (
+        <div className="aria-fadein no-print" style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 12 }}>
+          <ActionBtn icon="Copy" label="Copy" onClick={onCopy} />
+          <ActionBtn icon="RefreshCw" label="Regenerate" onClick={onRegen} />
+          <button onClick={onExport} className="aria-focus"
+            style={{ display: "flex", alignItems: "center", gap: 7, padding: "7px 13px", borderRadius: 100, background: CA.s1, border: `1px solid ${CA.hair}`, color: CA.ink, fontSize: 13, fontWeight: 500, marginLeft: 4 }}
+            onMouseEnter={(e) => e.currentTarget.style.background = CA.s2}
+            onMouseLeave={(e) => e.currentTarget.style.background = CA.s1}>
+            <Icon name="Download" size={15} /> Export PDF Brief
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+function ActionBtn({ icon, label, onClick }) {
+  const [done, setDone] = useState(false);
+  return (
+    <button title={label} className="aria-focus"
+      onClick={() => { onClick && onClick(); if (icon === "Copy") { setDone(true); setTimeout(() => setDone(false), 1200); } }}
+      style={{ width: 34, height: 34, borderRadius: 8, display: "grid", placeItems: "center", color: CA.muted }}
+      onMouseEnter={(e) => { e.currentTarget.style.background = CA.s1; e.currentTarget.style.color = CA.ink; }}
+      onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = CA.muted; }}>
+      <Icon name={done ? "Check" : icon} size={15.5} color={done ? CA.success : undefined} />
+    </button>
+  );
+}
+
+/* ---------- message thread ---------- */
+function Thread({ agent, messages, live, scrollRef, onCopy, onRegen, onExport }) {
+  const dens = (ARIA.ui && ARIA.ui.density) || "regular";
+  const gap = dens === "compact" ? 16 : dens === "comfy" ? 38 : 26;
+  const fs = (ARIA.ui && ARIA.ui.fontSize) || 15;
+  return (
+    <div ref={scrollRef} style={{ flex: 1, overflowY: "auto" }}>
+      <div style={{ maxWidth: 768, margin: "0 auto", padding: "26px 24px 30px" }}>
+        {messages.map((m, i) => (
+          <div key={i} style={{ marginBottom: gap }}>
+            {m.role === "user" ? (
+              <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                <div style={{ background: CA.s1, border: `1px solid ${CA.hair}`, borderRadius: 20, borderBottomRightRadius: 6, padding: "11px 16px", fontSize: fs, maxWidth: "82%", lineHeight: 1.45, textWrap: "pretty" }}>{m.text}</div>
+              </div>
+            ) : (
+              <AnswerView m={m} live={false}
+                onCopy={() => onCopy(m)} onRegen={() => onRegen(m)} onExport={() => onExport(m)} />
+            )}
+          </div>
+        ))}
+        {live && (
+          <div style={{ marginBottom: gap }}>
+            <AnswerView m={live.msg} live={true} />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ---------- App ---------- */
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "accent": "#0099ff",
+  "fontSize": 15,
+  "density": "regular",
+  "streamSpeed": "normal",
+  "traceCollapse": true
+}/*EDITMODE-END*/;
+
+function App() {
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  const [theme, setTheme] = useState("light");
+  // apply theme palette (dark = default) + push tweak values into the live globals
+  applyTheme(theme);
+  ARIA.c.blue = t.accent;
+  ARIA.ui = { fontSize: t.fontSize, density: t.density, streamSpeed: t.streamSpeed, traceCollapse: t.traceCollapse };
+
+  const [collapsed, setCollapsed] = useState(false);
+  const [agentId, setAgentId] = useState("host-revenue");
+  const [conversations, setConversations] = useState(
+    SEED_CONVERSATIONS.map((c) => ({ ...c, messages: null })) // lazy
+  );
+  const [activeConvId, setActiveConvId] = useState(null);
+  const [search, setSearch] = useState("");
+  const [input, setInput] = useState("");
+  const [modelId, setModelId] = useState("gemini-2.5-pro");
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settings, setSettings] = useState({
+    apiKey: "", project: "", region: "europe-west1", defaultModel: "gemini-2.5-pro", demoMode: true,
+  });
+  const [live, setLive] = useState(null); // { convId, msg }
+  const cancelRef = useRef(false);
+  const scrollRef = useRef(null);
+  const taRef = useRef(null);
+
+  const agent = AGENT_BY_ID[agentId];
+  const activeConv = conversations.find((c) => c.id === activeConvId) || null;
+
+  /* lazily materialize a seeded conversation's thread */
+  const ensureThread = useCallback((conv) => {
+    if (conv.messages) return conv;
+    const built = {
+      ...conv,
+      messages: [{ role: "user", text: conv.prompt }, builtMessage(conv.agentId, conv.prompt)],
+    };
+    setConversations((cs) => cs.map((c) => (c.id === conv.id ? built : c)));
+    return built;
+  }, []);
+
+  const stopStream = useCallback(() => {
+    cancelRef.current = true;
+    setLive((l) => {
+      if (!l) return null;
+      const finalMsg = { ...l.msg, done: true, traceRunning: false, traceDone: l.msg.trace.length };
+      setConversations((cs) => cs.map((c) => c.id === l.convId ? { ...c, messages: [...(c.messages || []), finalMsg] } : c));
+      return null;
+    });
+  }, []);
+
+  /* core streaming runner */
+  const runStream = useCallback((convId, aId, prompt, staticMsg) => {
+    cancelRef.current = false;
+    const SP = ({ slow: { trace: 760, word: 44, block: 680 }, fast: { trace: 320, word: 6, block: 320 } }[(ARIA.ui && ARIA.ui.streamSpeed)] || { trace: 540, word: 22, block: 540 });
+    const steps = staticMsg.trace, blocks = staticMsg.blocks;
+    const base = { ...staticMsg, traceDone: 0, traceRunning: true, progress: { block: -1, text: "" }, done: false };
+    setLive({ convId, msg: base });
+    const upd = (patch) => setLive((l) => l ? { ...l, msg: { ...l.msg, ...(typeof patch === "function" ? patch(l.msg) : patch) } } : l);
+
+    const finish = () => {
+      setLive((l) => {
+        if (!l) return null;
+        const fin = { ...l.msg, done: true, traceRunning: false, traceDone: steps.length, progress: { block: blocks.length, text: "" } };
+        setConversations((cs) => cs.map((c) => c.id === convId ? { ...c, messages: [...(c.messages || []), fin] } : c));
+        return null;
+      });
+    };
+
+    const revealBlock = (bi) => {
+      if (cancelRef.current) return;
+      if (bi >= blocks.length) { setTimeout(finish, 150); return; }
+      const block = blocks[bi];
+      if (block.type === "text") {
+        const words = block.text.split(" ");
+        let w = 0;
+        upd({ progress: { block: bi, text: "" } });
+        const step = () => {
+          if (cancelRef.current) return;
+          w++;
+          upd({ progress: { block: bi, text: words.slice(0, w).join(" ") } });
+          if (w < words.length) setTimeout(step, SP.word + Math.random() * (SP.word * 0.9));
+          else setTimeout(() => revealBlock(bi + 1), 140);
+        };
+        step();
+      } else {
+        upd({ progress: { block: bi, text: "" } });
+        setTimeout(() => revealBlock(bi + 1), SP.block);
+      }
+    };
+
+    let si = 0;
+    const tickTrace = () => {
+      if (cancelRef.current) return;
+      si++;
+      upd({ traceDone: si });
+      if (si < steps.length) setTimeout(tickTrace, SP.trace + Math.random() * 160);
+      else { upd({ traceRunning: false }); setTimeout(() => revealBlock(0), 280); }
+    };
+    setTimeout(tickTrace, SP.trace);
+  }, []);
+
+  /* live Gemini path */
+  const runLive = useCallback(async (convId, aId, prompt) => {
+    cancelRef.current = false;
+    const ag = AGENT_BY_ID[aId];
+    let model = modelId;
+    if (MODEL_BY_ID[model].ml) model = settings.defaultModel;
+    const steps = [
+      { node: "Orchestrator", detail: `routing to ${ag.name}` },
+      { node: "Retrieval Agent", detail: "retrieving project context" },
+      { node: "Gemini", detail: `generating with ${model}` },
+    ];
+    const base = {
+      role: "assistant", agentId: aId, prompt, trace: steps, blocks: [],
+      brief: genericScript(ag, prompt).brief, traceDone: 0, traceRunning: true,
+      progress: { block: -1, text: "" }, done: false, elapsed: elapsedFor(steps),
+    };
+    setLive({ convId, msg: base });
+    const upd = (patch) => setLive((l) => l ? { ...l, msg: { ...l.msg, ...patch } } : l);
+
+    upd({ traceDone: 1 });
+    let text = "";
+    try {
+      const sys = `You are ${ag.name}, ${ag.tagline}. Project context: Airbnb data for Paris (120,809 listings) and Athens (14,242 listings), 135,051-listing master dataset, XGBoost pricing, LightGBM risk, SHAP explainability. Answer in 150-220 words, grounded in this data.`;
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${settings.apiKey}`;
+      upd({ traceDone: 2 });
+      const res = await fetch(url, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ systemInstruction: { parts: [{ text: sys }] }, contents: [{ role: "user", parts: [{ text: prompt }] }] }),
+      });
+      const j = await res.json();
+      text = j?.candidates?.[0]?.content?.parts?.[0]?.text
+        || (j?.error?.message ? `**API error:** ${j.error.message}\n\nCheck your key in Settings, or switch Demo mode back on.` : "No response returned.");
+    } catch (e) {
+      text = `**Network error:** ${e.message}. Switch Demo mode on in Settings to use scripted responses.`;
+    }
+    if (cancelRef.current) return;
+    upd({ traceDone: 3, traceRunning: false, blocks: [{ type: "text", text }] });
+
+    // stream the text
+    const words = text.split(" ");
+    let w = 0;
+    const step = () => {
+      if (cancelRef.current) return;
+      w++;
+      setLive((l) => l ? { ...l, msg: { ...l.msg, progress: { block: 0, text: words.slice(0, w).join(" ") } } } : l);
+      if (w < words.length) setTimeout(step, 14 + Math.random() * 20);
+      else setLive((l) => {
+        if (!l) return null;
+        const fin = { ...l.msg, done: true, progress: { block: 1, text: "" } };
+        setConversations((cs) => cs.map((c) => c.id === convId ? { ...c, messages: [...(c.messages || []), fin] } : c));
+        return null;
+      });
+    };
+    setTimeout(step, 200);
+  }, [modelId, settings]);
+
+  /* send a prompt */
+  const send = useCallback((rawPrompt) => {
+    const prompt = (rawPrompt != null ? rawPrompt : input).trim();
+    if (!prompt || live) return;
+    setInput("");
+    if (taRef.current) taRef.current.style.height = "auto";
+
+    let convId = activeConvId;
+    const useLive = !settings.demoMode && settings.apiKey.trim().length > 8;
+
+    setConversations((cs) => {
+      let next = cs;
+      if (!convId) {
+        convId = "c" + Date.now();
+        const title = prompt.length > 38 ? prompt.slice(0, 36) + "…" : prompt;
+        next = [{ id: convId, agentId, title, group: "Today", messages: [{ role: "user", text: prompt }] }, ...cs];
+      } else {
+        next = cs.map((c) => c.id === convId
+          ? { ...c, messages: [...(c.messages || []), { role: "user", text: prompt }] }
+          : c);
+      }
+      return next;
+    });
+    setActiveConvId(convId);
+
+    setTimeout(() => {
+      if (useLive) runLive(convId, agentId, prompt);
+      else {
+        const s = getScript(agentId, prompt) || genericScript(agent, prompt);
+        const staticMsg = {
+          role: "assistant", agentId, prompt, trace: s.trace, blocks: s.blocks, brief: s.brief, elapsed: elapsedFor(s.trace),
+        };
+        runStream(convId, agentId, prompt, staticMsg);
+      }
+    }, 30);
+  }, [input, activeConvId, agentId, agent, live, settings, runStream, runLive]);
+
+  /* handlers */
+  const newChat = useCallback(() => { stopStream(); setActiveConvId(null); }, [stopStream]);
+  const pickAgent = useCallback((id) => { stopStream(); setAgentId(id); setActiveConvId(null); }, [stopStream]);
+  const pickConv = useCallback((id) => {
+    stopStream();
+    const conv = conversations.find((c) => c.id === id);
+    if (conv) { ensureThread(conv); setAgentId(conv.agentId); setActiveConvId(id); }
+  }, [conversations, ensureThread, stopStream]);
+  const renameConv = useCallback((id, t) => setConversations((cs) => cs.map((c) => c.id === id ? { ...c, title: t } : c)), []);
+  const deleteConv = useCallback((id) => {
+    setConversations((cs) => cs.filter((c) => c.id !== id));
+    setActiveConvId((a) => a === id ? null : a);
+  }, []);
+
+  const copyMsg = useCallback((m) => {
+    const txt = m.blocks.filter((b) => b.type === "text").map((b) => b.text.replace(/\*\*/g, "").replace(/`/g, "")).join("\n\n");
+    navigator.clipboard && navigator.clipboard.writeText(txt);
+  }, []);
+  const regenMsg = useCallback((m) => {
+    if (live) return;
+    setConversations((cs) => cs.map((c) => {
+      if (c.id !== activeConvId) return c;
+      const idx = c.messages.lastIndexOf(m);
+      return { ...c, messages: c.messages.slice(0, idx) };
+    }));
+    setTimeout(() => {
+      const s = getScript(m.agentId, m.prompt) || genericScript(AGENT_BY_ID[m.agentId], m.prompt);
+      runStream(activeConvId, m.agentId, m.prompt, { role: "assistant", agentId: m.agentId, prompt: m.prompt, trace: s.trace, blocks: s.blocks, brief: s.brief, elapsed: elapsedFor(s.trace) });
+    }, 40);
+  }, [live, activeConvId, runStream]);
+  const exportMsg = useCallback((m) => exportBrief(AGENT_BY_ID[m.agentId], m.prompt, m.brief), []);
+
+  /* autoscroll while streaming */
+  useEffect(() => {
+    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+  }, [live, activeConv && activeConv.messages && activeConv.messages.length]);
+
+  /* keyboard: "/" focuses composer */
+  useEffect(() => {
+    const h = (e) => {
+      if (e.key === "/" && document.activeElement && !["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement.tagName) && !settingsOpen) {
+        e.preventDefault(); taRef.current && taRef.current.focus();
+      }
+      if (e.key === "Escape") { if (settingsOpen) setSettingsOpen(false); }
+    };
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
+  }, [settingsOpen]);
+
+  const composerEl = (
+    <Composer ref={taRef} agent={agent} agents={AGENTS} onPickAgent={pickAgent} value={input} setValue={setInput}
+      onSend={() => send()} streaming={!!live} onStop={stopStream}
+      modelId={modelId} setModelId={setModelId} />
+  );
+
+  const showThread = activeConv && (activeConv.messages || (live && live.convId === activeConvId));
+
+  return (
+    <div style={{ display: "flex", height: "100vh", background: CA.canvas }}>
+      <Sidebar
+        collapsed={collapsed} onToggle={() => setCollapsed((v) => !v)}
+        agents={AGENTS} activeAgentId={agentId} onPickAgent={pickAgent} onNewChat={newChat}
+        apiKey={settings.apiKey}
+        onApiKey={(v) => setSettings((s) => ({ ...s, apiKey: v, demoMode: v.trim().length === 0 }))}
+        conversations={conversations} activeConvId={activeConvId} onPickConv={pickConv}
+        onRenameConv={renameConv} onDeleteConv={deleteConv}
+        search={search} setSearch={setSearch} onOpenSettings={() => setSettingsOpen(true)} />
+
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
+        {/* top bar */}
+        <div className="no-print" style={{ height: 52, flexShrink: 0, display: "flex", alignItems: "center", gap: 10, padding: "0 18px", borderBottom: `1px solid ${CA.hairSoft}` }}>
+          <AgentTile accent={agent.accent} icon={agent.icon} size={26} radius={8} iconSize={14} />
+          <span style={{ fontSize: 14.5, fontWeight: 500 }}>{agent.name}</span>
+          <span style={{ fontSize: 12.5, color: CA.muted }}>· {agent.tagline}</span>
+          <button className="aria-focus" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            style={{ marginLeft: "auto", width: 34, height: 34, borderRadius: 100, display: "grid", placeItems: "center", color: CA.muted, background: CA.s1, border: `1px solid ${CA.hair}` }}>
+            <Icon name={theme === "dark" ? "Sun" : "Moon"} size={16.5} />
+          </button>
+          <div style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 12, color: CA.muted, border: `1px solid ${CA.hair}`, borderRadius: 100, padding: "5px 11px" }}>
+            <span style={{ width: 6, height: 6, borderRadius: 4, background: settings.demoMode ? CA.orange : CA.success }} />
+            {settings.demoMode ? "Demo mode" : "Live · Gemini"}
+          </div>
+        </div>
+
+        {showThread ? (
+          <>
+            <Thread agent={agent}
+              messages={(activeConv && activeConv.messages) || []}
+              live={live && live.convId === activeConvId ? live : null}
+              scrollRef={scrollRef} onCopy={copyMsg} onRegen={regenMsg} onExport={exportMsg} />
+            <div className="no-print" style={{ flexShrink: 0, padding: "8px 24px 16px", background: CA.canvas }}>
+              {composerEl}
+            </div>
+          </>
+        ) : (
+          <EmptyState agent={agent} onChip={(c) => send(c)} composer={composerEl} />
+        )}
+      </div>
+
+      <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} settings={settings} setSettings={setSettings} />
+
+      <TweaksPanel title="Tweaks">
+        <TweakSection label="Interface" />
+        <TweakColor label="Accent" value={t.accent}
+          options={["#0099ff", "#6a4cf5", "#1fd1c7", "#d44df0"]}
+          onChange={(v) => setTweak("accent", v)} />
+        <TweakRadio label="Density" value={t.density}
+          options={["compact", "regular", "comfy"]}
+          onChange={(v) => setTweak("density", v)} />
+        <TweakSlider label="Chat text" value={t.fontSize} min={14} max={18} step={1} unit="px"
+          onChange={(v) => setTweak("fontSize", v)} />
+        <TweakSection label="Conversation" />
+        <TweakRadio label="Streaming" value={t.streamSpeed}
+          options={[{ value: "slow", label: "Slow" }, { value: "normal", label: "Normal" }, { value: "fast", label: "Fast" }]}
+          onChange={(v) => setTweak("streamSpeed", v)} />
+        <TweakToggle label="Auto-collapse reasoning" value={t.traceCollapse}
+          onChange={(v) => setTweak("traceCollapse", v)} />
+      </TweaksPanel>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+
+</script>
+
+<script>
+  (function () {
+    function fitToViewport() {
+      try {
+        var frame = window.frameElement;
+        if (!frame) return;
+        frame.style.width = "100vw";
+        frame.style.height = window.parent.innerHeight + "px";
+        frame.style.minHeight = window.parent.innerHeight + "px";
+      } catch (error) {}
+    }
+    fitToViewport();
+    window.addEventListener("resize", fitToViewport);
+  })();
+</script>
+
+</body>
+</html>
