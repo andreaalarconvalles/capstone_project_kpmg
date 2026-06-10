@@ -1,6 +1,6 @@
 # Stage 7 — ARIA Platform UI
 
-**Live Vercel website:** [https://capstone-project-kpmg-iarimooha-lukatcheishvilis-projects.vercel.app/](https://capstone-project-kpmg-iarimooha-lukatcheishvilis-projects.vercel.app/)
+**Live Vercel website:** [https://capstone-project-kpmg-git-main-lukatcheishvilis-projects.vercel.app/](https://capstone-project-kpmg-git-main-lukatcheishvilis-projects.vercel.app/)
 
 The front-end MVP for **ARIA** (Airbnb Revenue Intelligence & Analytics) — a ChatGPT-style,
 multi-agent AI platform built for the IE Business School × KPMG Spain Capstone 2026.
@@ -82,7 +82,7 @@ npm run dev
 Live Vercel deployment:
 
 ```text
-https://capstone-project-kpmg-iarimooha-lukatcheishvilis-projects.vercel.app/
+https://capstone-project-kpmg-git-main-lukatcheishvilis-projects.vercel.app/
 ```
 
 For the existing Vercel project, keep using the repository root. The root `vercel.json` routes Vercel into this nested app folder with:

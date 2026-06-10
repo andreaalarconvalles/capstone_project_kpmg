@@ -130,6 +130,7 @@ This table is the single source of truth for what the team has shipped and what 
 - [2026-06-10] Stage 7 Vercel UI polish: added the checked-in ARIA wordmark asset to the landing/sidebar, removed the landing agent subtitle, and balanced the wordmark letter spacing.
 - [2026-06-10] Documentation memory routing: moved the running session log into `CLAUDE.md` and updated Rule 3 so future agent session notes stay out of README/YAML/deployment files.
 - [2026-06-10] Stage 7 README link cleanup: made the Vercel deployment the only public website link in the Stage 7 README and removed the Streamlit launch badge/link.
+- [2026-06-10] README Vercel link sync: updated every repo README to point at `https://capstone-project-kpmg-git-main-lukatcheishvilis-projects.vercel.app/`.
 
 ### In Progress
 
@@ -164,6 +165,7 @@ This table is the single source of truth for what the team has shipped and what 
 - [2026-06-10] Session 16: Polished the Vercel landing page with the ARIA wordmark asset, removed the landing agent subtitle, and balanced the wordmark letter spacing.
 - [2026-06-10] Session 17: Moved the canonical session log from README into `CLAUDE.md` and updated agent instructions so future session history stays in this file.
 - [2026-06-10] Session 18: Updated the Stage 7 README so the live website points to the current Vercel deployment and removed the Streamlit public launch link.
+- [2026-06-10] Session 19: Updated every repo README with the current Vercel deployment URL: `https://capstone-project-kpmg-git-main-lukatcheishvilis-projects.vercel.app/`.
 
 ---
 

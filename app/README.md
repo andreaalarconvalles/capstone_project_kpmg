@@ -1,5 +1,7 @@
 # Phase 7 — Streamlit App
 
+**Live Vercel website:** [https://capstone-project-kpmg-git-main-lukatcheishvilis-projects.vercel.app/](https://capstone-project-kpmg-git-main-lukatcheishvilis-projects.vercel.app/)
+
 3-tab UI serving three personas. Can be started now using existing CSV outputs from Phases 2 and 3.
 
 Tab 1 — Investor: neighbourhood opportunity map, yield calculator, risk heatmap, Prophet forecast (Phase 4 placeholder)
