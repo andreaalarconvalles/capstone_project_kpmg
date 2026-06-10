@@ -117,10 +117,12 @@ This table is the single source of truth for what the team has shipped and what 
 - [2026-06-09] Phase 3 LightGBM COMPLETE (A/95): leakage corrected, AUC=0.8288, 865 priority targets, €1.43M opportunity
 - [2026-06-10] Phase 7 agent-chat UI MVP built in `Stage 7 - UI Interface/`: React/HTML prototype + faithful Streamlit app (5 agents, scripted demos, LangGraph-style traces, Plotly dark charts, pseudo-choropleth map, model picker, hybrid live-Gemini mode). Verified via Streamlit AppTest.
 - [2026-06-10] Streamlit Cloud deployment dependency fix: added root-level `requirements.txt` so the installer no longer parses the nested `Stage 7 - UI Interface/streamlit_app/requirements.txt` path as separate tokens.
-- [2026-06-10] Streamlit Cloud deployment hardening: added no-spaces wrapper entrypoint `streamlit_app/app.py`, duplicated `streamlit_app/requirements.txt`, and updated Stage 7 README badge/docs to use the wrapper path.
+- [2026-06-10] Streamlit Cloud deployment hardening: added no-spaces compatibility wrapper entrypoint `streamlit_app/app.py` and duplicated `streamlit_app/requirements.txt`.
 - [2026-06-10] Stage 7 design fidelity update: synced the React prototype from the ZIP handoff and replaced the native Streamlit recreation with a Streamlit host that embeds the exact Claude Design prototype full-page.
 - [2026-06-10] Stage 7 deployment hotfix: reverted the embedded prototype renderer from `st.iframe` to the classic Streamlit HTML component because the newer API showed a blank page on Streamlit Cloud.
-- [2026-06-10] Stage 7 white-screen fix: generated the React prototype into `streamlit_app/static/aria/index.html`, enabled Streamlit static serving, and iframed the static URL instead of sending the full app through an inline HTML payload.
+- [2026-06-10] Stage 7 white-screen fix: enabled Streamlit static serving and iframed the static URL instead of sending the full app through an inline HTML payload.
+- [2026-06-10] Stage 7 deployment target fix: Streamlit Cloud main module is `Stage 7 - UI Interface/streamlit_app/app.py`; generated static assets now live under that app folder.
+- [2026-06-10] Stage 7 Vite deployment path: added a root Vite React app that bundles the Claude Design export and a `vercel.json` configuration for Vercel deployment.
 
 ### In Progress
 

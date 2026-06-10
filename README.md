@@ -353,7 +353,9 @@ Status key: ✅ Done · 🔄 In progress · 🔲 Not started · ⏳ Blocked
 - [2026-06-09] Session 5: README completely rewritten to reflect all 7 phases. CLAUDE.md updated. Placeholder folders created.
 - [2026-06-10] Session 6: Built the ARIA agent-chat UI in `Stage 7 - UI Interface/` from the claude.ai/design handoff — React/HTML prototype + a faithful Streamlit app (5 agents, scripted demos, reasoning traces, Plotly dark charts, pseudo-choropleth map, model picker, hybrid live-Gemini mode). Verified via Streamlit AppTest (no exceptions).
 - [2026-06-10] Session 7: Fixed Streamlit Cloud dependency installation by adding a root-level `requirements.txt`, avoiding installer parsing issues caused by the nested app folder path with spaces and a hyphen.
-- [2026-06-10] Session 8: Added a no-spaces Streamlit Cloud wrapper at `streamlit_app/app.py`, duplicated deployment requirements there, and updated Stage 7 deployment docs to use `streamlit_app/app.py` as the main module.
+- [2026-06-10] Session 8: Added a no-spaces Streamlit Cloud wrapper at `streamlit_app/app.py` and duplicated deployment requirements there as a compatibility fallback.
 - [2026-06-10] Session 9: Replaced the native Stage 7 Streamlit recreation with a Streamlit host that embeds the exact Claude Design React prototype, synced the prototype files from the ZIP handoff, and updated deployment documentation.
 - [2026-06-10] Session 10: Hotfixed the Streamlit Cloud embed path by switching the React prototype host back to the classic Streamlit HTML component after the newer `st.iframe` path rendered as a blank page on deployment.
-- [2026-06-10] Session 11: Moved the embedded ARIA prototype to Streamlit static serving (`streamlit_app/static/aria/index.html`) and iframed that URL to avoid Cloud white screens from large inline HTML payloads.
+- [2026-06-10] Session 11: Moved the embedded ARIA prototype to Streamlit static serving and iframed that URL to avoid Cloud white screens from large inline HTML payloads.
+- [2026-06-10] Session 12: Set the Streamlit deployment target to `Stage 7 - UI Interface/streamlit_app/app.py` and made generated static assets live under that app folder.
+- [2026-06-10] Session 13: Added a Vite React build path for the Claude Design export, with Vercel config serving the generated `dist/` directory.

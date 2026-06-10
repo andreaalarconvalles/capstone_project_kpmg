@@ -46,16 +46,12 @@ Stage 7 - UI Interface/
     ├── aria_content.py               # Legacy native Streamlit content module
     ├── aria_charts.py                # Legacy native Streamlit chart module
     └── requirements.txt
-
-../../streamlit_app/
-├── app.py                            # No-spaces Streamlit Cloud wrapper into Stage 7
-└── requirements.txt                  # Deployment dependencies
 ```
 
 ## Run the Streamlit app (recommended)
 
 ```bash
-cd streamlit_app
+cd "Stage 7 - UI Interface/streamlit_app"
 pip install -r requirements.txt
 streamlit run app.py
 ```
@@ -65,10 +61,27 @@ Opens at `http://localhost:8501`.
 For Streamlit Community Cloud, set the main module to:
 
 ```text
-streamlit_app/app.py
+Stage 7 - UI Interface/streamlit_app/app.py
 ```
 
-The wrapper runs the real Stage 7 app from `Stage 7 - UI Interface/streamlit_app/app.py`, while avoiding deployment issues caused by spaces and the standalone hyphen in the folder name. The Stage 7 app then renders the React prototype inside a full-page Streamlit component.
+This points Streamlit directly at the real Stage 7 app. The app renders the React prototype inside a full-page Streamlit component and writes its generated static HTML under `Stage 7 - UI Interface/streamlit_app/static/aria/`.
+
+## Run the Vite React app
+
+The repository root now also contains a Vite React build of the Claude Design handoff. It reuses the checked-in prototype modules from `src/legacy/` and bundles React, Recharts, and Lucide instead of loading them through CDN scripts.
+
+```bash
+npm install
+npm run dev
+```
+
+For Vercel, use the repository root. `vercel.json` builds the Vite app with:
+
+```bash
+npm run build
+```
+
+and serves the generated `dist/` directory.
 
 ## Run the React prototype
 

@@ -110,8 +110,8 @@ def _prototype_dir() -> Path:
     return Path(__file__).resolve().parents[1] / "prototype"
 
 
-def _repo_root() -> Path:
-    return Path(__file__).resolve().parents[2]
+def _app_dir() -> Path:
+    return Path(__file__).resolve().parent
 
 
 def _read_text(path: Path) -> str:
@@ -148,7 +148,7 @@ def build_inlined_prototype_html() -> str:
 
 
 def write_static_prototype() -> str:
-    static_path = _repo_root() / "streamlit_app" / "static" / "aria" / "index.html"
+    static_path = _app_dir() / "static" / "aria" / "index.html"
     static_path.parent.mkdir(parents=True, exist_ok=True)
     static_path.write_text(build_inlined_prototype_html(), encoding="utf-8")
     return "/app/static/aria/index.html"
