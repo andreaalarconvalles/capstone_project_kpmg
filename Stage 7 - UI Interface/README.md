@@ -51,6 +51,8 @@ Stage 7 - UI Interface/
 └── vercel_vite_app/                  # Vercel-ready Vite React deployment
     ├── index.html
     ├── package.json
+    ├── public/
+    │   └── aria-wordmark.svg          # ARIA wordmark used on landing/sidebar
     ├── vercel.json
     ├── vite.config.js
     └── src/
@@ -77,6 +79,7 @@ This points Streamlit directly at the real Stage 7 app. The app renders the Reac
 ## Run the Vite React app
 
 The `vercel_vite_app/` folder contains the Vite React build of the Claude Design handoff. It reuses the checked-in prototype modules from `src/legacy/` and bundles React, Recharts, and Lucide instead of loading them through CDN scripts.
+The live Vercel landing page uses `public/aria-wordmark.svg` above the main prompt and in the sidebar, with the agent subtitle removed for a cleaner first view.
 
 ```bash
 cd "Stage 7 - UI Interface/vercel_vite_app"
@@ -131,4 +134,4 @@ The model picker also exposes the project's own ML engines: **XGBoost Pricing v1
 
 Framer-style system from the Claude Design handoff. The prototype defaults to light mode
 with Inter, neutral surfaces, hairline borders, pill-shaped CTAs, compact rounded controls,
-agent accent gradients, and the built-in theme toggle for dark mode.
+agent accent gradients, the checked-in ARIA wordmark, and the built-in theme toggle for dark mode.
