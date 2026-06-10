@@ -137,6 +137,7 @@ This table is the single source of truth for what the team has shipped and what 
 - [2026-06-10] Settings modal sizing fix: kept the Settings panel dimensions stable when switching from API & Models to About.
 - [2026-06-10] Theme selector polish: replaced the top-bar segmented theme buttons with a dropdown selector in the Vercel ARIA UI.
 - [2026-06-10] Landing data status polish: added a Live Data Status panel under the prompt cards to fill the lower-left landing space with dataset, model, and forecast readiness signals.
+- [2026-06-10] Landing panel alignment: stretched the landing page columns so the Live Data Status box aligns with the bottom of the Agent Signals box.
 
 ### In Progress
 
@@ -178,6 +179,7 @@ This table is the single source of truth for what the team has shipped and what 
 - [2026-06-10] Session 23: Fixed the Settings modal so the About tab keeps the same grey-panel dimensions as the API & Models tab.
 - [2026-06-10] Session 24: Replaced the Airbnb/KPMG/Dark segmented theme switcher with a dropdown menu that preserves the same theme options and behavior.
 - [2026-06-10] Session 25: Added a Live Data Status panel to the Vercel landing page so the lower-left area shows dataset freshness, portfolio load, model readiness, and forecast coverage.
+- [2026-06-10] Session 26: Aligned the landing page panel bottoms by stretching the two-column row and allowing the Live Data Status panel to fill the remaining lower-left height.
 
 ---
 

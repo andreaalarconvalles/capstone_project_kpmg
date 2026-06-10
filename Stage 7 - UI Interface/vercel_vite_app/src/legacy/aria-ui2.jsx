@@ -186,7 +186,7 @@ const Composer = React.forwardRef(function Composer({
 
 function StatusMetric({ icon, accent, label, value, meta }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, padding: "10px 0", borderTop: `1px solid ${C2.hairSoft}` }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, height: "100%", padding: "10px 0", borderTop: `1px solid ${C2.hairSoft}` }}>
       <div style={{ width: 30, height: 30, borderRadius: 9, flexShrink: 0, display: "grid", placeItems: "center", background: `${accent}1f` }}>
         <Icon name={icon} size={15.5} color={accent} sw={2.1} />
       </div>
@@ -212,7 +212,7 @@ function LiveDataStatus() {
   return (
     <div className="aria-elev" style={{
       background: C2.s1, border: `1px solid ${C2.hair}`, borderRadius: 16, padding: "14px 16px 15px",
-      display: "flex", flexDirection: "column", gap: 8,
+      display: "flex", flexDirection: "column", gap: 8, flex: "1 1 auto", minHeight: 228,
     }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
@@ -233,7 +233,10 @@ function LiveDataStatus() {
           <span style={{ width: 5, height: 5, borderRadius: 4, background: C2.success }} /> Operational
         </span>
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", columnGap: 18, rowGap: 0 }}>
+      <div style={{
+        display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gridAutoRows: "1fr",
+        columnGap: 18, rowGap: 0, flex: 1, alignContent: "stretch",
+      }}>
         {items.map((item) => <StatusMetric key={item.label} {...item} />)}
       </div>
     </div>
@@ -254,7 +257,7 @@ function EmptyState({ agent, onChip, composer, onSignal }) {
         </div>
 
         {/* two columns: composer + chips | dashboard */}
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 22, alignItems: "flex-start", justifyContent: "center" }}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 22, alignItems: "stretch", justifyContent: "center" }}>
           <div style={{ flex: "1 1 460px", minWidth: 0, maxWidth: 560, display: "flex", flexDirection: "column", gap: 18 }}>
             {composer}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
@@ -274,7 +277,7 @@ function EmptyState({ agent, onChip, composer, onSignal }) {
             </div>
             <LiveDataStatus />
           </div>
-          <div style={{ flex: "1 1 360px", minWidth: 0, maxWidth: 440 }}>
+          <div style={{ flex: "1 1 360px", minWidth: 0, maxWidth: 440, display: "flex" }}>
             <LandingDashboard onSignal={onSignal} />
           </div>
         </div>
