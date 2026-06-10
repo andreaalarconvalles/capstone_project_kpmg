@@ -32,6 +32,49 @@ function AgentTile({ accent, icon, size = 34, radius = 11, iconSize }) {
 
 }
 
+function AriaLogo({ width = 148, compact = false, style }) {
+  const color = C.cta || C.coral || "#ff385c";
+  const mark = (
+    <svg viewBox="0 0 54 62" aria-hidden="true" style={{ width: compact ? 22 : 34, height: compact ? 25 : 39, flexShrink: 0 }}>
+      <path
+        d="M27 6C16.4 21.5 7.7 37 7.7 46.2c0 7.2 5 11.6 11.1 11.6 4.3 0 7.2-2.4 8.2-3.7 1 1.3 3.9 3.7 8.2 3.7 6.1 0 11.1-4.4 11.1-11.6C46.3 37 37.6 21.5 27 6Z"
+        fill="none"
+        stroke={color}
+        strokeWidth="6"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+      <path
+        d="M27 47.8c-5.3-7.2-8-12.8-8-16.6 0-4.7 3.4-7.9 8-7.9s8 3.2 8 7.9c0 3.8-2.7 9.4-8 16.6Z"
+        fill="none"
+        stroke={color}
+        strokeWidth="6"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+
+  if (compact) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", gap: 8, color, ...style }}>
+        {mark}
+        <span style={{ fontSize: 18, lineHeight: 1, fontWeight: 700, letterSpacing: -0.6, color: C.ink }}>ARIA</span>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 14, color, ...style }}>
+      {mark}
+      <span style={{ fontSize: Math.max(28, Math.round(width * 0.22)), lineHeight: 1, fontWeight: 800, letterSpacing: -1.3, color }}>
+        RIA
+      </span>
+      {mark}
+    </div>
+  );
+}
+
 /* ---------- Sidebar ---------- */
 function SidebarRow({ active, children, onClick, onMouseEnter, onMouseLeave, style }) {
   return (
@@ -99,12 +142,7 @@ function Sidebar({
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 16px 8px" }}>
         <button className="aria-focus" onClick={onNewChat} title="New chat"
         style={{ display: "flex", alignItems: "center", gap: 9, padding: 0, borderRadius: 8 }}>
-          <div style={{
-            width: 26, height: 26, borderRadius: 8,
-            background: `conic-gradient(from 210deg, ${C.violet}, ${C.magenta}, ${C.coral}, ${C.orange}, ${C.violet})`,
-            boxShadow: "inset 0 1px 0 rgba(255,255,255,0.3)"
-          }} />
-          <span style={{ fontSize: 17, fontWeight: 600, letterSpacing: -0.6 }}>ARIA</span>
+          <AriaLogo compact />
         </button>
         <button className="aria-focus" onClick={onToggle} title="Collapse sidebar"
         style={{ width: 32, height: 32, borderRadius: 8, display: "grid", placeItems: "center", color: C.muted }}>
@@ -298,4 +336,4 @@ function ReasoningTrace({ steps, doneCount, running, elapsed }) {
 
 }
 
-Object.assign(window, { Icon, AgentTile, Sidebar, RichText, renderInline, ReasoningTrace });
+Object.assign(window, { Icon, AgentTile, AriaLogo, Sidebar, RichText, renderInline, ReasoningTrace });
