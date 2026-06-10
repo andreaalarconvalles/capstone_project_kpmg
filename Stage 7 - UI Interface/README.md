@@ -1,6 +1,6 @@
 # Stage 7 — ARIA Platform UI
 
-**Vercel website:** [capstone-project-kpmg-iarimooha-lukatcheishvilis-projects.vercel.app](https://capstone-project-kpmg-iarimooha-lukatcheishvilis-projects.vercel.app/)
+**Vercel website:** [https://capstone-project-kpmg-iarimooha-lukatcheishvilis-projects.vercel.app/](https://capstone-project-kpmg-iarimooha-lukatcheishvilis-projects.vercel.app/)
 
 [![Launch ARIA Platform UI](https://img.shields.io/badge/Launch%20ARIA%20Platform%20UI-Streamlit-ff4b4b?style=for-the-badge&logo=streamlit&logoColor=white)](https://capstoneprojectkpmg.streamlit.app/)
 
@@ -87,7 +87,7 @@ npm run dev
 Live Vercel deployment:
 
 ```text
-https://capstone-project-kpmg-iarimooha-lukatcheishvilis-projects.vercel.app
+https://capstone-project-kpmg-iarimooha-lukatcheishvilis-projects.vercel.app/
 ```
 
 For the existing Vercel project, keep using the repository root. The root `vercel.json` routes Vercel into this nested app folder with:
