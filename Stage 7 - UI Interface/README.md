@@ -40,12 +40,18 @@ Stage 7 - UI Interface/
 │   ├── aria-ui.jsx / aria-ui2.jsx    # Sidebar, composer, model picker, settings, empty state
 │   ├── aria-main.jsx                 # App root, streaming engine, hybrid Gemini call
 │   └── tweaks-panel.jsx              # Live design-tweak panel
-└── streamlit_app/                    # Streamlit host for the exact React prototype
-    ├── app.py                        # Thin Streamlit entrypoint
-    ├── prototype_embed.py            # Inlines prototype JSX and renders it full-page
-    ├── aria_content.py               # Legacy native Streamlit content module
-    ├── aria_charts.py                # Legacy native Streamlit chart module
-    └── requirements.txt
+├── streamlit_app/                    # Streamlit host for the exact React prototype
+│   ├── app.py                        # Thin Streamlit entrypoint
+│   ├── prototype_embed.py            # Inlines prototype JSX and renders it full-page
+│   ├── aria_content.py               # Legacy native Streamlit content module
+│   ├── aria_charts.py                # Legacy native Streamlit chart module
+│   └── requirements.txt
+└── vercel_vite_app/                  # Vercel-ready Vite React deployment
+    ├── index.html
+    ├── package.json
+    ├── vercel.json
+    ├── vite.config.js
+    └── src/
 ```
 
 ## Run the Streamlit app (recommended)
@@ -68,20 +74,30 @@ This points Streamlit directly at the real Stage 7 app. The app renders the Reac
 
 ## Run the Vite React app
 
-The repository root now also contains a Vite React build of the Claude Design handoff. It reuses the checked-in prototype modules from `src/legacy/` and bundles React, Recharts, and Lucide instead of loading them through CDN scripts.
+The `vercel_vite_app/` folder contains the Vite React build of the Claude Design handoff. It reuses the checked-in prototype modules from `src/legacy/` and bundles React, Recharts, and Lucide instead of loading them through CDN scripts.
 
 ```bash
+cd "Stage 7 - UI Interface/vercel_vite_app"
 npm install
 npm run dev
 ```
 
-For Vercel, use the repository root. `vercel.json` builds the Vite app with:
+Live Vercel deployment:
 
-```bash
-npm run build
+```text
+https://capstone-project-kpmg-iarimooha-lukatcheishvilis-projects.vercel.app
 ```
 
-and serves the generated `dist/` directory.
+For the existing Vercel project, keep using the repository root. The root `vercel.json` routes Vercel into this nested app folder with:
+
+```bash
+cd "Stage 7 - UI Interface/vercel_vite_app" && npm install
+cd "Stage 7 - UI Interface/vercel_vite_app" && npm run build
+```
+
+and serves `Stage 7 - UI Interface/vercel_vite_app/dist`.
+
+If you create a new Vercel project later, you can also set the Vercel root directory to `Stage 7 - UI Interface/vercel_vite_app`; the nested `vercel.json` then uses `npm run build` and serves `dist`.
 
 ## Run the React prototype
 

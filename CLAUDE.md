@@ -123,6 +123,7 @@ This table is the single source of truth for what the team has shipped and what 
 - [2026-06-10] Stage 7 white-screen fix: enabled Streamlit static serving and iframed the static URL instead of sending the full app through an inline HTML payload.
 - [2026-06-10] Stage 7 deployment target fix: Streamlit Cloud main module is `Stage 7 - UI Interface/streamlit_app/app.py`; generated static assets now live under that app folder.
 - [2026-06-10] Stage 7 Vite deployment path: added a root Vite React app that bundles the Claude Design export and a `vercel.json` configuration for Vercel deployment.
+- [2026-06-10] Stage 7 Vercel folder organization: moved the Vite React app into `Stage 7 - UI Interface/vercel_vite_app/`; root `vercel.json` routes deployments into that nested folder.
 
 ### In Progress
 

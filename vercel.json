@@ -1,5 +1,6 @@
 {
-  "buildCommand": "npm run build",
-  "outputDirectory": "dist",
+  "installCommand": "cd \"Stage 7 - UI Interface/vercel_vite_app\" && npm install",
+  "buildCommand": "cd \"Stage 7 - UI Interface/vercel_vite_app\" && npm run build",
+  "outputDirectory": "Stage 7 - UI Interface/vercel_vite_app/dist",
   "framework": "vite"
 }
