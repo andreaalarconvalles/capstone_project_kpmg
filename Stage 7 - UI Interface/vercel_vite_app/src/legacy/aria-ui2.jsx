@@ -191,7 +191,7 @@ function EmptyState({ agent, onChip, composer, onSignal }) {
       <div style={{ width: "100%", maxWidth: 1080, margin: "auto 0" }}>
         {/* identity + greeting */}
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 24 }}>
-          <AriaLogo width={164} style={{ marginBottom: 12 }} />
+          <AriaLogo width={220} style={{ marginBottom: 14 }} />
           <div style={{ fontSize: 14.5, fontWeight: 500, marginTop: 4, letterSpacing: -0.2 }}>{agent.name}</div>
           <div style={{ fontSize: 13, color: C2.muted, marginTop: 3 }}>{agent.tagline}</div>
           <h1 style={{ fontSize: 30, fontWeight: 500, letterSpacing: -1, lineHeight: 1.13, margin: "18px 0 0", textAlign: "center" }}>
