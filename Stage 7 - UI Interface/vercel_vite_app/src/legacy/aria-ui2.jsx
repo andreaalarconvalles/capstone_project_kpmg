@@ -114,13 +114,14 @@ function AgentPicker({ agentId, agents, onPick }) {
 /* ---------- Composer ---------- */
 const Composer = React.forwardRef(function Composer({
   agent, agents, onPickAgent, value, setValue, onSend, streaming, onStop, modelId, setModelId,
+  maxWidth = 768,
 }, ref) {
   const taRef = ref || React.useRef(null);
   const engine = MODEL_BY_ID[modelId];
   const grow = (el) => { if (!el) return; el.style.height = "auto"; el.style.height = Math.min(el.scrollHeight, 200) + "px"; };
 
   return (
-    <div style={{ width: "100%", maxWidth: 768, margin: "0 auto" }}>
+    <div style={{ width: "100%", maxWidth, margin: "0 auto" }}>
       <div className="aria-elev" style={{
         background: C2.s1, border: `1px solid ${C2.hair}`, borderRadius: 24, padding: "10px 10px 8px",
       }}>
@@ -248,6 +249,7 @@ function LiveDataStatus() {
 
 /* ---------- Empty state ---------- */
 function EmptyState({ agent, onChip, composer, onSignal }) {
+  const landingWidth = 1022;
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", padding: "26px 24px 36px", overflowY: "auto" }}>
       <div style={{ width: "100%", maxWidth: 1080, margin: "auto 0" }}>
@@ -259,10 +261,17 @@ function EmptyState({ agent, onChip, composer, onSignal }) {
           </h1>
         </div>
 
-        {/* two columns: composer + chips | dashboard */}
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 22, alignItems: "stretch", justifyContent: "center" }}>
-          <div style={{ flex: "1 1 460px", minWidth: 0, maxWidth: 560, display: "flex", flexDirection: "column", gap: 18 }}>
-            {composer}
+        <div style={{ width: "100%", maxWidth: landingWidth, margin: "0 auto 22px" }}>
+          {composer}
+        </div>
+
+        {/* aligned cover-page cards */}
+        <div style={{ width: "100%", maxWidth: landingWidth, margin: "0 auto", display: "flex", flexWrap: "wrap", gap: 22, alignItems: "stretch", justifyContent: "center" }}>
+          <div style={{ flex: "1 1 520px", minWidth: 0, maxWidth: 560, display: "flex", flexDirection: "column", gap: 14 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", minHeight: 24 }}>
+              <span style={{ fontSize: 13.5, fontWeight: 600, letterSpacing: -0.2 }}>Suggested analyses</span>
+              <span style={{ fontSize: 11.5, color: C2.muted }}>4 prompts</span>
+            </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
               {agent.chips.map((c) => (
                 <button key={c} className="aria-focus aria-elev" onClick={() => onChip(c)}
@@ -280,7 +289,7 @@ function EmptyState({ agent, onChip, composer, onSignal }) {
             </div>
             <LiveDataStatus />
           </div>
-          <div style={{ flex: "1 1 360px", minWidth: 0, maxWidth: 440, display: "flex" }}>
+          <div style={{ flex: "1 1 420px", minWidth: 0, maxWidth: 440, display: "flex" }}>
             <LandingDashboard onSignal={onSignal} />
           </div>
         </div>

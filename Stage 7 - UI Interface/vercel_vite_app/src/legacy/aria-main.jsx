@@ -386,6 +386,11 @@ function App() {
       onSend={() => send()} streaming={!!live} onStop={stopStream}
       modelId={modelId} setModelId={setModelId} />
   );
+  const landingComposerEl = (
+    <Composer ref={taRef} agent={agent} agents={AGENTS} onPickAgent={pickAgent} value={input} setValue={setInput}
+      onSend={() => send()} streaming={!!live} onStop={stopStream}
+      modelId={modelId} setModelId={setModelId} maxWidth={1022} />
+  );
 
   const showThread = activeConv && (activeConv.messages || (live && live.convId === activeConvId));
 
@@ -466,7 +471,7 @@ function App() {
             </div>
           </>
         ) : (
-          <EmptyState agent={agent} onChip={(c) => send(c)} composer={composerEl}
+          <EmptyState agent={agent} onChip={(c) => send(c)} composer={landingComposerEl}
             onSignal={(aid, prompt) => send(prompt, aid)} />
         )}
       </div>
