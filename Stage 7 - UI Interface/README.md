@@ -27,7 +27,6 @@ forecast with confidence band, a pseudo-choropleth Athens map) plus a one-click 
 ```
 Stage 7 - UI Interface/
 ├── ARIA_UI_Claude_Design_Prompt.md   # The original design brief
-├── vercel.json                       # Vercel config when project root is Stage 7
 ├── app/                              # Original Phase 7 three-tab Streamlit MVP notes
 ├── deployment_support/               # Archived root-level UI deployment compatibility files
 │   └── root_streamlit_requirements.txt
@@ -91,22 +90,16 @@ Live Vercel deployment:
 https://capstone-project-kpmg-git-main-lukatcheishvilis-projects.vercel.app/
 ```
 
-For the existing Vercel project, set the Vercel **Root Directory** to:
-
-```text
-Stage 7 - UI Interface
-```
-
-The `Stage 7 - UI Interface/vercel.json` file routes Vercel into the nested Vite app folder with:
+For the existing Vercel project, keep using the repository root. The root `vercel.json` routes Vercel into this nested app folder with:
 
 ```bash
-cd "vercel_vite_app" && npm install
-cd "vercel_vite_app" && npm run build
+cd "Stage 7 - UI Interface/vercel_vite_app" && npm install
+cd "Stage 7 - UI Interface/vercel_vite_app" && npm run build
 ```
 
-and serves `vercel_vite_app/dist`.
+and serves `Stage 7 - UI Interface/vercel_vite_app/dist`.
 
-If you create a new Vercel project later, you can also set the Vercel root directory directly to `Stage 7 - UI Interface/vercel_vite_app`; the nested `vercel.json` then uses `npm run build` and serves `dist`.
+If you create a new Vercel project later, you can also set the Vercel root directory to `Stage 7 - UI Interface/vercel_vite_app`; the nested `vercel.json` then uses `npm run build` and serves `dist`.
 
 ## Run the React prototype
 

@@ -1,6 +1,0 @@
-{
-  "installCommand": "cd \"vercel_vite_app\" && npm install",
-  "buildCommand": "cd \"vercel_vite_app\" && npm run build",
-  "outputDirectory": "vercel_vite_app/dist",
-  "framework": "vite"
-}

@@ -144,6 +144,7 @@ This table is the single source of truth for what the team has shipped and what 
 - [2026-06-10] Composer attachment polish: made the plus button open a desktop photo picker with image previews, and removed the landing-card header strip for cleaner box alignment.
 - [2026-06-10] Live Data Status readability: stacked metric values and details so the Model stack text no longer truncates with ellipses.
 - [2026-06-10] Stage 7 Vercel config move: moved `vercel.json` into `Stage 7 - UI Interface/` and made its commands relative to that folder.
+- [2026-06-10] Vercel config restore: moved `vercel.json` back to the repository root with root-relative commands for the Stage 7 Vite app.
 
 ### In Progress
 
@@ -192,6 +193,7 @@ This table is the single source of truth for what the team has shipped and what 
 - [2026-06-10] Session 30: Connected the composer plus button to a multi-image desktop upload picker with preview chips/removal controls, and removed the Suggested analyses / Portfolio snapshot header strip above the landing cards.
 - [2026-06-10] Session 31: Updated the Live Data Status metric layout so value/detail text wraps on stacked lines, making `3 engines ready` and `XGB · LGBM · Prophet` fully visible.
 - [2026-06-10] Session 32: Moved `vercel.json` from the repository root into `Stage 7 - UI Interface/`, updated the Vercel commands to run from that folder, and documented that Vercel should use `Stage 7 - UI Interface` as the Root Directory.
+- [2026-06-10] Session 33: Moved `vercel.json` back to the repository root and restored the root-relative Vercel install/build/output paths for `Stage 7 - UI Interface/vercel_vite_app`.
 
 ---
 
