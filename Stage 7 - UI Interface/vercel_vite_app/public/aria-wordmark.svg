@@ -1,14 +1,18 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1666 913" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1726 913" role="img" aria-labelledby="title desc">
   <title id="title">ARIA</title>
   <desc id="desc">ARIA wordmark in rounded pink line lettering.</desc>
-  <rect width="1666" height="913" fill="none"/>
+  <defs>
+    <g id="aria-letter-a">
+      <path d="M32 695 184 255c12-34 36-52 68-52s56 18 68 52l151 440"/>
+      <path d="M159 552h138"/>
+    </g>
+  </defs>
+  <rect width="1726" height="913" fill="none"/>
   <g fill="none" stroke="#ff2d5f" stroke-width="44" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M32 695 184 255c12-34 36-52 68-52s56 18 68 52l151 440"/>
-    <path d="M159 552h138"/>
+    <use href="#aria-letter-a"/>
     <path d="M540 696V259c0-33 24-56 59-56h208c124 0 204 66 204 165 0 99-80 165-204 165H687"/>
     <path d="M687 533 905 696"/>
     <path d="M1085 202v493"/>
-    <path d="M1254 695 1406 255c12-34 36-52 68-52s56 18 68 52l151 440"/>
-    <path d="M1381 552h138"/>
+    <use href="#aria-letter-a" transform="translate(1222 0)"/>
   </g>
 </svg>
