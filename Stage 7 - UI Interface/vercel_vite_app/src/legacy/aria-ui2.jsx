@@ -246,7 +246,7 @@ function SettingsModal({ open, onClose, settings, setSettings }) {
       style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(3px)", display: "grid", placeItems: "center", zIndex: 100, padding: 24 }}>
       <div className="aria-scalein" onMouseDown={(e) => e.stopPropagation()}
         style={{
-          width: 560, maxWidth: "100%", maxHeight: "86vh", overflow: "hidden", display: "flex", flexDirection: "column",
+          width: 560, maxWidth: "100%", height: "min(546px, calc(100vh - 48px))", maxHeight: "86vh", overflow: "hidden", display: "flex", flexDirection: "column",
           background: C2.s2, borderRadius: 18, border: `1px solid ${C2.hair}`,
           boxShadow: "0 -1px 0 rgba(255,255,255,0.10) inset, 0 30px 80px rgba(0,0,0,0.7)",
         }}>
@@ -264,7 +264,7 @@ function SettingsModal({ open, onClose, settings, setSettings }) {
           ))}
         </div>
 
-        <div style={{ padding: 18, overflowY: "auto" }}>
+        <div style={{ padding: 18, overflowY: "auto", flex: 1 }}>
           {tab === "api" ? (
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               <div>

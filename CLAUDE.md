@@ -134,6 +134,7 @@ This table is the single source of truth for what the team has shipped and what 
 - [2026-06-10] Main README link fix: corrected the root README Vercel line to clean Markdown link syntax after a nested link was introduced on `main`.
 - [2026-06-10] Vercel sidebar control polish: added a fullscreen toggle directly beside the sidebar collapse button in the ARIA Vite UI.
 - [2026-06-10] KPMG theme polish: made the KPMG theme use KPMG palette tokens across the Vite UI while preserving the Airbnb and Dark theme colors.
+- [2026-06-10] Settings modal sizing fix: kept the Settings panel dimensions stable when switching from API & Models to About.
 
 ### In Progress
 
@@ -172,6 +173,7 @@ This table is the single source of truth for what the team has shipped and what 
 - [2026-06-10] Session 20: Fixed the root README Vercel website line on `main` so the URL is a clean clickable Markdown link.
 - [2026-06-10] Session 21: Added a fullscreen toggle beside the sidebar collapse button in the Vercel ARIA UI and wired it to the browser Fullscreen API.
 - [2026-06-10] Session 22: Updated the KPMG theme so shell colors, CTA, logo treatment, agent accents, dashboard visuals, and charts use KPMG palette colors without changing Airbnb or Dark mode.
+- [2026-06-10] Session 23: Fixed the Settings modal so the About tab keeps the same grey-panel dimensions as the API & Models tab.
 
 ---
 
