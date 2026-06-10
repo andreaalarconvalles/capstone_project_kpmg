@@ -355,3 +355,4 @@ Status key: ✅ Done · 🔄 In progress · 🔲 Not started · ⏳ Blocked
 - [2026-06-10] Session 7: Fixed Streamlit Cloud dependency installation by adding a root-level `requirements.txt`, avoiding installer parsing issues caused by the nested app folder path with spaces and a hyphen.
 - [2026-06-10] Session 8: Added a no-spaces Streamlit Cloud wrapper at `streamlit_app/app.py`, duplicated deployment requirements there, and updated Stage 7 deployment docs to use `streamlit_app/app.py` as the main module.
 - [2026-06-10] Session 9: Replaced the native Stage 7 Streamlit recreation with a Streamlit host that embeds the exact Claude Design React prototype, synced the prototype files from the ZIP handoff, and updated deployment documentation.
+- [2026-06-10] Session 10: Hotfixed the Streamlit Cloud embed path by switching the React prototype host back to the classic Streamlit HTML component after the newer `st.iframe` path rendered as a blank page on deployment.

@@ -11,6 +11,7 @@ from functools import lru_cache
 from pathlib import Path
 
 import streamlit as st
+import streamlit.components.v1 as components
 
 
 STREAMLIT_FRAME_CSS = """
@@ -46,7 +47,8 @@ STREAMLIT_FRAME_CSS = """
     padding: 0 !important;
   }
 
-  iframe {
+  iframe,
+  iframe[title="streamlit.components.v1.html"] {
     position: fixed !important;
     inset: 0 !important;
     width: 100vw !important;
@@ -139,4 +141,4 @@ def render_prototype_app() -> None:
         st.error(f"Unable to load the ARIA prototype: {exc}")
         return
 
-    st.iframe(prototype_html, width="stretch", height="stretch")
+    components.html(prototype_html, height=1200, scrolling=False)
