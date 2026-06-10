@@ -32,6 +32,7 @@ async function bootstrap() {
   await import("./legacy/tweaks-panel.jsx");
   await import("./legacy/aria-data.jsx");
   await import("./legacy/aria-charts.jsx");
+  await import("./legacy/aria-dashboard.jsx");
   await import("./legacy/aria-ui.jsx");
   await import("./legacy/aria-ui2.jsx");
   await import("./legacy/aria-main.jsx");

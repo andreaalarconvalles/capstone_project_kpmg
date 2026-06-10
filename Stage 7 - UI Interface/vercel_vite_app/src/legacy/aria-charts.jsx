@@ -8,8 +8,7 @@ const {
 const CC = ARIA.c;
 
 /* ---------- shared theme bits ---------- */
-const axisTick = { fill: CC.muted, fontSize: 11, letterSpacing: -0.2 };
-const gridStroke = CC.s2;
+const axisTick = () => ({ fill: CC.muted, fontSize: 11, letterSpacing: -0.2 });
 
 function ChartTip({ active, payload, label, suffix = "", labelKey }) {
   if (!active || !payload || !payload.length) return null;
@@ -204,11 +203,11 @@ function ChartBlock({ chart }) {
     return (
       <ChartCard title={title} height={220}>
         <BarChart data={DATA.shap} layout="vertical" margin={{ left: 8, right: 24, top: 4, bottom: 4 }} barCategoryGap="28%">
-          <CartesianGrid horizontal={false} stroke={gridStroke} />
-          <XAxis type="number" tick={axisTick} axisLine={false} tickLine={false} domain={[-10, 24]} />
-          <YAxis type="category" dataKey="f" tick={axisTick} axisLine={false} tickLine={false} width={132} />
+          <CartesianGrid horizontal={false} stroke={CC.s2} />
+          <XAxis type="number" tick={axisTick()} axisLine={false} tickLine={false} domain={[-10, 24]} />
+          <YAxis type="category" dataKey="f" tick={axisTick()} axisLine={false} tickLine={false} width={132} />
           <ReferenceLine x={0} stroke={CC.hair} />
-          <Tooltip cursor={{ fill: "rgba(255,255,255,0.03)" }} content={<ChartTip suffix=" €" />} />
+          <Tooltip cursor={{ fill: "rgba(128,128,128,0.09)" }} content={<ChartTip suffix=" €" />} />
           <Bar dataKey="v" name="SHAP value" radius={4} isAnimationActive>
             {DATA.shap.map((d, i) => <Cell key={i} fill={d.v >= 0 ? CC.violet : CC.muted} />)}
           </Bar>
@@ -221,9 +220,9 @@ function ChartBlock({ chart }) {
     return (
       <ChartCard title={title}>
         <LineChart data={DATA.revsim} margin={{ left: 4, right: 16, top: 6, bottom: 2 }}>
-          <CartesianGrid vertical={false} stroke={gridStroke} />
-          <XAxis dataKey="m" tick={axisTick} axisLine={false} tickLine={false} />
-          <YAxis tick={axisTick} axisLine={false} tickLine={false} width={42} />
+          <CartesianGrid vertical={false} stroke={CC.s2} />
+          <XAxis dataKey="m" tick={axisTick()} axisLine={false} tickLine={false} />
+          <YAxis tick={axisTick()} axisLine={false} tickLine={false} width={42} />
           <Tooltip cursor={{ stroke: CC.hair }} content={<ChartTip suffix=" €" />} />
           <Line type="monotone" dataKey="cur" name="Current €118" stroke={CC.muted} strokeWidth={2} dot={false} />
           <Line type="monotone" dataKey="rec" name="Recommended €142" stroke={CC.violet} strokeWidth={2.5} dot={false} />
@@ -243,12 +242,12 @@ function ChartBlock({ chart }) {
     return (
       <ChartCard title={title} height={232}>
         <BarChart data={map.data} margin={{ left: 4, right: 16, top: 8, bottom: 2 }} barCategoryGap="30%">
-          <CartesianGrid vertical={false} stroke={gridStroke} />
-          <XAxis dataKey="n" tick={axisTick} axisLine={false} tickLine={false} interval={0} />
-          <YAxis tick={axisTick} axisLine={false} tickLine={false} width={40} domain={map.dom} />
-          {map.ref != null && <ReferenceLine y={map.ref} stroke="rgba(255,255,255,0.22)" strokeDasharray="4 4"
+          <CartesianGrid vertical={false} stroke={CC.s2} />
+          <XAxis dataKey="n" tick={axisTick()} axisLine={false} tickLine={false} interval={0} />
+          <YAxis tick={axisTick()} axisLine={false} tickLine={false} width={40} domain={map.dom} />
+          {map.ref != null && <ReferenceLine y={map.ref} stroke="rgba(128,128,128,0.34)" strokeDasharray="4 4"
             label={{ value: map.refLabel, fill: CC.muted, fontSize: 10.5, position: "right" }} />}
-          <Tooltip cursor={{ fill: "rgba(255,255,255,0.03)" }} content={<ChartTip suffix={map.suffix} />} />
+          <Tooltip cursor={{ fill: "rgba(128,128,128,0.09)" }} content={<ChartTip suffix={map.suffix} />} />
           <Bar dataKey="v" name={title} radius={[5, 5, 0, 0]} isAnimationActive>
             {map.data.map((d, i) => {
               let fill = map.color;
@@ -267,10 +266,10 @@ function ChartBlock({ chart }) {
     return (
       <ChartCard title={title} height={210}>
         <BarChart data={DATA.riskdist} margin={{ left: 4, right: 16, top: 8, bottom: 2 }} barCategoryGap="22%">
-          <CartesianGrid vertical={false} stroke={gridStroke} />
-          <XAxis dataKey="b" tick={axisTick} axisLine={false} tickLine={false} />
-          <YAxis tick={axisTick} axisLine={false} tickLine={false} width={36} />
-          <Tooltip cursor={{ fill: "rgba(255,255,255,0.03)" }} content={<ChartTip suffix="%" />} />
+          <CartesianGrid vertical={false} stroke={CC.s2} />
+          <XAxis dataKey="b" tick={axisTick()} axisLine={false} tickLine={false} />
+          <YAxis tick={axisTick()} axisLine={false} tickLine={false} width={36} />
+          <Tooltip cursor={{ fill: "rgba(128,128,128,0.09)" }} content={<ChartTip suffix="%" />} />
           <Bar dataKey="v" name="share of listings" radius={[5, 5, 0, 0]}>
             {DATA.riskdist.map((d, i) => <Cell key={i} fill={d.flag ? CC.coral : "rgba(153,153,153,0.45)"} />)}
           </Bar>
@@ -287,9 +286,9 @@ function ChartBlock({ chart }) {
     return (
       <ChartCard title={title}>
         <LineChart data={DATA.trend} margin={{ left: 4, right: 16, top: 6, bottom: 2 }}>
-          <CartesianGrid vertical={false} stroke={gridStroke} />
-          <XAxis dataKey="q" tick={axisTick} axisLine={false} tickLine={false} />
-          <YAxis tick={axisTick} axisLine={false} tickLine={false} width={40} domain={[95, 130]} />
+          <CartesianGrid vertical={false} stroke={CC.s2} />
+          <XAxis dataKey="q" tick={axisTick()} axisLine={false} tickLine={false} />
+          <YAxis tick={axisTick()} axisLine={false} tickLine={false} width={40} domain={[95, 130]} />
           <Tooltip cursor={{ stroke: CC.hair }} content={<ChartTip />} />
           {lines.map((l) => (
             <Line key={l.k} type="monotone" dataKey={l.k} name={l.k} stroke={l.c}
@@ -304,9 +303,9 @@ function ChartBlock({ chart }) {
     return (
       <ChartCard title={title}>
         <ComposedChart data={DATA.forecast} margin={{ left: 4, right: 16, top: 6, bottom: 2 }}>
-          <CartesianGrid vertical={false} stroke={gridStroke} />
-          <XAxis dataKey="m" tick={axisTick} axisLine={false} tickLine={false} />
-          <YAxis tick={axisTick} axisLine={false} tickLine={false} width={42} unit="k" />
+          <CartesianGrid vertical={false} stroke={CC.s2} />
+          <XAxis dataKey="m" tick={axisTick()} axisLine={false} tickLine={false} />
+          <YAxis tick={axisTick()} axisLine={false} tickLine={false} width={42} unit="k" />
           <Tooltip cursor={{ stroke: CC.hair }} content={<ChartTip suffix="k nights" />} />
           <Area type="monotone" dataKey="hi" name="upper 80%" stroke="none" fill="rgba(255,122,61,0.14)" isAnimationActive={false} />
           <Area type="monotone" dataKey="lo" name="lower 80%" stroke="none" fill={CC.canvas || "#090909"} isAnimationActive={false} />

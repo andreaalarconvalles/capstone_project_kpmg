@@ -72,7 +72,7 @@ function Sidebar({
           <Icon name="PanelLeft" size={19} />
         </button>
         <button className="aria-focus" onClick={onNewChat} title="New chat"
-        style={{ width: 36, height: 36, borderRadius: 100, display: "grid", placeItems: "center", background: C.ink, color: C.canvas, marginTop: 4 }}>
+        style={{ width: 36, height: 36, borderRadius: 100, display: "grid", placeItems: "center", background: C.cta, color: C.ctaText, marginTop: 4 }}>
           <Icon name="Plus" size={19} sw={2.2} />
         </button>
         <div style={{ height: 10 }} />
@@ -117,7 +117,7 @@ function Sidebar({
         <button className="aria-focus" onClick={onNewChat}
         style={{
           width: "100%", display: "flex", alignItems: "center", gap: 9, justifyContent: "center",
-          background: C.ink, color: C.canvas, borderRadius: 100, padding: "9px 14px",
+          background: C.cta, color: C.ctaText, borderRadius: 100, padding: "9px 14px",
           fontSize: 14, fontWeight: 600, letterSpacing: -0.2
         }}>
           <Icon name="Plus" size={17} sw={2.4} /> New chat

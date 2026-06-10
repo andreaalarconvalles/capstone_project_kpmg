@@ -97,7 +97,7 @@ function Thread({ agent, messages, live, scrollRef, onCopy, onRegen, onExport })
 
 /* ---------- App ---------- */
 const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
-  "accent": "#0099ff",
+  "accent": "brand",
   "fontSize": 15,
   "density": "regular",
   "streamSpeed": "normal",
@@ -106,10 +106,11 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
 
 function App() {
   const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
-  const [theme, setTheme] = useState("light");
-  // apply theme palette (dark = default) + push tweak values into the live globals
+  const [theme, setTheme] = useState("airbnb");
+  // apply theme palette (airbnb = default) + push tweak values into the live globals
   applyTheme(theme);
-  ARIA.c.blue = t.accent;
+  // accent Tweak: "brand" follows the theme's brand accent; any hex value overrides it
+  if (t.accent && t.accent !== "brand") ARIA.c.blue = t.accent;
   ARIA.ui = { fontSize: t.fontSize, density: t.density, streamSpeed: t.streamSpeed, traceCollapse: t.traceCollapse };
 
   const [collapsed, setCollapsed] = useState(false);
@@ -262,38 +263,39 @@ function App() {
   }, [modelId, settings]);
 
   /* send a prompt */
-  const send = useCallback((rawPrompt) => {
+  const send = useCallback((rawPrompt, forceAgentId) => {
     const prompt = (rawPrompt != null ? rawPrompt : input).trim();
     if (!prompt || live) return;
+    const aid = forceAgentId || agentId;
+    const ag = AGENT_BY_ID[aid];
+    if (forceAgentId && forceAgentId !== agentId) setAgentId(forceAgentId);
     setInput("");
     if (taRef.current) taRef.current.style.height = "auto";
 
     let convId = activeConvId;
+    const isNew = !convId;
+    if (isNew) convId = "c" + Date.now();
     const useLive = !settings.demoMode && settings.apiKey.trim().length > 8;
 
     setConversations((cs) => {
-      let next = cs;
-      if (!convId) {
-        convId = "c" + Date.now();
+      if (isNew) {
         const title = prompt.length > 38 ? prompt.slice(0, 36) + "…" : prompt;
-        next = [{ id: convId, agentId, title, group: "Today", messages: [{ role: "user", text: prompt }] }, ...cs];
-      } else {
-        next = cs.map((c) => c.id === convId
-          ? { ...c, messages: [...(c.messages || []), { role: "user", text: prompt }] }
-          : c);
+        return [{ id: convId, agentId: aid, title, group: "Today", messages: [{ role: "user", text: prompt }] }, ...cs];
       }
-      return next;
+      return cs.map((c) => c.id === convId
+        ? { ...c, messages: [...(c.messages || []), { role: "user", text: prompt }] }
+        : c);
     });
     setActiveConvId(convId);
 
     setTimeout(() => {
-      if (useLive) runLive(convId, agentId, prompt);
+      if (useLive) runLive(convId, aid, prompt);
       else {
-        const s = getScript(agentId, prompt) || genericScript(agent, prompt);
+        const s = getScript(aid, prompt) || genericScript(ag, prompt);
         const staticMsg = {
-          role: "assistant", agentId, prompt, trace: s.trace, blocks: s.blocks, brief: s.brief, elapsed: elapsedFor(s.trace),
+          role: "assistant", agentId: aid, prompt, trace: s.trace, blocks: s.blocks, brief: s.brief, elapsed: elapsedFor(s.trace),
         };
-        runStream(convId, agentId, prompt, staticMsg);
+        runStream(convId, aid, prompt, staticMsg);
       }
     }, 30);
   }, [input, activeConvId, agentId, agent, live, settings, runStream, runLive]);
@@ -370,14 +372,29 @@ function App() {
         {/* top bar */}
         <div className="no-print" style={{ height: 52, flexShrink: 0, display: "flex", alignItems: "center", gap: 10, padding: "0 18px", borderBottom: `1px solid ${CA.hairSoft}` }}>
           <AgentTile accent={agent.accent} icon={agent.icon} size={26} radius={8} iconSize={14} />
-          <span style={{ fontSize: 14.5, fontWeight: 500 }}>{agent.name}</span>
-          <span style={{ fontSize: 12.5, color: CA.muted }}>· {agent.tagline}</span>
-          <button className="aria-focus" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-            style={{ marginLeft: "auto", width: 34, height: 34, borderRadius: 100, display: "grid", placeItems: "center", color: CA.muted, background: CA.s1, border: `1px solid ${CA.hair}` }}>
-            <Icon name={theme === "dark" ? "Sun" : "Moon"} size={16.5} />
-          </button>
-          <div style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 12, color: CA.muted, border: `1px solid ${CA.hair}`, borderRadius: 100, padding: "5px 11px" }}>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 7, minWidth: 0, flexShrink: 1, overflow: "hidden" }}>
+            <span style={{ fontSize: 14.5, fontWeight: 500, whiteSpace: "nowrap" }}>{agent.name}</span>
+            <span style={{ fontSize: 12.5, color: CA.muted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>· {agent.tagline}</span>
+          </div>
+          <div style={{ marginLeft: "auto", flexShrink: 0, display: "flex", alignItems: "center", gap: 2, padding: 3, borderRadius: 100, background: CA.s1, border: `1px solid ${CA.hair}` }}>
+            {["airbnb", "kpmgLight", "dark"].map((mode) => {
+              const p = PALETTES[mode];
+              const on = theme === mode;
+              return (
+                <button key={mode} className="aria-focus" onClick={() => setTheme(mode)}
+                  title={`${p.label} theme`}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 6, height: 28, padding: "0 11px", borderRadius: 100,
+                    background: on ? CA.s2 : "transparent", color: on ? CA.ink : CA.muted,
+                    fontSize: 12.5, fontWeight: 500, transition: "background 0.14s, color 0.14s",
+                  }}>
+                  <Icon name={p.icon} size={14.5} color={on ? p.accent : CA.muted} />
+                  <span style={{ whiteSpace: "nowrap" }}>{p.label}</span>
+                </button>
+              );
+            })}
+          </div>
+          <div style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 7, fontSize: 12, color: CA.muted, border: `1px solid ${CA.hair}`, borderRadius: 100, padding: "5px 11px" }}>
             <span style={{ width: 6, height: 6, borderRadius: 4, background: settings.demoMode ? CA.orange : CA.success }} />
             {settings.demoMode ? "Demo mode" : "Live · Gemini"}
           </div>
@@ -394,7 +411,8 @@ function App() {
             </div>
           </>
         ) : (
-          <EmptyState agent={agent} onChip={(c) => send(c)} composer={composerEl} />
+          <EmptyState agent={agent} onChip={(c) => send(c)} composer={composerEl}
+            onSignal={(aid, prompt) => send(prompt, aid)} />
         )}
       </div>
 
@@ -402,8 +420,8 @@ function App() {
 
       <TweaksPanel title="Tweaks">
         <TweakSection label="Interface" />
-        <TweakColor label="Accent" value={t.accent}
-          options={["#0099ff", "#6a4cf5", "#1fd1c7", "#d44df0"]}
+        <TweakRadio label="Accent" value={t.accent}
+          options={[{ value: "brand", label: "Brand" }, { value: "#6a4cf5", label: "Violet" }, { value: "#1fd1c7", label: "Teal" }]}
           onChange={(v) => setTweak("accent", v)} />
         <TweakRadio label="Density" value={t.density}
           options={["compact", "regular", "comfy"]}

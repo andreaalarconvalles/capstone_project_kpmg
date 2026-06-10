@@ -121,9 +121,8 @@ const Composer = React.forwardRef(function Composer({
 
   return (
     <div style={{ width: "100%", maxWidth: 768, margin: "0 auto" }}>
-      <div style={{
+      <div className="aria-elev" style={{
         background: C2.s1, border: `1px solid ${C2.hair}`, borderRadius: 24, padding: "8px 8px 8px 8px",
-        boxShadow: "0 8px 30px rgba(0,0,0,0.35)",
       }}>
         <div style={{ display: "flex", alignItems: "flex-end", gap: 6 }}>
           <button className="aria-focus" title="Attach" tabIndex={-1}
@@ -150,7 +149,7 @@ const Composer = React.forwardRef(function Composer({
               <button className="aria-focus" onClick={onSend} disabled={!value.trim()} title="Send"
                 style={{
                   width: 38, height: 38, borderRadius: 100, display: "grid", placeItems: "center",
-                  background: value.trim() ? C2.ink : C2.s2, color: value.trim() ? C2.canvas : C2.muted,
+                  background: value.trim() ? C2.cta : C2.s2, color: value.trim() ? C2.ctaText : C2.muted,
                   transition: "background 0.15s", cursor: value.trim() ? "pointer" : "default",
                 }}>
                 <Icon name="ArrowUp" size={19} sw={2.4} />
@@ -186,31 +185,43 @@ const Composer = React.forwardRef(function Composer({
 });
 
 /* ---------- Empty state ---------- */
-function EmptyState({ agent, onChip, composer }) {
+function EmptyState({ agent, onChip, composer, onSignal }) {
   return (
-    <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", padding: "20px 24px 36px", overflowY: "auto" }}>
-      <div style={{ width: "100%", maxWidth: 768, display: "flex", flexDirection: "column", alignItems: "center" }}>
-        <AgentTile accent={agent.accent} icon={agent.icon} size={58} radius={18} iconSize={28} />
-        <div style={{ fontSize: 15, fontWeight: 500, marginTop: 16, letterSpacing: -0.2 }}>{agent.name}</div>
-        <div style={{ fontSize: 13.5, color: C2.muted, marginTop: 3 }}>{agent.tagline}</div>
-        <h1 style={{ fontSize: 32, fontWeight: 500, letterSpacing: -1, lineHeight: 1.13, margin: "26px 0 26px", textAlign: "center" }}>
-          What should we analyze today?
-        </h1>
-        <div style={{ width: "100%", marginBottom: 22 }}>{composer}</div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, width: "100%", maxWidth: 768 }}>
-          {agent.chips.map((c) => (
-            <button key={c} className="aria-focus" onClick={() => onChip(c)}
-              style={{
-                display: "flex", alignItems: "center", gap: 10, textAlign: "left", padding: "13px 15px",
-                borderRadius: 14, background: C2.s1, border: `1px solid ${C2.hair}`, color: C2.inkSoft,
-                fontSize: 13.5, lineHeight: 1.35, transition: "background 0.13s, border-color 0.13s",
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = C2.s2; e.currentTarget.style.borderColor = "#333"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = C2.s1; e.currentTarget.style.borderColor = C2.hair; }}>
-              <Icon name="ArrowUpRight" size={15} color={agent.accent} style={{ marginTop: 1 }} />
-              <span style={{ textWrap: "pretty" }}>{c}</span>
-            </button>
-          ))}
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", padding: "26px 24px 36px", overflowY: "auto" }}>
+      <div style={{ width: "100%", maxWidth: 1080, margin: "auto 0" }}>
+        {/* identity + greeting */}
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 24 }}>
+          <AgentTile accent={agent.accent} icon={agent.icon} size={52} radius={16} iconSize={26} />
+          <div style={{ fontSize: 14.5, fontWeight: 500, marginTop: 13, letterSpacing: -0.2 }}>{agent.name}</div>
+          <div style={{ fontSize: 13, color: C2.muted, marginTop: 3 }}>{agent.tagline}</div>
+          <h1 style={{ fontSize: 30, fontWeight: 500, letterSpacing: -1, lineHeight: 1.13, margin: "18px 0 0", textAlign: "center" }}>
+            What should we analyze today?
+          </h1>
+        </div>
+
+        {/* two columns: composer + chips | dashboard */}
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 22, alignItems: "flex-start", justifyContent: "center" }}>
+          <div style={{ flex: "1 1 460px", minWidth: 0, maxWidth: 560, display: "flex", flexDirection: "column", gap: 18 }}>
+            {composer}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              {agent.chips.map((c) => (
+                <button key={c} className="aria-focus aria-elev" onClick={() => onChip(c)}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 10, textAlign: "left", padding: "12px 14px",
+                    borderRadius: 14, background: C2.s1, border: `1px solid ${C2.hair}`, color: C2.inkSoft,
+                    fontSize: 13, lineHeight: 1.35, transition: "background 0.13s, transform 0.13s",
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = C2.s2; e.currentTarget.style.transform = "translateY(-1px)"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = C2.s1; e.currentTarget.style.transform = "none"; }}>
+                  <Icon name="ArrowUpRight" size={15} color={agent.accent} style={{ marginTop: 1, flexShrink: 0 }} />
+                  <span style={{ textWrap: "pretty" }}>{c}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+          <div style={{ flex: "1 1 360px", minWidth: 0, maxWidth: 440 }}>
+            <LandingDashboard onSignal={onSignal} />
+          </div>
         </div>
       </div>
     </div>

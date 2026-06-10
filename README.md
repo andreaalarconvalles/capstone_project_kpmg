@@ -1,6 +1,8 @@
 # ARIA — Agentic Real-estate Intelligence Advisor
 ### IE Business School × KPMG Spain · Corporate Capstone 2026
 
+**Website:** [capstone-project-kpmg-iarimooha-lukatcheishvilis-projects.vercel.app](https://capstone-project-kpmg-iarimooha-lukatcheishvilis-projects.vercel.app/)
+
 ---
 
 ## What is ARIA
@@ -360,3 +362,4 @@ Status key: ✅ Done · 🔄 In progress · 🔲 Not started · ⏳ Blocked
 - [2026-06-10] Session 12: Set the Streamlit deployment target to `Stage 7 - UI Interface/streamlit_app/app.py` and made generated static assets live under that app folder.
 - [2026-06-10] Session 13: Added a Vite React build path for the Claude Design export, with Vercel config serving the generated `dist/` directory.
 - [2026-06-10] Session 14: Moved the Vercel Vite app into `Stage 7 - UI Interface/vercel_vite_app/` and kept the root Vercel config as a deployment pointer.
+- [2026-06-10] Session 15: Updated the Vercel Vite UI from the latest Claude Design zip, including the new landing dashboard module and Airbnb/KPMG theme system.
