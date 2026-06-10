@@ -33,17 +33,34 @@ function AgentTile({ accent, icon, size = 34, radius = 11, iconSize }) {
 }
 
 function AriaLogo({ width = 148, compact = false, style }) {
+  const logoWidth = compact ? 88 : width;
+  const baseStyle = {
+    display: "block",
+    width: logoWidth,
+    height: "auto",
+    objectFit: "contain",
+    ...style,
+  };
+  if (document.documentElement.dataset.theme === "kpmgLight") {
+    return (
+      <span
+        role="img"
+        aria-label="ARIA"
+        style={{
+          ...baseStyle,
+          aspectRatio: "1650 / 913",
+          background: C.cta,
+          WebkitMask: "url('/aria-wordmark.svg') center / contain no-repeat",
+          mask: "url('/aria-wordmark.svg') center / contain no-repeat",
+        }}
+      />
+    );
+  }
   return (
     <img
       src="/aria-wordmark.svg"
       alt="ARIA"
-      style={{
-        display: "block",
-        width: compact ? 88 : width,
-        height: "auto",
-        objectFit: "contain",
-        ...style,
-      }}
+      style={baseStyle}
     />
   );
 }

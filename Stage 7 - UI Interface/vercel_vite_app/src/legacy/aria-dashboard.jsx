@@ -54,7 +54,7 @@ function MiniBars({ data, color, w = 96, h = 30 }) {
 }
 
 function Delta({ value, positive = true }) {
-  const col = positive ? CD.success : "#e0116f";
+  const col = positive ? CD.success : CD.coral;
   return (
     <span style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: 12.5, fontWeight: 600, color: col }}>
       <Icon name={positive ? "TrendingUp" : "TrendingDown"} size={13} color={col} sw={2.2} />
@@ -137,7 +137,7 @@ function LandingDashboard({ onSignal }) {
           viz={<MiniBars data={[8, 11, 9, 14, 17, 21]} color={A["host-revenue"]} />} />
         <KpiCard icon="ShieldAlert" accent={A["crime"]} label="Flagged listings" value="47"
           sub="AML score > 0.80"
-          foot={<StackBar segments={[{ value: 12, color: "#e0116f" }, { value: 23, color: A["crime"] }, { value: 12, color: CD.muted }]} />} />
+          foot={<StackBar segments={[{ value: 12, color: CD.coral }, { value: 23, color: A["crime"] }, { value: 12, color: CD.muted }]} />} />
       </div>
 
       {/* agent signals */}

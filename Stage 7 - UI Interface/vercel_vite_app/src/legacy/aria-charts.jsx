@@ -126,7 +126,7 @@ function hexToRgb(h) {
 }
 function riskColor(t) {
   t = Math.max(0, Math.min(1, t));
-  const a = hexToRgb(ARIA.c.s2), b = [255, 85, 119];
+  const a = hexToRgb(ARIA.c.s2), b = hexToRgb(ARIA.c.coral || "#ff5577");
   const e = Math.pow(t, 0.85);
   const c = a.map((v, i) => Math.round(v + (b[i] - v) * e));
   return `rgb(${c[0]},${c[1]},${c[2]})`;
@@ -165,7 +165,7 @@ function NeighbourhoodMap({ city = "Athens", title, metric = "risk" }) {
                  style={{ cursor: "default" }}>
                 <rect x={px} y={py} width={cell} height={cell} rx={14}
                   fill={riskColor(t)}
-                  stroke={active ? CC.ink : over ? "rgba(255,85,119,0.7)" : CC.hair}
+                  stroke={active ? CC.ink : over ? `${CC.coral}b3` : CC.hair}
                   strokeWidth={active ? 1.5 : 1}
                   style={{ transition: "stroke 0.15s, transform 0.15s", transformOrigin: `${px + cell / 2}px ${py + cell / 2}px`, transform: active ? "scale(1.04)" : "none" }} />
                 <text x={px + cell / 2} y={py + cell / 2 - 4} textAnchor="middle"
@@ -253,7 +253,7 @@ function ChartBlock({ chart }) {
               let fill = map.color;
               if (kind === "supplygap") fill = d.v >= 0 ? CC.teal : CC.muted;
               if (kind === "anomaly" && d.n === "#48213") fill = CC.coral;
-              else if (kind === "anomaly") fill = "rgba(255,85,119,0.55)";
+              else if (kind === "anomaly") fill = `${CC.coral}8c`;
               return <Cell key={i} fill={fill} />;
             })}
           </Bar>
@@ -281,7 +281,7 @@ function ChartBlock({ chart }) {
   if (kind === "trend") {
     const lines = [
       { k: "centre", c: CC.magenta }, { k: "mid", c: CC.orange },
-      { k: "outer", c: CC.muted }, { k: "far", c: "#555" },
+      { k: "outer", c: CC.muted }, { k: "far", c: CC.hair },
     ];
     return (
       <ChartCard title={title}>
@@ -307,7 +307,7 @@ function ChartBlock({ chart }) {
           <XAxis dataKey="m" tick={axisTick()} axisLine={false} tickLine={false} />
           <YAxis tick={axisTick()} axisLine={false} tickLine={false} width={42} unit="k" />
           <Tooltip cursor={{ stroke: CC.hair }} content={<ChartTip suffix="k nights" />} />
-          <Area type="monotone" dataKey="hi" name="upper 80%" stroke="none" fill="rgba(255,122,61,0.14)" isAnimationActive={false} />
+          <Area type="monotone" dataKey="hi" name="upper 80%" stroke="none" fill={`${CC.orange}24`} isAnimationActive={false} />
           <Area type="monotone" dataKey="lo" name="lower 80%" stroke="none" fill={CC.canvas || "#090909"} isAnimationActive={false} />
           <Line type="monotone" dataKey="y" name="forecast" stroke={CC.orange} strokeWidth={2.5} dot={{ r: 2.5, fill: CC.orange }} />
         </ComposedChart>

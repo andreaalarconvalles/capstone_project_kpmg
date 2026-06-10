@@ -73,6 +73,7 @@ const AGENTS = [
 ];
 
 const AGENT_BY_ID = Object.fromEntries(AGENTS.map((a) => [a.id, a]));
+const DEFAULT_AGENT_ACCENTS = Object.fromEntries(AGENTS.map((a) => [a.id, a.accent]));
 
 const MODELS = [
   { group: "AI Models", items: [
@@ -334,6 +335,7 @@ const PALETTES = {
     ink: "#222222", inkSoft: "#3f3f3f", muted: "#6a6a6a", success: "#16a34a", scrollThumb: "#cfcfcf",
     accent: "#ff385c", accentActive: "#e00b41",        // Rausch
     cta: "#ff385c", ctaText: "#ffffff",                // primary buttons = Rausch fill
+    violet: "#6a4cf5", magenta: "#d44df0", orange: "#ff7a3d", coral: "#ff5577", teal: "#1fd1c7",
     font: "'Inter','Airbnb Cereal VF',Circular,system-ui,sans-serif",
   },
   dark: {
@@ -342,22 +344,32 @@ const PALETTES = {
     ink: "#ffffff", inkSoft: "#ededed", muted: "#999999", success: "#22c55e", scrollThumb: "#2a2a2a",
     accent: "#0099ff", accentActive: "#33adff",
     cta: "#ffffff", ctaText: "#000000",                // neutral white pill
+    violet: "#6a4cf5", magenta: "#d44df0", orange: "#ff7a3d", coral: "#ff5577", teal: "#1fd1c7",
     font: "'Inter',system-ui,sans-serif",
   },
   kpmg: {
     label: "KPMG Dark", icon: "MoonStar",
     canvas: "#0a0e1a", s1: "#111726", s2: "#1a2236", hair: "#283250", hairSoft: "#161d2e",
-    ink: "#ffffff", inkSoft: "#e8ecf6", muted: "#97a3c0", success: "#22c55e", scrollThumb: "#283250",
+    ink: "#ffffff", inkSoft: "#e8ecf6", muted: "#97a3c0", success: "#00a3a1", scrollThumb: "#283250",
     accent: "#0091da", accentActive: "#33adff",        // KPMG light blue (pops on navy)
     cta: "#005eb8", ctaText: "#ffffff",                // KPMG medium blue fill
+    violet: "#00338d", magenta: "#005eb8", orange: "#0091da", coral: "#6d2077", teal: "#00a3a1",
     font: "'Inter',system-ui,sans-serif",
   },
   kpmgLight: {
     label: "KPMG", icon: "Landmark",
     canvas: "#ffffff", s1: "#f4f7fc", s2: "#e9f0f9", hair: "#d3deee", hairSoft: "#e8eef7",
-    ink: "#0a1f44", inkSoft: "#2b3a57", muted: "#5d6b86", success: "#16a34a", scrollThumb: "#cdd9ea",
+    ink: "#0a1f44", inkSoft: "#2b3a57", muted: "#5d6b86", success: "#00a3a1", scrollThumb: "#cdd9ea",
     accent: "#00338d", accentActive: "#005eb8",        // KPMG Blue / Medium Blue
     cta: "#00338d", ctaText: "#ffffff",                // KPMG Blue fill
+    violet: "#00338d", magenta: "#005eb8", orange: "#0091da", coral: "#6d2077", teal: "#00a3a1",
+    agentAccents: {
+      "host-revenue": "#00338d",
+      gentrification: "#005eb8",
+      crime: "#470a68",
+      demand: "#0091da",
+      market: "#00a3a1",
+    },
     font: "'Inter',system-ui,sans-serif",
   },
 };
@@ -366,6 +378,9 @@ function applyTheme(mode) {
   const p = PALETTES[mode] || PALETTES.airbnb;
   Object.assign(ARIA.c, p);
   ARIA.c.blue = p.accent; // default accent (Tweak "brand" follows this; explicit hex overrides)
+  AGENTS.forEach((agent) => {
+    agent.accent = (p.agentAccents && p.agentAccents[agent.id]) || DEFAULT_AGENT_ACCENTS[agent.id];
+  });
   const r = document.documentElement.style;
   r.setProperty("--canvas", p.canvas);
   r.setProperty("--surface-1", p.s1);
@@ -377,6 +392,11 @@ function applyTheme(mode) {
   r.setProperty("--accent-blue", p.accent);
   r.setProperty("--cta", p.cta);
   r.setProperty("--cta-text", p.ctaText);
+  r.setProperty("--grad-violet", p.violet);
+  r.setProperty("--grad-magenta", p.magenta);
+  r.setProperty("--grad-orange", p.orange);
+  r.setProperty("--grad-coral", p.coral);
+  r.setProperty("--grad-teal", p.teal);
   r.setProperty("--scroll-thumb", p.scrollThumb);
   document.documentElement.dataset.theme = mode;
   document.body && (document.body.style.fontFamily = p.font);
