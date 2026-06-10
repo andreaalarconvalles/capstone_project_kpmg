@@ -117,6 +117,7 @@ This table is the single source of truth for what the team has shipped and what 
 - [2026-06-09] Phase 3 LightGBM COMPLETE (A/95): leakage corrected, AUC=0.8288, 865 priority targets, €1.43M opportunity
 - [2026-06-10] Phase 7 agent-chat UI MVP built in `Stage 7 - UI Interface/`: React/HTML prototype + faithful Streamlit app (5 agents, scripted demos, LangGraph-style traces, Plotly dark charts, pseudo-choropleth map, model picker, hybrid live-Gemini mode). Verified via Streamlit AppTest.
 - [2026-06-10] Streamlit Cloud deployment dependency fix: added root-level `requirements.txt` so the installer no longer parses the nested `Stage 7 - UI Interface/streamlit_app/requirements.txt` path as separate tokens.
+- [2026-06-10] Streamlit Cloud deployment hardening: added no-spaces wrapper entrypoint `streamlit_app/app.py`, duplicated `streamlit_app/requirements.txt`, and updated Stage 7 README badge/docs to use the wrapper path.
 
 ### In Progress
 

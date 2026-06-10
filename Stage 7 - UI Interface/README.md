@@ -1,11 +1,11 @@
 # Stage 7 — ARIA Platform UI
 
-[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://share.streamlit.io/deploy?repository=lukatcheishvili/capstone_project_kpmg&branch=main&mainModule=Stage%207%20-%20UI%20Interface/streamlit_app/app.py)
+[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://share.streamlit.io/deploy?repository=lukatcheishvili/capstone_project_kpmg&branch=main&mainModule=streamlit_app/app.py)
 
 > **▶ Launch the app:** click the **Open in Streamlit** badge above to deploy this UI to
 > Streamlit Community Cloud (free) and get a shareable live URL. The first deploy takes ~1
 > minute while it installs `requirements.txt`; sign in with the GitHub account that owns the
-> repo. To run it on your own machine instead, see [Run the Streamlit app](#run-the-streamlit-app-recommended)
+> repo. Use `streamlit_app/app.py` as the main module on Streamlit Cloud. To run it on your own machine instead, see [Run the Streamlit app](#run-the-streamlit-app-recommended)
 > below — it opens at **http://localhost:8501**.
 
 The front-end MVP for **ARIA** (Airbnb Revenue Intelligence & Analytics) — a ChatGPT-style,
@@ -42,6 +42,10 @@ Stage 7 - UI Interface/
     ├── aria_content.py               # Agents, models, scripts, datasets, seeds
     ├── aria_charts.py                # Plotly dark charts + pseudo-choropleth map
     └── requirements.txt
+
+../../streamlit_app/
+├── app.py                            # No-spaces Streamlit Cloud wrapper
+└── requirements.txt                  # Deployment dependencies
 ```
 
 ## Run the Streamlit app (recommended)
@@ -53,6 +57,14 @@ streamlit run app.py
 ```
 
 Opens at `http://localhost:8501`.
+
+For Streamlit Community Cloud, set the main module to:
+
+```text
+streamlit_app/app.py
+```
+
+The wrapper runs the real Stage 7 app from `Stage 7 - UI Interface/streamlit_app/app.py`, while avoiding deployment issues caused by spaces and the standalone hyphen in the folder name.
 
 ## Run the React prototype
 
@@ -72,4 +84,17 @@ python -m http.server 8000
   XGBoost pricing · LightGBM risk · SHAP explainability.
 - **Live mode:** paste a Google / Vertex AI **Gemini API key** into the sidebar **Access Key**
   field. The app auto-switches and routes free-form questions to the Generative Language API
-  (`gemini-2.5
+  (`gemini-2.5-pro` / `gemini-2.5-flash`). Clear the key to return to demo.
+
+The model picker also exposes the project's own ML engines: **XGBoost Pricing v1**,
+**LightGBM Risk v1**, and **Prophet Forecast**.
+
+> Note: live calls hit the Generative Language endpoint directly with the pasted key (works for
+> Gemini API keys). True Vertex AI OAuth is out of MVP scope, matching the original design spec.
+
+## Design system
+
+Dark-only "Framer" system — canvas `#090909`, surface lifts (`#141414` → `#1c1c1c`),
+hairline borders `#262626`, single muted gray `#999999`, Inter with aggressively negative
+tracking, pill-shaped CTAs, and one gradient accent per agent. Elevation is surface lift,
+not shadow.
