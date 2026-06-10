@@ -71,17 +71,19 @@ git push https://ghp_<TOKEN>@github.com/lukatcheishvili/capstone_project_kpmg.gi
 
 Do not add co-author trailers like `Co-authored-by: Claude <claude@anthropic.com>`.
 
-### Rule 3 — Session Memory: Update README Every 5 Prompts
+### Rule 3 — Session Memory: Update CLAUDE.md Every 5 Prompts
 
 **After every 5 user prompts in a session, do two things:**
 
-1. Edit `README.md` — add a `## Session Log` section at the bottom (or update it if it exists) with a timestamped bullet summarizing what was done in this session.
+1. Edit this `CLAUDE.md` — add or update the `## Session Log` section with a timestamped bullet summarizing what was done in this session.
 
 2. Edit this `CLAUDE.md` — update the `## Progress Tracker` section below with what has been completed and what remains.
 
 This creates persistent memory across sessions so that any future agent (or human) picking up this project understands the current state without reading the full conversation history.
 
-The format for README session log entries:
+Do not store running session history in `README.md`, deployment YAML, or Vercel config files. `CLAUDE.md` is the canonical agent memory file.
+
+The format for session log entries:
 ```
 - [YYYY-MM-DD] Session N: <what was done in 1–2 sentences>
 ```
@@ -125,6 +127,8 @@ This table is the single source of truth for what the team has shipped and what 
 - [2026-06-10] Stage 7 Vite deployment path: added a root Vite React app that bundles the Claude Design export and a `vercel.json` configuration for Vercel deployment.
 - [2026-06-10] Stage 7 Vercel folder organization: moved the Vite React app into `Stage 7 - UI Interface/vercel_vite_app/`; root `vercel.json` routes deployments into that nested folder.
 - [2026-06-10] Stage 7 Vercel UI refresh: updated `Stage 7 - UI Interface/vercel_vite_app/` from the latest Claude Design zip, adding the landing dashboard and Airbnb/KPMG theme system.
+- [2026-06-10] Stage 7 Vercel UI polish: added the checked-in ARIA wordmark asset to the landing/sidebar, removed the landing agent subtitle, and balanced the wordmark letter spacing.
+- [2026-06-10] Documentation memory routing: moved the running session log into `CLAUDE.md` and updated Rule 3 so future agent session notes stay out of README/YAML/deployment files.
 
 ### In Progress
 
@@ -136,6 +140,28 @@ This table is the single source of truth for what the team has shipped and what 
 - Phase 6 — LangGraph orchestrator (5 agents, human-in-the-loop, dynamic pricing layer)
 - Phase 7 — Streamlit MVP (3 tabs: investor, host, developer)
 - KPMG final presentation and methodology document
+
+---
+
+## Session Log
+
+- [2026-06-09] Session 1: Repository initialised. README, CLAUDE.md, .gitignore created and pushed.
+- [2026-06-09] Session 2: Phase 1 EDA complete (A+/99). 135,051 rows x 96 cols. 41 pipeline steps. 10 figures. Business quantification complete.
+- [2026-06-09] Session 3: Phase 2 XGBoost complete (A/96). Paris R2=0.588, Athens R2=0.676. 26-feature pipeline. 2,945 underpriced listings. EUR 4.8M foregone revenue. All 7 output files saved.
+- [2026-06-09] Session 4: Phase 3 LightGBM complete (A/95). Leakage discovered and corrected. AUC=0.8288. 865 priority targets. EUR 1.43M opportunity.
+- [2026-06-09] Session 5: README completely rewritten to reflect all 7 phases. CLAUDE.md updated. Placeholder folders created.
+- [2026-06-10] Session 6: Built the ARIA agent-chat UI in `Stage 7 - UI Interface/` from the claude.ai/design handoff: React/HTML prototype plus a faithful Streamlit app with 5 agents, scripted demos, reasoning traces, Plotly dark charts, pseudo-choropleth map, model picker, and hybrid live-Gemini mode. Verified via Streamlit AppTest.
+- [2026-06-10] Session 7: Fixed Streamlit Cloud dependency installation by adding a root-level `requirements.txt`, avoiding installer parsing issues caused by the nested app folder path with spaces and a hyphen.
+- [2026-06-10] Session 8: Added a no-spaces Streamlit Cloud wrapper at `streamlit_app/app.py` and duplicated deployment requirements there as a compatibility fallback.
+- [2026-06-10] Session 9: Replaced the native Stage 7 Streamlit recreation with a Streamlit host that embeds the exact Claude Design React prototype, synced the prototype files from the ZIP handoff, and updated deployment documentation.
+- [2026-06-10] Session 10: Hotfixed the Streamlit Cloud embed path by switching the React prototype host back to the classic Streamlit HTML component after the newer `st.iframe` path rendered as a blank page on deployment.
+- [2026-06-10] Session 11: Moved the embedded ARIA prototype to Streamlit static serving and iframed that URL to avoid Cloud white screens from large inline HTML payloads.
+- [2026-06-10] Session 12: Set the Streamlit deployment target to `Stage 7 - UI Interface/streamlit_app/app.py` and made generated static assets live under that app folder.
+- [2026-06-10] Session 13: Added a Vite React build path for the Claude Design export, with Vercel config serving the generated `dist/` directory.
+- [2026-06-10] Session 14: Moved the Vercel Vite app into `Stage 7 - UI Interface/vercel_vite_app/` and kept the root Vercel config as a deployment pointer.
+- [2026-06-10] Session 15: Updated the Vercel Vite UI from the latest Claude Design zip, including the new landing dashboard module and Airbnb/KPMG theme system.
+- [2026-06-10] Session 16: Polished the Vercel landing page with the ARIA wordmark asset, removed the landing agent subtitle, and balanced the wordmark letter spacing.
+- [2026-06-10] Session 17: Moved the canonical session log from README into `CLAUDE.md` and updated agent instructions so future session history stays in this file.
 
 ---
 

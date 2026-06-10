@@ -343,24 +343,3 @@ Large files are excluded from version control. Download from the sources below.
 | Documentation + Presentation | Member 6 | 🔲 Not started |
 
 Status key: ✅ Done · 🔄 In progress · 🔲 Not started · ⏳ Blocked
-
----
-
-## Session Log
-
-- [2026-06-09] Session 1: Repository initialised. README, CLAUDE.md, .gitignore created and pushed.
-- [2026-06-09] Session 2: Phase 1 EDA complete (A+/99). 135,051 rows × 96 cols. 41 pipeline steps. 10 figures. Business quantification complete.
-- [2026-06-09] Session 3: Phase 2 XGBoost complete (A/96). Paris R²=0.588, Athens R²=0.676. 26-feature pipeline. 2,945 underpriced listings. €4.8M foregone revenue. All 7 output files saved.
-- [2026-06-09] Session 4: Phase 3 LightGBM complete (A/95). Leakage discovered and corrected. AUC=0.8288. 865 priority targets. €1.43M opportunity.
-- [2026-06-09] Session 5: README completely rewritten to reflect all 7 phases. CLAUDE.md updated. Placeholder folders created.
-- [2026-06-10] Session 6: Built the ARIA agent-chat UI in `Stage 7 - UI Interface/` from the claude.ai/design handoff — React/HTML prototype + a faithful Streamlit app (5 agents, scripted demos, reasoning traces, Plotly dark charts, pseudo-choropleth map, model picker, hybrid live-Gemini mode). Verified via Streamlit AppTest (no exceptions).
-- [2026-06-10] Session 7: Fixed Streamlit Cloud dependency installation by adding a root-level `requirements.txt`, avoiding installer parsing issues caused by the nested app folder path with spaces and a hyphen.
-- [2026-06-10] Session 8: Added a no-spaces Streamlit Cloud wrapper at `streamlit_app/app.py` and duplicated deployment requirements there as a compatibility fallback.
-- [2026-06-10] Session 9: Replaced the native Stage 7 Streamlit recreation with a Streamlit host that embeds the exact Claude Design React prototype, synced the prototype files from the ZIP handoff, and updated deployment documentation.
-- [2026-06-10] Session 10: Hotfixed the Streamlit Cloud embed path by switching the React prototype host back to the classic Streamlit HTML component after the newer `st.iframe` path rendered as a blank page on deployment.
-- [2026-06-10] Session 11: Moved the embedded ARIA prototype to Streamlit static serving and iframed that URL to avoid Cloud white screens from large inline HTML payloads.
-- [2026-06-10] Session 12: Set the Streamlit deployment target to `Stage 7 - UI Interface/streamlit_app/app.py` and made generated static assets live under that app folder.
-- [2026-06-10] Session 13: Added a Vite React build path for the Claude Design export, with Vercel config serving the generated `dist/` directory.
-- [2026-06-10] Session 14: Moved the Vercel Vite app into `Stage 7 - UI Interface/vercel_vite_app/` and kept the root Vercel config as a deployment pointer.
-- [2026-06-10] Session 15: Updated the Vercel Vite UI from the latest Claude Design zip, including the new landing dashboard module and Airbnb/KPMG theme system.
-- [2026-06-10] Session 16: Polished the Vercel landing page with the ARIA wordmark asset, removed the landing agent subtitle, and balanced the wordmark letter spacing.
