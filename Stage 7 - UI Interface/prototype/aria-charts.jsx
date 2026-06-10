@@ -119,10 +119,15 @@ const MAP_NODES = [
   { name: "Neos Kosmos", risk: 0.35, stress: 0.5, x: 2, y: 3 },
 ];
 
-/* lerp surface-2 -> coral by value 0..1 */
+/* lerp current surface-2 -> coral by value 0..1 */
+function hexToRgb(h) {
+  const x = String(h).replace("#", "");
+  const n = x.length === 3 ? x.replace(/./g, (c) => c + c) : x;
+  return [parseInt(n.slice(0, 2), 16), parseInt(n.slice(2, 4), 16), parseInt(n.slice(4, 6), 16)];
+}
 function riskColor(t) {
   t = Math.max(0, Math.min(1, t));
-  const a = [28, 28, 28], b = [255, 85, 119];
+  const a = hexToRgb(ARIA.c.s2), b = [255, 85, 119];
   const e = Math.pow(t, 0.85);
   const c = a.map((v, i) => Math.round(v + (b[i] - v) * e));
   return `rgb(${c[0]},${c[1]},${c[2]})`;

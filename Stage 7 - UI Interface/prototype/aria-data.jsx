@@ -2,11 +2,12 @@
 
 const ARIA = {
   c: {
-    canvas: "#090909", s1: "#141414", s2: "#1c1c1c",
-    hair: "#262626", hairSoft: "#1a1a1a",
-    ink: "#ffffff", muted: "#999999", blue: "#0099ff",
+    /* defaults to LIGHT (Framer-faithful inversion); applyTheme() swaps these live */
+    canvas: "#ffffff", s1: "#f4f4f5", s2: "#e9e9eb",
+    hair: "#e4e4e7", hairSoft: "#efeff1",
+    ink: "#0b0b0c", inkSoft: "#26262b", muted: "#6b6b73", blue: "#0099ff",
     violet: "#6a4cf5", magenta: "#d44df0", orange: "#ff7a3d",
-    coral: "#ff5577", teal: "#1fd1c7", success: "#22c55e",
+    coral: "#ff5577", teal: "#1fd1c7", success: "#16a34a", scrollThumb: "#cfcfd4",
   },
   /* live UI tweak state (mutated by the Tweaks panel, read at render/stream time) */
   ui: { fontSize: 15, density: "regular", streamSpeed: "normal", traceCollapse: true },
@@ -322,7 +323,34 @@ const SEED_CONVERSATIONS = [
     prompt: "Rank Athens neighbourhoods by projected STR yield" },
 ];
 
+/* ---------- Theme palettes (dark = default Framer; light = Framer-faithful inversion) ---------- */
+const PALETTES = {
+  dark: {
+    canvas: "#090909", s1: "#141414", s2: "#1c1c1c", hair: "#262626", hairSoft: "#1a1a1a",
+    ink: "#ffffff", inkSoft: "#ededed", muted: "#999999", success: "#22c55e", scrollThumb: "#2a2a2a",
+  },
+  light: {
+    canvas: "#ffffff", s1: "#f4f4f5", s2: "#e9e9eb", hair: "#e4e4e7", hairSoft: "#efeff1",
+    ink: "#0b0b0c", inkSoft: "#26262b", muted: "#6b6b73", success: "#16a34a", scrollThumb: "#cfcfd4",
+  },
+};
+
+function applyTheme(mode) {
+  const p = PALETTES[mode] || PALETTES.dark;
+  Object.assign(ARIA.c, p); // accent-blue + gradients stay constant across themes
+  const r = document.documentElement.style;
+  r.setProperty("--canvas", p.canvas);
+  r.setProperty("--surface-1", p.s1);
+  r.setProperty("--surface-2", p.s2);
+  r.setProperty("--hairline", p.hair);
+  r.setProperty("--hairline-soft", p.hairSoft);
+  r.setProperty("--ink", p.ink);
+  r.setProperty("--ink-muted", p.muted);
+  r.setProperty("--scroll-thumb", p.scrollThumb);
+  document.documentElement.dataset.theme = mode;
+}
+
 Object.assign(window, {
   ARIA, AGENTS, AGENT_BY_ID, MODELS, MODEL_BY_ID,
-  SCRIPTS, getScript, genericScript, SEED_CONVERSATIONS,
+  SCRIPTS, getScript, genericScript, SEED_CONVERSATIONS, PALETTES, applyTheme,
 });

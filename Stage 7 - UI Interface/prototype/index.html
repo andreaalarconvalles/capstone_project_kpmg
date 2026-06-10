@@ -9,21 +9,22 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300..700&display=swap" rel="stylesheet" />
 <style>
   :root {
-    /* Framer dark design system */
-    --canvas: #090909;
-    --surface-1: #141414;
-    --surface-2: #1c1c1c;
-    --hairline: #262626;
-    --hairline-soft: #1a1a1a;
-    --ink: #ffffff;
-    --ink-muted: #999999;
+    /* Framer system — defaults to LIGHT (light mode is the default); JS swaps these on toggle */
+    --canvas: #ffffff;
+    --surface-1: #f4f4f5;
+    --surface-2: #e9e9eb;
+    --hairline: #e4e4e7;
+    --hairline-soft: #efeff1;
+    --ink: #0b0b0c;
+    --ink-muted: #6b6b73;
     --accent-blue: #0099ff;
     --grad-violet: #6a4cf5;
     --grad-magenta: #d44df0;
     --grad-orange: #ff7a3d;
     --grad-coral: #ff5577;
     --grad-teal: #1fd1c7;
-    --success: #22c55e;
+    --success: #16a34a;
+    --scroll-thumb: #cfcfd4;
 
     --r-row: 10px;
     --r-card: 16px;
@@ -48,9 +49,9 @@
 
   ::-webkit-scrollbar { width: 10px; height: 10px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: #222; border-radius: 100px; border: 2px solid var(--canvas); }
-  ::-webkit-scrollbar-thumb:hover { background: #2e2e2e; }
-  * { scrollbar-width: thin; scrollbar-color: #222 transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--scroll-thumb, #2a2a2a); border-radius: 100px; border: 2px solid var(--canvas); }
+  ::-webkit-scrollbar-thumb:hover { background: var(--ink-muted, #2e2e2e); }
+  * { scrollbar-width: thin; scrollbar-color: var(--scroll-thumb, #2a2a2a) transparent; }
 
   button { font-family: inherit; letter-spacing: -0.14px; cursor: pointer; border: none; background: none; color: inherit; }
   input, textarea { font-family: inherit; letter-spacing: -0.15px; }

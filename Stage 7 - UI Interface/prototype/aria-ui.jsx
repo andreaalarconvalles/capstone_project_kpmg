@@ -71,7 +71,7 @@ function Sidebar({
           <Icon name="PanelLeft" size={19} />
         </button>
         <button className="aria-focus" onClick={onNewChat} title="New chat"
-        style={{ width: 36, height: 36, borderRadius: 100, display: "grid", placeItems: "center", background: C.ink, color: "#000", marginTop: 4 }}>
+        style={{ width: 36, height: 36, borderRadius: 100, display: "grid", placeItems: "center", background: C.ink, color: C.canvas, marginTop: 4 }}>
           <Icon name="Plus" size={19} sw={2.2} />
         </button>
         <div style={{ height: 10 }} />
@@ -97,7 +97,7 @@ function Sidebar({
       {/* header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 16px 8px" }}>
         <button className="aria-focus" onClick={onNewChat} title="New chat"
-          style={{ display: "flex", alignItems: "center", gap: 9, padding: 0, borderRadius: 8 }}>
+        style={{ display: "flex", alignItems: "center", gap: 9, padding: 0, borderRadius: 8 }}>
           <div style={{
             width: 26, height: 26, borderRadius: 8,
             background: `conic-gradient(from 210deg, ${C.violet}, ${C.magenta}, ${C.coral}, ${C.orange}, ${C.violet})`,
@@ -116,7 +116,7 @@ function Sidebar({
         <button className="aria-focus" onClick={onNewChat}
         style={{
           width: "100%", display: "flex", alignItems: "center", gap: 9, justifyContent: "center",
-          background: C.ink, color: "#000", borderRadius: 100, padding: "9px 14px",
+          background: C.ink, color: C.canvas, borderRadius: 100, padding: "9px 14px",
           fontSize: 14, fontWeight: 600, letterSpacing: -0.2
         }}>
           <Icon name="Plus" size={17} sw={2.4} /> New chat
@@ -152,7 +152,7 @@ function Sidebar({
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 7, padding: "8px 4px 2px", fontSize: 11.5, color: C.muted }}>
             <span style={{ width: 6, height: 6, borderRadius: 4, background: apiKey ? C.success : C.orange, flexShrink: 0 }} />
-            {apiKey ? "Live · Vertex AI / Gemini" : "Demo mode — scripted responses"}
+            {apiKey ? "Live · ARIA Agent" : "Demo mode — scripted responses"}
           </div>
         </div>
 
@@ -163,7 +163,7 @@ function Sidebar({
           if (!rows.length) return null;
           return (
             <div key={g}>
-              <div style={{ fontSize: 11.5, color: "#6e6e6e", padding: "8px 8px 3px", letterSpacing: -0.1 }}>{g}</div>
+              <div style={{ fontSize: 11.5, color: C.muted, padding: "8px 8px 3px", letterSpacing: -0.1 }}>{g}</div>
               {rows.map((c) => {
                 const a = AGENT_BY_ID[c.agentId];
                 const isEdit = editing === c.id;
@@ -183,7 +183,7 @@ function Sidebar({
                     onBlur={() => {onRenameConv(c.id, editVal.trim() || c.title);setEditing(null);}}
                     style={{ flex: 1, minWidth: 0, background: C.canvas, border: `1px solid ${C.blue}`, color: C.ink, borderRadius: 6, padding: "3px 6px", fontSize: 13, outline: "none" }} /> :
 
-                    <span style={{ fontSize: 13, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", flex: 1, color: activeConvId === c.id ? C.ink : "#cfcfcf" }}>{c.title}</span>
+                    <span style={{ fontSize: 13, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", flex: 1, color: activeConvId === c.id ? C.ink : C.muted }}>{c.title}</span>
                     }
                     {!isEdit && hoverConv === c.id &&
                     <div style={{ display: "flex", gap: 2, marginLeft: "auto" }}>
@@ -240,7 +240,7 @@ function renderInline(text) {
 function RichText({ text, cursor }) {
   const paras = text.split("\n\n");
   return (
-    <div className="aria-prose" style={{ fontSize: ARIA.ui && ARIA.ui.fontSize || 15, lineHeight: 1.62, letterSpacing: -0.15, color: "#ededed" }}>
+    <div className="aria-prose" style={{ fontSize: ARIA.ui && ARIA.ui.fontSize || 15, lineHeight: 1.62, letterSpacing: -0.15, color: C.inkSoft }}>
       {paras.map((p, i) =>
       <p key={i} style={{ margin: i ? "0 0 12px" : "0 0 12px", textWrap: "pretty" }}>
           {renderInline(p)}

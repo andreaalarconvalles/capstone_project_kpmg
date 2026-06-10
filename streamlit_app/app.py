@@ -1,4 +1,4 @@
-"""No-spaces Streamlit Cloud entrypoint for the Stage 7 ARIA app.
+"""No-spaces Streamlit Cloud entrypoint for the Stage 7 ARIA prototype app.
 
 Streamlit Cloud can misparse dependency paths when the configured main module
 lives under a directory containing spaces and a standalone hyphen. Keep the

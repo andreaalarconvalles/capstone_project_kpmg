@@ -10,6 +10,9 @@
 
 The front-end MVP for **ARIA** (Airbnb Revenue Intelligence & Analytics) — a ChatGPT-style,
 multi-agent AI platform built for the IE Business School × KPMG Spain Capstone 2026.
+The Streamlit deployment now embeds the exact Claude Design React prototype so the deployed
+demo keeps the same layout, styling, animations, sidebar, composer, model picker, and agent
+experience as the original design handoff.
 
 Five KPMG-proposed agents on one interface, each selectable like a custom GPT:
 
@@ -22,7 +25,7 @@ Five KPMG-proposed agents on one interface, each selectable like a custom GPT:
 | 🏗️ Market Entry Advisor | Site selection & ROI intelligence |
 
 Every agent chat shows a LangGraph-style multi-agent reasoning trace, streams its answer,
-and renders inline dark-themed charts (SHAP drivers, revenue simulation, risk bars, demand
+and renders inline Recharts/SVG visuals (SHAP drivers, revenue simulation, risk bars, demand
 forecast with confidence band, a pseudo-choropleth Athens map) plus a one-click brief export.
 
 ## Folder layout
@@ -37,14 +40,15 @@ Stage 7 - UI Interface/
 │   ├── aria-ui.jsx / aria-ui2.jsx    # Sidebar, composer, model picker, settings, empty state
 │   ├── aria-main.jsx                 # App root, streaming engine, hybrid Gemini call
 │   └── tweaks-panel.jsx              # Live design-tweak panel
-└── streamlit_app/                    # Production-grade Streamlit recreation
-    ├── app.py                        # UI orchestration
-    ├── aria_content.py               # Agents, models, scripts, datasets, seeds
-    ├── aria_charts.py                # Plotly dark charts + pseudo-choropleth map
+└── streamlit_app/                    # Streamlit host for the exact React prototype
+    ├── app.py                        # Thin Streamlit entrypoint
+    ├── prototype_embed.py            # Inlines prototype JSX and renders it full-page
+    ├── aria_content.py               # Legacy native Streamlit content module
+    ├── aria_charts.py                # Legacy native Streamlit chart module
     └── requirements.txt
 
 ../../streamlit_app/
-├── app.py                            # No-spaces Streamlit Cloud wrapper
+├── app.py                            # No-spaces Streamlit Cloud wrapper into Stage 7
 └── requirements.txt                  # Deployment dependencies
 ```
 
@@ -64,7 +68,7 @@ For Streamlit Community Cloud, set the main module to:
 streamlit_app/app.py
 ```
 
-The wrapper runs the real Stage 7 app from `Stage 7 - UI Interface/streamlit_app/app.py`, while avoiding deployment issues caused by spaces and the standalone hyphen in the folder name.
+The wrapper runs the real Stage 7 app from `Stage 7 - UI Interface/streamlit_app/app.py`, while avoiding deployment issues caused by spaces and the standalone hyphen in the folder name. The Stage 7 app then renders the React prototype inside a full-page Streamlit component.
 
 ## Run the React prototype
 
@@ -94,7 +98,6 @@ The model picker also exposes the project's own ML engines: **XGBoost Pricing v1
 
 ## Design system
 
-Dark-only "Framer" system — canvas `#090909`, surface lifts (`#141414` → `#1c1c1c`),
-hairline borders `#262626`, single muted gray `#999999`, Inter with aggressively negative
-tracking, pill-shaped CTAs, and one gradient accent per agent. Elevation is surface lift,
-not shadow.
+Framer-style system from the Claude Design handoff. The prototype defaults to light mode
+with Inter, neutral surfaces, hairline borders, pill-shaped CTAs, compact rounded controls,
+agent accent gradients, and the built-in theme toggle for dark mode.

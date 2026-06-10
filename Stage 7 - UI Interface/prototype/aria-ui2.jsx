@@ -143,14 +143,14 @@ const Composer = React.forwardRef(function Composer({
           <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
             {streaming ? (
               <button className="aria-focus" onClick={onStop} title="Stop generating"
-                style={{ width: 38, height: 38, borderRadius: 100, display: "grid", placeItems: "center", background: C2.ink, color: "#000" }}>
-                <span style={{ width: 11, height: 11, borderRadius: 3, background: "#000" }} />
+                style={{ width: 38, height: 38, borderRadius: 100, display: "grid", placeItems: "center", background: C2.ink, color: C2.canvas }}>
+                <span style={{ width: 11, height: 11, borderRadius: 3, background: C2.canvas }} />
               </button>
             ) : (
               <button className="aria-focus" onClick={onSend} disabled={!value.trim()} title="Send"
                 style={{
                   width: 38, height: 38, borderRadius: 100, display: "grid", placeItems: "center",
-                  background: value.trim() ? C2.ink : C2.s2, color: value.trim() ? "#000" : C2.muted,
+                  background: value.trim() ? C2.ink : C2.s2, color: value.trim() ? C2.canvas : C2.muted,
                   transition: "background 0.15s", cursor: value.trim() ? "pointer" : "default",
                 }}>
                 <Icon name="ArrowUp" size={19} sw={2.4} />
@@ -202,7 +202,7 @@ function EmptyState({ agent, onChip, composer }) {
             <button key={c} className="aria-focus" onClick={() => onChip(c)}
               style={{
                 display: "flex", alignItems: "center", gap: 10, textAlign: "left", padding: "13px 15px",
-                borderRadius: 14, background: C2.s1, border: `1px solid ${C2.hair}`, color: "#dcdcdc",
+                borderRadius: 14, background: C2.s1, border: `1px solid ${C2.hair}`, color: C2.inkSoft,
                 fontSize: 13.5, lineHeight: 1.35, transition: "background 0.13s, border-color 0.13s",
               }}
               onMouseEnter={(e) => { e.currentTarget.style.background = C2.s2; e.currentTarget.style.borderColor = "#333"; }}
@@ -306,7 +306,7 @@ function SettingsModal({ open, onClose, settings, setSettings }) {
               </div>
             </div>
           ) : (
-            <div style={{ fontSize: 14.5, lineHeight: 1.65, color: "#dcdcdc" }}>
+            <div style={{ fontSize: 14.5, lineHeight: 1.65, color: C2.inkSoft }}>
               <div style={{ display: "flex", alignItems: "center", gap: 11, marginBottom: 14 }}>
                 <div style={{ width: 30, height: 30, borderRadius: 9, background: `conic-gradient(from 210deg, ${C2.violet}, ${C2.magenta}, ${C2.coral}, ${C2.orange}, ${C2.violet})` }} />
                 <span style={{ fontSize: 17, fontWeight: 600, letterSpacing: -0.4 }}>ARIA</span>

@@ -92,7 +92,7 @@ KPMG Capstone/
 ├── rag/                                     # Phase 5 — ChromaDB index + RAG agent
 ├── agents/                                  # Phase 6 — LangGraph orchestration code
 ├── app/                                     # Phase 7 — Streamlit app (3-tab persona MVP)
-├── Stage 7 - UI Interface/                  # Phase 7 — agent-chat UI (React prototype + Streamlit)
+├── Stage 7 - UI Interface/                  # Phase 7 — agent-chat UI (React prototype + Streamlit host)
 ├── docs/                                    # Methodology docs, proposals, planner
 ├── KPMG Capstone.pdf
 ├── KPMG Proposal - Regulators.pdf
@@ -250,7 +250,7 @@ Output files: `lgb_athens_risk_v1.txt` · `athens_risk_scores_v1.csv`
 ### Phase 7 — Streamlit MVP (Member 5)
 **Location:** `app/` (3-tab persona MVP) · `Stage 7 - UI Interface/` (agent-chat UI)
 
-> **Built — agent-chat UI (`Stage 7 - UI Interface/`):** a ChatGPT-style multi-agent interface implemented from the claude.ai/design handoff. Surfaces all 5 KPMG agents (Host Revenue, Gentrification Early Warning, STR Financial Crime, Tourism Demand, Market Entry) with LangGraph-style reasoning traces, inline dark Plotly charts, a pseudo-choropleth Athens map, a model picker, and a hybrid Demo / live-Gemini mode. Ships as both a React/HTML prototype (`prototype/`) and a faithful Streamlit app (`streamlit_app/`). Run: `cd "Stage 7 - UI Interface/streamlit_app" && pip install -r requirements.txt && streamlit run app.py`.
+> **Built — agent-chat UI (`Stage 7 - UI Interface/`):** a ChatGPT-style multi-agent interface implemented from the claude.ai/design handoff. Surfaces all 5 KPMG agents (Host Revenue, Gentrification Early Warning, STR Financial Crime, Tourism Demand, Market Entry) with LangGraph-style reasoning traces, inline Recharts/SVG visuals, a pseudo-choropleth Athens map, a model picker, and a hybrid Demo / live-Gemini mode. The Streamlit deployment embeds the exact React/HTML prototype (`prototype/`) through `streamlit_app/`, preserving the Claude Design layout and interaction model. Run: `cd "Stage 7 - UI Interface/streamlit_app" && pip install -r requirements.txt && streamlit run app.py`.
 
 **What to build:** A 3-tab Streamlit application that serves the three personas. This tab **can be started now** using the existing CSV outputs from Phases 2 and 3 — it does not require Phase 4, 5, or 6 to be complete.
 
@@ -354,3 +354,4 @@ Status key: ✅ Done · 🔄 In progress · 🔲 Not started · ⏳ Blocked
 - [2026-06-10] Session 6: Built the ARIA agent-chat UI in `Stage 7 - UI Interface/` from the claude.ai/design handoff — React/HTML prototype + a faithful Streamlit app (5 agents, scripted demos, reasoning traces, Plotly dark charts, pseudo-choropleth map, model picker, hybrid live-Gemini mode). Verified via Streamlit AppTest (no exceptions).
 - [2026-06-10] Session 7: Fixed Streamlit Cloud dependency installation by adding a root-level `requirements.txt`, avoiding installer parsing issues caused by the nested app folder path with spaces and a hyphen.
 - [2026-06-10] Session 8: Added a no-spaces Streamlit Cloud wrapper at `streamlit_app/app.py`, duplicated deployment requirements there, and updated Stage 7 deployment docs to use `streamlit_app/app.py` as the main module.
+- [2026-06-10] Session 9: Replaced the native Stage 7 Streamlit recreation with a Streamlit host that embeds the exact Claude Design React prototype, synced the prototype files from the ZIP handoff, and updated deployment documentation.

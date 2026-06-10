@@ -118,6 +118,7 @@ This table is the single source of truth for what the team has shipped and what 
 - [2026-06-10] Phase 7 agent-chat UI MVP built in `Stage 7 - UI Interface/`: React/HTML prototype + faithful Streamlit app (5 agents, scripted demos, LangGraph-style traces, Plotly dark charts, pseudo-choropleth map, model picker, hybrid live-Gemini mode). Verified via Streamlit AppTest.
 - [2026-06-10] Streamlit Cloud deployment dependency fix: added root-level `requirements.txt` so the installer no longer parses the nested `Stage 7 - UI Interface/streamlit_app/requirements.txt` path as separate tokens.
 - [2026-06-10] Streamlit Cloud deployment hardening: added no-spaces wrapper entrypoint `streamlit_app/app.py`, duplicated `streamlit_app/requirements.txt`, and updated Stage 7 README badge/docs to use the wrapper path.
+- [2026-06-10] Stage 7 design fidelity update: synced the React prototype from the ZIP handoff and replaced the native Streamlit recreation with a Streamlit host that embeds the exact Claude Design prototype full-page.
 
 ### In Progress
 
@@ -295,6 +296,6 @@ KPMG Capstone/
 ├── rag/                              ← Phase 5
 ├── agents/                           ← Phase 6
 ├── app/                         ← Phase 7 — Streamlit app (3-tab persona MVP)
-├── Stage 7 - UI Interface/      ← Phase 7 — agent-chat UI (React prototype + Streamlit app)
+├── Stage 7 - UI Interface/      ← Phase 7 — agent-chat UI (React prototype + Streamlit host)
 └── docs/                        ← methodology docs, proposals, planner
 ```

@@ -106,7 +106,9 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
 
 function App() {
   const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
-  // push tweak values into the live globals read by render + the stream engine
+  const [theme, setTheme] = useState("light");
+  // apply theme palette (dark = default) + push tweak values into the live globals
+  applyTheme(theme);
   ARIA.c.blue = t.accent;
   ARIA.ui = { fontSize: t.fontSize, density: t.density, streamSpeed: t.streamSpeed, traceCollapse: t.traceCollapse };
 
@@ -370,7 +372,12 @@ function App() {
           <AgentTile accent={agent.accent} icon={agent.icon} size={26} radius={8} iconSize={14} />
           <span style={{ fontSize: 14.5, fontWeight: 500 }}>{agent.name}</span>
           <span style={{ fontSize: 12.5, color: CA.muted }}>· {agent.tagline}</span>
-          <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 7, fontSize: 12, color: CA.muted, border: `1px solid ${CA.hair}`, borderRadius: 100, padding: "5px 11px" }}>
+          <button className="aria-focus" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            style={{ marginLeft: "auto", width: 34, height: 34, borderRadius: 100, display: "grid", placeItems: "center", color: CA.muted, background: CA.s1, border: `1px solid ${CA.hair}` }}>
+            <Icon name={theme === "dark" ? "Sun" : "Moon"} size={16.5} />
+          </button>
+          <div style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 12, color: CA.muted, border: `1px solid ${CA.hair}`, borderRadius: 100, padding: "5px 11px" }}>
             <span style={{ width: 6, height: 6, borderRadius: 4, background: settings.demoMode ? CA.orange : CA.success }} />
             {settings.demoMode ? "Demo mode" : "Live · Gemini"}
           </div>
