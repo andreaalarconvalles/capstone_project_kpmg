@@ -65,7 +65,7 @@ function SidebarRow({ active, children, onClick, onMouseEnter, onMouseLeave, sty
 }
 
 function Sidebar({
-  collapsed, onToggle, agents, activeAgentId, onPickAgent, onNewChat,
+  collapsed, onToggle, onToggleFullscreen, isFullscreen, agents, activeAgentId, onPickAgent, onNewChat,
   conversations, activeConvId, onPickConv, onRenameConv, onDeleteConv,
   search, setSearch, onOpenSettings, apiKey, onApiKey
 }) {
@@ -86,6 +86,10 @@ function Sidebar({
         <button className="aria-focus" onClick={onToggle} title="Expand"
         style={{ width: 36, height: 36, borderRadius: 9, display: "grid", placeItems: "center", color: C.muted }}>
           <Icon name="PanelLeft" size={19} />
+        </button>
+        <button className="aria-focus" onClick={onToggleFullscreen} title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+        style={{ width: 36, height: 36, borderRadius: 9, display: "grid", placeItems: "center", color: C.muted }}>
+          <Icon name={isFullscreen ? "Minimize2" : "Maximize2"} size={18} />
         </button>
         <button className="aria-focus" onClick={onNewChat} title="New chat"
         style={{ width: 36, height: 36, borderRadius: 100, display: "grid", placeItems: "center", background: C.cta, color: C.ctaText, marginTop: 4 }}>
@@ -117,10 +121,16 @@ function Sidebar({
         style={{ display: "flex", alignItems: "center", gap: 9, padding: 0, borderRadius: 8 }}>
           <AriaLogo compact />
         </button>
-        <button className="aria-focus" onClick={onToggle} title="Collapse sidebar"
-        style={{ width: 32, height: 32, borderRadius: 8, display: "grid", placeItems: "center", color: C.muted }}>
-          <Icon name="PanelLeftClose" size={19} />
-        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
+          <button className="aria-focus" onClick={onToggleFullscreen} title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+          style={{ width: 32, height: 32, borderRadius: 8, display: "grid", placeItems: "center", color: C.muted }}>
+            <Icon name={isFullscreen ? "Minimize2" : "Maximize2"} size={17.5} />
+          </button>
+          <button className="aria-focus" onClick={onToggle} title="Collapse sidebar"
+          style={{ width: 32, height: 32, borderRadius: 8, display: "grid", placeItems: "center", color: C.muted }}>
+            <Icon name="PanelLeftClose" size={19} />
+          </button>
+        </div>
       </div>
 
       {/* new chat */}

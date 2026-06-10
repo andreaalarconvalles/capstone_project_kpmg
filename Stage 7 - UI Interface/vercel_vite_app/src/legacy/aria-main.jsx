@@ -114,6 +114,7 @@ function App() {
   ARIA.ui = { fontSize: t.fontSize, density: t.density, streamSpeed: t.streamSpeed, traceCollapse: t.traceCollapse };
 
   const [collapsed, setCollapsed] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [agentId, setAgentId] = useState("host-revenue");
   const [conversations, setConversations] = useState(
     SEED_CONVERSATIONS.map((c) => ({ ...c, messages: null })) // lazy
@@ -313,6 +314,15 @@ function App() {
     setConversations((cs) => cs.filter((c) => c.id !== id));
     setActiveConvId((a) => a === id ? null : a);
   }, []);
+  const toggleFullscreen = useCallback(() => {
+    const doc = document;
+    if (doc.fullscreenElement) {
+      doc.exitFullscreen && doc.exitFullscreen().catch(() => {});
+      return;
+    }
+    const root = doc.documentElement;
+    root.requestFullscreen && root.requestFullscreen().catch(() => {});
+  }, []);
 
   const copyMsg = useCallback((m) => {
     const txt = m.blocks.filter((b) => b.type === "text").map((b) => b.text.replace(/\*\*/g, "").replace(/`/g, "")).join("\n\n");
@@ -336,6 +346,13 @@ function App() {
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [live, activeConv && activeConv.messages && activeConv.messages.length]);
+
+  useEffect(() => {
+    const syncFullscreen = () => setIsFullscreen(!!document.fullscreenElement);
+    syncFullscreen();
+    document.addEventListener("fullscreenchange", syncFullscreen);
+    return () => document.removeEventListener("fullscreenchange", syncFullscreen);
+  }, []);
 
   /* keyboard: "/" focuses composer */
   useEffect(() => {
@@ -361,6 +378,7 @@ function App() {
     <div style={{ display: "flex", height: "100vh", background: CA.canvas }}>
       <Sidebar
         collapsed={collapsed} onToggle={() => setCollapsed((v) => !v)}
+        onToggleFullscreen={toggleFullscreen} isFullscreen={isFullscreen}
         agents={AGENTS} activeAgentId={agentId} onPickAgent={pickAgent} onNewChat={newChat}
         apiKey={settings.apiKey}
         onApiKey={(v) => setSettings((s) => ({ ...s, apiKey: v, demoMode: v.trim().length === 0 }))}

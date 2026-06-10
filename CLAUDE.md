@@ -132,6 +132,7 @@ This table is the single source of truth for what the team has shipped and what 
 - [2026-06-10] Stage 7 README link cleanup: made the Vercel deployment the only public website link in the Stage 7 README and removed the Streamlit launch badge/link.
 - [2026-06-10] README Vercel link sync: updated every repo README to point at `https://capstone-project-kpmg-git-main-lukatcheishvilis-projects.vercel.app/`.
 - [2026-06-10] Main README link fix: corrected the root README Vercel line to clean Markdown link syntax after a nested link was introduced on `main`.
+- [2026-06-10] Vercel sidebar control polish: added a fullscreen toggle directly beside the sidebar collapse button in the ARIA Vite UI.
 
 ### In Progress
 
@@ -168,6 +169,7 @@ This table is the single source of truth for what the team has shipped and what 
 - [2026-06-10] Session 18: Updated the Stage 7 README so the live website points to the current Vercel deployment and removed the Streamlit public launch link.
 - [2026-06-10] Session 19: Updated every repo README with the current Vercel deployment URL: `https://capstone-project-kpmg-git-main-lukatcheishvilis-projects.vercel.app/`.
 - [2026-06-10] Session 20: Fixed the root README Vercel website line on `main` so the URL is a clean clickable Markdown link.
+- [2026-06-10] Session 21: Added a fullscreen toggle beside the sidebar collapse button in the Vercel ARIA UI and wired it to the browser Fullscreen API.
 
 ---
 
