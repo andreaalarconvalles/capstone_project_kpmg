@@ -93,8 +93,7 @@ KPMG Capstone/
 │   └── prophet_athens_v1.pkl                # Phase 4 — not yet (gitignored)
 ├── rag/                                     # Phase 5 — ChromaDB index + RAG agent
 ├── agents/                                  # Phase 6 — LangGraph orchestration code
-├── app/                                     # Phase 7 — Streamlit app (3-tab persona MVP)
-├── Stage 7 - UI Interface/                  # Phase 7 — agent-chat UI (React prototype + Streamlit host)
+├── Stage 7 - UI Interface/                  # Phase 7 — all UI assets, prototypes, and Vercel app
 ├── docs/                                    # Methodology docs, proposals, planner
 ├── KPMG Capstone.pdf
 ├── KPMG Proposal - Regulators.pdf

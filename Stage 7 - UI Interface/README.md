@@ -27,6 +27,9 @@ forecast with confidence band, a pseudo-choropleth Athens map) plus a one-click 
 ```
 Stage 7 - UI Interface/
 ├── ARIA_UI_Claude_Design_Prompt.md   # The original design brief
+├── app/                              # Original Phase 7 three-tab Streamlit MVP notes
+├── deployment_support/               # Archived root-level UI deployment compatibility files
+│   └── root_streamlit_requirements.txt
 ├── prototype/                        # React/HTML design handoff (claude.ai/design)
 │   ├── index.html                    # Entry point — loads the .jsx via Babel + React (CDN)
 │   ├── aria-data.jsx                 # Agents, models, scripted demo content
@@ -35,6 +38,8 @@ Stage 7 - UI Interface/
 │   ├── aria-main.jsx                 # App root, streaming engine, hybrid Gemini call
 │   └── tweaks-panel.jsx              # Live design-tweak panel
 ├── streamlit_app/                    # Streamlit host for the exact React prototype
+│   ├── .streamlit/
+│   │   └── config.toml                # Streamlit static-serving config
 │   ├── app.py                        # Thin Streamlit entrypoint
 │   ├── prototype_embed.py            # Inlines prototype JSX and renders it full-page
 │   ├── aria_content.py               # Legacy native Streamlit content module
