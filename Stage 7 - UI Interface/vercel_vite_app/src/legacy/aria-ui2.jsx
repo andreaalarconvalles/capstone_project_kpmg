@@ -117,8 +117,43 @@ const Composer = React.forwardRef(function Composer({
   maxWidth = 768,
 }, ref) {
   const taRef = ref || React.useRef(null);
+  const fileRef = React.useRef(null);
+  const [attachments, setAttachments] = React.useState([]);
+  const attachmentsRef = React.useRef([]);
   const engine = MODEL_BY_ID[modelId];
   const grow = (el) => { if (!el) return; el.style.height = "auto"; el.style.height = Math.min(el.scrollHeight, 200) + "px"; };
+  React.useEffect(() => { attachmentsRef.current = attachments; }, [attachments]);
+  React.useEffect(() => () => {
+    attachmentsRef.current.forEach((item) => URL.revokeObjectURL(item.url));
+  }, []);
+  const addPhotos = (e) => {
+    const files = Array.from(e.target.files || []).filter((file) => file.type.startsWith("image/"));
+    if (!files.length) return;
+    const next = files.map((file) => ({
+      id: `${file.name}-${file.lastModified}-${file.size}-${Math.random().toString(36).slice(2)}`,
+      name: file.name,
+      url: URL.createObjectURL(file),
+    }));
+    setAttachments((items) => [...items, ...next]);
+    if (!value.trim()) setValue("Analyze the uploaded listing photo");
+    e.target.value = "";
+  };
+  const removePhoto = (id) => {
+    setAttachments((items) => {
+      const target = items.find((item) => item.id === id);
+      if (target) URL.revokeObjectURL(target.url);
+      return items.filter((item) => item.id !== id);
+    });
+  };
+  const clearPhotos = () => {
+    attachmentsRef.current.forEach((item) => URL.revokeObjectURL(item.url));
+    setAttachments([]);
+  };
+  const submit = () => {
+    if (!value.trim()) return;
+    onSend();
+    clearPhotos();
+  };
 
   return (
     <div style={{ width: "100%", maxWidth, margin: "0 auto" }}>
@@ -129,7 +164,7 @@ const Composer = React.forwardRef(function Composer({
           <textarea ref={taRef} value={value} rows={1}
             onChange={(e) => { setValue(e.target.value); grow(e.target); }}
             onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); onSend(); }
+              if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submit(); }
             }}
             placeholder={`Ask ${agent.name}…`}
             style={{
@@ -138,12 +173,32 @@ const Composer = React.forwardRef(function Composer({
               resize: "none",
             }} />
         </div>
+        {attachments.length > 0 && (
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", padding: "0 6px 8px" }}>
+            {attachments.map((item) => (
+              <div key={item.id} style={{
+                display: "flex", alignItems: "center", gap: 8, maxWidth: 210, padding: "5px 7px 5px 5px",
+                borderRadius: 12, background: C2.s2, border: `1px solid ${C2.hair}`, color: C2.ink,
+              }}>
+                <img src={item.url} alt="" style={{ width: 34, height: 34, borderRadius: 9, objectFit: "cover", flexShrink: 0 }} />
+                <span title={item.name} style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 12.5, color: C2.inkSoft }}>
+                  {item.name}
+                </span>
+                <button className="aria-focus" onClick={() => removePhoto(item.id)} title="Remove photo"
+                  style={{ width: 22, height: 22, borderRadius: 100, display: "grid", placeItems: "center", color: C2.muted, flexShrink: 0 }}>
+                  <Icon name="X" size={13} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
         {/* bottom controls row */}
         <div style={{
           display: "flex", alignItems: "center", gap: 8, rowGap: 6, flexWrap: "wrap",
           padding: "7px 0 0", borderTop: `1px solid ${C2.hairSoft}`,
         }}>
-          <button className="aria-focus" title="Attach" tabIndex={-1}
+          <input ref={fileRef} type="file" accept="image/*" multiple onChange={addPhotos} style={{ display: "none" }} />
+          <button className="aria-focus" title="Upload photos" onClick={() => fileRef.current && fileRef.current.click()}
             style={{ width: 34, height: 34, borderRadius: 100, display: "grid", placeItems: "center", color: C2.muted, flexShrink: 0 }}>
             <Icon name="Plus" size={19} />
           </button>
@@ -170,7 +225,7 @@ const Composer = React.forwardRef(function Composer({
               <span style={{ width: 11, height: 11, borderRadius: 3, background: C2.canvas }} />
             </button>
           ) : (
-            <button className="aria-focus" onClick={onSend} disabled={!value.trim()} title="Send"
+            <button className="aria-focus" onClick={submit} disabled={!value.trim()} title="Send"
               style={{
                 width: 36, height: 36, borderRadius: 100, display: "grid", placeItems: "center", flexShrink: 0,
                 background: value.trim() ? C2.cta : C2.s2, color: value.trim() ? C2.ctaText : C2.muted,
@@ -268,10 +323,6 @@ function EmptyState({ agent, onChip, composer, onSignal }) {
         {/* aligned cover-page cards */}
         <div style={{ width: "100%", maxWidth: landingWidth, margin: "0 auto", display: "flex", flexWrap: "wrap", gap: 22, alignItems: "stretch", justifyContent: "center" }}>
           <div style={{ flex: "1 1 520px", minWidth: 0, maxWidth: 560, display: "flex", flexDirection: "column", gap: 14 }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", minHeight: 24 }}>
-              <span style={{ fontSize: 13.5, fontWeight: 600, letterSpacing: -0.2 }}>Suggested analyses</span>
-              <span style={{ fontSize: 11.5, color: C2.muted }}>4 prompts</span>
-            </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
               {agent.chips.map((c) => (
                 <button key={c} className="aria-focus aria-elev" onClick={() => onChip(c)}

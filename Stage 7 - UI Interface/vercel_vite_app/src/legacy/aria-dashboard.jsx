@@ -114,16 +114,6 @@ function LandingDashboard({ onSignal }) {
   const A = Object.fromEntries(AGENTS.map((a) => [a.id, a.accent]));
   return (
     <div className="aria-fadein" style={{ display: "flex", flexDirection: "column", gap: 14, width: "100%" }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <span style={{ fontSize: 13.5, fontWeight: 600, letterSpacing: -0.2 }}>Portfolio snapshot</span>
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11, color: CD.muted, border: `1px solid ${CD.hair}`, borderRadius: 100, padding: "2px 8px" }}>
-            <span style={{ width: 5, height: 5, borderRadius: 4, background: CD.success }} /> Live
-          </span>
-        </div>
-        <span style={{ fontSize: 11.5, color: CD.muted }}>135,051 × 96 cols</span>
-      </div>
-
       {/* KPI grid */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
         <KpiCard icon="Building" accent={A["market"]} label="Listings" value="135,051"
