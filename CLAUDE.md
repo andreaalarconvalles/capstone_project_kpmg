@@ -115,6 +115,7 @@ This table is the single source of truth for what the team has shipped and what 
 - [2026-06-09] Phase 1 EDA COMPLETE (A+/99): 135,051 rows, 41 pipeline steps, 10 figures, at_risk_host label engineered
 - [2026-06-09] Phase 2 XGBoost COMPLETE (A/96): Paris R²=0.588, Athens R²=0.676, 26 features, 2,945 underpriced listings, €4.8M foregone revenue
 - [2026-06-09] Phase 3 LightGBM COMPLETE (A/95): leakage corrected, AUC=0.8288, 865 priority targets, €1.43M opportunity
+- [2026-06-10] Phase 7 agent-chat UI MVP built in `Stage 7 - UI Interface/`: React/HTML prototype + faithful Streamlit app (5 agents, scripted demos, LangGraph-style traces, Plotly dark charts, pseudo-choropleth map, model picker, hybrid live-Gemini mode). Verified via Streamlit AppTest.
 
 ### In Progress
 
@@ -291,6 +292,7 @@ KPMG Capstone/
 ├── models/                           ← trained model files
 ├── rag/                              ← Phase 5
 ├── agents/                           ← Phase 6
-├── app/                         ← Phase 7 — Streamlit app
+├── app/                         ← Phase 7 — Streamlit app (3-tab persona MVP)
+├── Stage 7 - UI Interface/      ← Phase 7 — agent-chat UI (React prototype + Streamlit app)
 └── docs/                        ← methodology docs, proposals, planner
 ```

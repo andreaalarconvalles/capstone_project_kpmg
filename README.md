@@ -91,7 +91,8 @@ KPMG Capstone/
 │   └── prophet_athens_v1.pkl                # Phase 4 — not yet (gitignored)
 ├── rag/                                     # Phase 5 — ChromaDB index + RAG agent
 ├── agents/                                  # Phase 6 — LangGraph orchestration code
-├── app/                                     # Phase 7 — Streamlit app
+├── app/                                     # Phase 7 — Streamlit app (3-tab persona MVP)
+├── Stage 7 - UI Interface/                  # Phase 7 — agent-chat UI (React prototype + Streamlit)
 ├── docs/                                    # Methodology docs, proposals, planner
 ├── KPMG Capstone.pdf
 ├── KPMG Proposal - Regulators.pdf
@@ -247,7 +248,9 @@ Output files: `lgb_athens_risk_v1.txt` · `athens_risk_scores_v1.csv`
 ---
 
 ### Phase 7 — Streamlit MVP (Member 5)
-**Location:** `app/`
+**Location:** `app/` (3-tab persona MVP) · `Stage 7 - UI Interface/` (agent-chat UI)
+
+> **Built — agent-chat UI (`Stage 7 - UI Interface/`):** a ChatGPT-style multi-agent interface implemented from the claude.ai/design handoff. Surfaces all 5 KPMG agents (Host Revenue, Gentrification Early Warning, STR Financial Crime, Tourism Demand, Market Entry) with LangGraph-style reasoning traces, inline dark Plotly charts, a pseudo-choropleth Athens map, a model picker, and a hybrid Demo / live-Gemini mode. Ships as both a React/HTML prototype (`prototype/`) and a faithful Streamlit app (`streamlit_app/`). Run: `cd "Stage 7 - UI Interface/streamlit_app" && pip install -r requirements.txt && streamlit run app.py`.
 
 **What to build:** A 3-tab Streamlit application that serves the three personas. This tab **can be started now** using the existing CSV outputs from Phases 2 and 3 — it does not require Phase 4, 5, or 6 to be complete.
 
@@ -334,7 +337,7 @@ Large files are excluded from version control. Download from the sources below.
 | Phase 4 — Prophet Forecasting | Member 2 | 🔲 Not started |
 | Phase 5 — RAG Compliance | Member 3 | 🔲 Not started |
 | Phase 6 — LangGraph Orchestrator | Member 4 | 🔲 Not started |
-| Phase 7 — Streamlit MVP | Member 5 | 🔲 Not started |
+| Phase 7 — Streamlit MVP | Member 5 | 🔄 In progress |
 | Documentation + Presentation | Member 6 | 🔲 Not started |
 
 Status key: ✅ Done · 🔄 In progress · 🔲 Not started · ⏳ Blocked
@@ -348,3 +351,4 @@ Status key: ✅ Done · 🔄 In progress · 🔲 Not started · ⏳ Blocked
 - [2026-06-09] Session 3: Phase 2 XGBoost complete (A/96). Paris R²=0.588, Athens R²=0.676. 26-feature pipeline. 2,945 underpriced listings. €4.8M foregone revenue. All 7 output files saved.
 - [2026-06-09] Session 4: Phase 3 LightGBM complete (A/95). Leakage discovered and corrected. AUC=0.8288. 865 priority targets. €1.43M opportunity.
 - [2026-06-09] Session 5: README completely rewritten to reflect all 7 phases. CLAUDE.md updated. Placeholder folders created.
+- [2026-06-10] Session 6: Built the ARIA agent-chat UI in `Stage 7 - UI Interface/` from the claude.ai/design handoff — React/HTML prototype + a faithful Streamlit app (5 agents, scripted demos, reasoning traces, Plotly dark charts, pseudo-choropleth map, model picker, hybrid live-Gemini mode). Verified via Streamlit AppTest (no exceptions).
