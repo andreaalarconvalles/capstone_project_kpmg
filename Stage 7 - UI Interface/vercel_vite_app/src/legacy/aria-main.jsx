@@ -107,6 +107,7 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
 function App() {
   const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
   const [theme, setTheme] = useState("airbnb");
+  const [themeMenuOpen, setThemeMenuOpen] = useState(false);
   // apply theme palette (airbnb = default) + push tweak values into the live globals
   applyTheme(theme);
   // accent Tweak: "brand" follows the theme's brand accent; any hex value overrides it
@@ -131,9 +132,12 @@ function App() {
   const cancelRef = useRef(false);
   const scrollRef = useRef(null);
   const taRef = useRef(null);
+  const themeMenuRef = useRef(null);
 
   const agent = AGENT_BY_ID[agentId];
   const activeConv = conversations.find((c) => c.id === activeConvId) || null;
+  const activeTheme = PALETTES[theme] || PALETTES.airbnb;
+  const themeModes = ["airbnb", "kpmgLight", "dark"];
 
   /* lazily materialize a seeded conversation's thread */
   const ensureThread = useCallback((conv) => {
@@ -354,17 +358,28 @@ function App() {
     return () => document.removeEventListener("fullscreenchange", syncFullscreen);
   }, []);
 
+  useEffect(() => {
+    const closeThemeMenu = (e) => {
+      if (themeMenuRef.current && !themeMenuRef.current.contains(e.target)) {
+        setThemeMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", closeThemeMenu);
+    return () => document.removeEventListener("mousedown", closeThemeMenu);
+  }, []);
+
   /* keyboard: "/" focuses composer */
   useEffect(() => {
     const h = (e) => {
       if (e.key === "/" && document.activeElement && !["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement.tagName) && !settingsOpen) {
         e.preventDefault(); taRef.current && taRef.current.focus();
       }
+      if (e.key === "Escape" && themeMenuOpen) setThemeMenuOpen(false);
       if (e.key === "Escape") { if (settingsOpen) setSettingsOpen(false); }
     };
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
-  }, [settingsOpen]);
+  }, [settingsOpen, themeMenuOpen]);
 
   const composerEl = (
     <Composer ref={taRef} agent={agent} agents={AGENTS} onPickAgent={pickAgent} value={input} setValue={setInput}
@@ -394,23 +409,45 @@ function App() {
             <span style={{ fontSize: 14.5, fontWeight: 500, whiteSpace: "nowrap" }}>{agent.name}</span>
             <span style={{ fontSize: 12.5, color: CA.muted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>· {agent.tagline}</span>
           </div>
-          <div style={{ marginLeft: "auto", flexShrink: 0, display: "flex", alignItems: "center", gap: 2, padding: 3, borderRadius: 100, background: CA.s1, border: `1px solid ${CA.hair}` }}>
-            {["airbnb", "kpmgLight", "dark"].map((mode) => {
-              const p = PALETTES[mode];
-              const on = theme === mode;
-              return (
-                <button key={mode} className="aria-focus" onClick={() => setTheme(mode)}
-                  title={`${p.label} theme`}
-                  style={{
-                    display: "flex", alignItems: "center", gap: 6, height: 28, padding: "0 11px", borderRadius: 100,
-                    background: on ? CA.s2 : "transparent", color: on ? CA.ink : CA.muted,
-                    fontSize: 12.5, fontWeight: 500, transition: "background 0.14s, color 0.14s",
-                  }}>
-                  <Icon name={p.icon} size={14.5} color={on ? p.accent : CA.muted} />
-                  <span style={{ whiteSpace: "nowrap" }}>{p.label}</span>
-                </button>
-              );
-            })}
+          <div ref={themeMenuRef} style={{ marginLeft: "auto", flexShrink: 0, position: "relative" }}>
+            <button className="aria-focus" onClick={() => setThemeMenuOpen((v) => !v)}
+              title="Change theme"
+              aria-haspopup="menu" aria-expanded={themeMenuOpen}
+              style={{
+                display: "flex", alignItems: "center", gap: 7, height: 34, padding: "0 12px", borderRadius: 100,
+                background: CA.s1, color: CA.ink, border: `1px solid ${CA.hair}`,
+                fontSize: 12.5, fontWeight: 500, transition: "background 0.14s, color 0.14s",
+              }}>
+              <Icon name={activeTheme.icon} size={14.5} color={activeTheme.accent} />
+              <span style={{ whiteSpace: "nowrap" }}>{activeTheme.label}</span>
+              <Icon name="ChevronDown" size={14} color={CA.muted}
+                style={{ transform: themeMenuOpen ? "rotate(180deg)" : "none", transition: "transform 0.16s" }} />
+            </button>
+            {themeMenuOpen && (
+              <div className="aria-scalein" role="menu" style={{
+                position: "absolute", top: "calc(100% + 8px)", right: 0, width: 172, padding: 6,
+                background: CA.s1, border: `1px solid ${CA.hair}`, borderRadius: 14,
+                boxShadow: "0 18px 44px rgba(0,0,0,0.18)", zIndex: 50,
+              }}>
+                {themeModes.map((mode) => {
+                  const p = PALETTES[mode];
+                  const on = theme === mode;
+                  return (
+                    <button key={mode} className="aria-focus" role="menuitemradio" aria-checked={on}
+                      onClick={() => { setTheme(mode); setThemeMenuOpen(false); }}
+                      style={{
+                        width: "100%", display: "flex", alignItems: "center", gap: 9, padding: "9px 10px",
+                        borderRadius: 10, background: on ? CA.s2 : "transparent", color: on ? CA.ink : CA.muted,
+                        fontSize: 13, fontWeight: 500, textAlign: "left",
+                      }}>
+                      <Icon name={p.icon} size={15} color={on ? p.accent : CA.muted} />
+                      <span style={{ flex: 1 }}>{p.label}</span>
+                      {on && <Icon name="Check" size={15} color={p.accent} sw={2.4} />}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
           <div style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 7, fontSize: 12, color: CA.muted, border: `1px solid ${CA.hair}`, borderRadius: 100, padding: "5px 11px" }}>
             <span style={{ width: 6, height: 6, borderRadius: 4, background: settings.demoMode ? CA.orange : CA.success }} />

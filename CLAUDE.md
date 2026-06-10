@@ -135,6 +135,7 @@ This table is the single source of truth for what the team has shipped and what 
 - [2026-06-10] Vercel sidebar control polish: added a fullscreen toggle directly beside the sidebar collapse button in the ARIA Vite UI.
 - [2026-06-10] KPMG theme polish: made the KPMG theme use KPMG palette tokens across the Vite UI while preserving the Airbnb and Dark theme colors.
 - [2026-06-10] Settings modal sizing fix: kept the Settings panel dimensions stable when switching from API & Models to About.
+- [2026-06-10] Theme selector polish: replaced the top-bar segmented theme buttons with a dropdown selector in the Vercel ARIA UI.
 
 ### In Progress
 
@@ -174,6 +175,7 @@ This table is the single source of truth for what the team has shipped and what 
 - [2026-06-10] Session 21: Added a fullscreen toggle beside the sidebar collapse button in the Vercel ARIA UI and wired it to the browser Fullscreen API.
 - [2026-06-10] Session 22: Updated the KPMG theme so shell colors, CTA, logo treatment, agent accents, dashboard visuals, and charts use KPMG palette colors without changing Airbnb or Dark mode.
 - [2026-06-10] Session 23: Fixed the Settings modal so the About tab keeps the same grey-panel dimensions as the API & Models tab.
+- [2026-06-10] Session 24: Replaced the Airbnb/KPMG/Dark segmented theme switcher with a dropdown menu that preserves the same theme options and behavior.
 
 ---
 
