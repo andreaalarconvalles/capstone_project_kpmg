@@ -1,12 +1,12 @@
 # Stage 7 — ARIA Platform UI
 
-[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://share.streamlit.io/deploy?repository=lukatcheishvili/capstone_project_kpmg&branch=main&mainModule=streamlit_app/app.py)
+[![Launch ARIA Platform UI](https://img.shields.io/badge/Launch%20ARIA%20Platform%20UI-Streamlit-ff4b4b?style=for-the-badge&logo=streamlit&logoColor=white)](https://capstoneprojectkpmg.streamlit.app/)
 
-> **▶ Launch the app:** click the **Open in Streamlit** badge above to deploy this UI to
-> Streamlit Community Cloud (free) and get a shareable live URL. The first deploy takes ~1
-> minute while it installs `requirements.txt`; sign in with the GitHub account that owns the
-> repo. Use `streamlit_app/app.py` as the main module on Streamlit Cloud. To run it on your own machine instead, see [Run the Streamlit app](#run-the-streamlit-app-recommended)
-> below — it opens at **http://localhost:8501**.
+> **Live demo:** click the badge above to open the deployed ARIA Platform UI directly:
+> [capstoneprojectkpmg.streamlit.app](https://capstoneprojectkpmg.streamlit.app/).
+> No redeploy step is required. To run it on your own machine instead, see
+> [Run the Streamlit app](#run-the-streamlit-app-recommended) below — it opens at
+> **http://localhost:8501**.
 
 The front-end MVP for **ARIA** (Airbnb Revenue Intelligence & Analytics) — a ChatGPT-style,
 multi-agent AI platform built for the IE Business School × KPMG Spain Capstone 2026.
