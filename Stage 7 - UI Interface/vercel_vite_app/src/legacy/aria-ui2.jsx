@@ -184,6 +184,62 @@ const Composer = React.forwardRef(function Composer({
   );
 });
 
+function StatusMetric({ icon, accent, label, value, meta }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, padding: "10px 0", borderTop: `1px solid ${C2.hairSoft}` }}>
+      <div style={{ width: 30, height: 30, borderRadius: 9, flexShrink: 0, display: "grid", placeItems: "center", background: `${accent}1f` }}>
+        <Icon name={icon} size={15.5} color={accent} sw={2.1} />
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 11.5, color: C2.muted, fontWeight: 500 }}>{label}</div>
+        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10, minWidth: 0, marginTop: 2 }}>
+          <span style={{ fontSize: 13.5, color: C2.ink, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{value}</span>
+          <span style={{ fontSize: 11.5, color: C2.muted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", textAlign: "right" }}>{meta}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function LiveDataStatus() {
+  const items = [
+    { icon: "RefreshCw", accent: C2.success, label: "Dataset refresh", value: "Synced 09:42", meta: "current build" },
+    { icon: "Table2", accent: C2.blue, label: "Portfolio load", value: "135,051 rows", meta: "96 columns" },
+    { icon: "BrainCircuit", accent: C2.violet, label: "Model stack", value: "3 engines ready", meta: "XGB · LGBM · Prophet" },
+    { icon: "CalendarClock", accent: C2.orange, label: "Forecast window", value: "90 days", meta: "Paris + Athens" },
+  ];
+
+  return (
+    <div className="aria-elev" style={{
+      background: C2.s1, border: `1px solid ${C2.hair}`, borderRadius: 16, padding: "14px 16px 15px",
+      display: "flex", flexDirection: "column", gap: 8,
+    }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+          <div style={{ width: 26, height: 26, borderRadius: 8, display: "grid", placeItems: "center", background: `${C2.success}1f`, flexShrink: 0 }}>
+            <Icon name="Activity" size={14.5} color={C2.success} sw={2.2} />
+          </div>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 13.5, fontWeight: 600, color: C2.ink }}>Live data status</div>
+            <div style={{ fontSize: 11.5, color: C2.muted, marginTop: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              Demo dataset and model readiness
+            </div>
+          </div>
+        </div>
+        <span style={{
+          display: "inline-flex", alignItems: "center", gap: 5, fontSize: 11, color: C2.muted,
+          border: `1px solid ${C2.hair}`, borderRadius: 100, padding: "3px 8px", whiteSpace: "nowrap", flexShrink: 0,
+        }}>
+          <span style={{ width: 5, height: 5, borderRadius: 4, background: C2.success }} /> Operational
+        </span>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", columnGap: 18, rowGap: 0 }}>
+        {items.map((item) => <StatusMetric key={item.label} {...item} />)}
+      </div>
+    </div>
+  );
+}
+
 /* ---------- Empty state ---------- */
 function EmptyState({ agent, onChip, composer, onSignal }) {
   return (
@@ -216,6 +272,7 @@ function EmptyState({ agent, onChip, composer, onSignal }) {
                 </button>
               ))}
             </div>
+            <LiveDataStatus />
           </div>
           <div style={{ flex: "1 1 360px", minWidth: 0, maxWidth: 440 }}>
             <LandingDashboard onSignal={onSignal} />
