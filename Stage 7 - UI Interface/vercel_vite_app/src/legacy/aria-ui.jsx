@@ -84,7 +84,7 @@ function SidebarRow({ active, children, onClick, onMouseEnter, onMouseLeave, sty
 function Sidebar({
   collapsed, onToggle, onToggleFullscreen, isFullscreen, agents, activeAgentId, onPickAgent, onNewChat,
   conversations, activeConvId, onPickConv, onRenameConv, onDeleteConv,
-  search, setSearch, onOpenSettings, apiKey, onApiKey
+  search, setSearch, onOpenSettings, apiKey, project, projectNumber
 }) {
   const [hoverConv, setHoverConv] = React.useState(null);
   const [editing, setEditing] = React.useState(null);
@@ -113,9 +113,9 @@ function Sidebar({
           <Icon name="Plus" size={19} sw={2.2} />
         </button>
         <div style={{ height: 10 }} />
-        <button className="aria-focus" onClick={onOpenSettings} title={apiKey ? "Access key set · Live" : "Add access key"}
-        style={{ width: 36, height: 36, borderRadius: 9, display: "grid", placeItems: "center", color: apiKey ? C.success : C.muted, border: `1px solid ${C.hair}` }}>
-          <Icon name="KeyRound" size={17} />
+        <button className="aria-focus" onClick={onOpenSettings} title={project && projectNumber ? "Vertex project set" : "Add Vertex project"}
+        style={{ width: 36, height: 36, borderRadius: 9, display: "grid", placeItems: "center", color: project && projectNumber ? C.success : C.muted, border: `1px solid ${C.hair}` }}>
+          <Icon name="CloudCog" size={17} />
         </button>
         <div style={{ marginTop: "auto" }}>
           <button className="aria-focus" onClick={onOpenSettings} title="Settings"
@@ -177,21 +177,19 @@ function Sidebar({
       </div>
 
       <div style={{ overflowY: "auto", flex: 1, padding: "0 8px 10px" }}>
-        {/* access key */}
-        <div style={{ fontSize: 12, color: C.muted, fontWeight: 500, letterSpacing: -0.13, padding: "8px 8px 6px" }}>ACCESS KEY</div>
+        {/* Vertex project */}
+        <div style={{ fontSize: 12, color: C.muted, fontWeight: 500, letterSpacing: -0.13, padding: "8px 8px 6px" }}>VERTEX AI</div>
         <div style={{ padding: "0 8px 4px" }}>
-          <div style={{ position: "relative" }}>
-            <Icon name="KeyRound" size={14.5} color={apiKey ? C.success : C.muted}
-            style={{ position: "absolute", left: 11, top: "50%", transform: "translateY(-50%)" }} />
-            <input className="aria-focus" type="password" value={apiKey || ""}
-            onChange={(e) => onApiKey(e.target.value)}
-            placeholder="Paste Vertex / Google key"
-            autoComplete="off" spellCheck={false}
-            style={{ width: "100%", background: C.canvas, border: `1px solid ${apiKey ? C.success + "55" : C.hair}`, color: C.ink, borderRadius: 10, padding: "9px 10px 9px 32px", fontSize: 13, outline: "none", letterSpacing: apiKey ? "2px" : "normal" }} />
-          </div>
+          <button className="aria-focus" onClick={onOpenSettings}
+            style={{ width: "100%", display: "flex", alignItems: "center", gap: 9, background: C.canvas, border: `1px solid ${project && projectNumber ? C.success + "55" : C.hair}`, color: C.ink, borderRadius: 10, padding: "9px 10px", fontSize: 13, outline: "none", textAlign: "left" }}>
+            <Icon name="CloudCog" size={15} color={project && projectNumber ? C.success : C.muted} />
+            <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {project && projectNumber ? `${project} · ${projectNumber}` : "Add Vertex project details"}
+            </span>
+          </button>
           <div style={{ display: "flex", alignItems: "center", gap: 7, padding: "8px 4px 2px", fontSize: 11.5, color: C.muted }}>
-            <span style={{ width: 6, height: 6, borderRadius: 4, background: apiKey ? C.success : C.orange, flexShrink: 0 }} />
-            {apiKey ? "Live · ARIA Agent" : "Demo mode — scripted responses"}
+            <span style={{ width: 6, height: 6, borderRadius: 4, background: project && projectNumber ? C.success : C.orange, flexShrink: 0 }} />
+            {project && projectNumber ? "Custom prompts use Vertex" : "Suggested prompts are scripted"}
           </div>
         </div>
 

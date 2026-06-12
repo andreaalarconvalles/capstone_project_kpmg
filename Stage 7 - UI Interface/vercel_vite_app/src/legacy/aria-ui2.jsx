@@ -356,9 +356,16 @@ function SettingsModal({ open, onClose, settings, setSettings }) {
   if (!open) return null;
 
   const set = (k, v) => setSettings((s) => ({ ...s, [k]: v }));
-  const testConn = () => {
+  const testConn = async () => {
     setTestState("testing");
-    setTimeout(() => setTestState(settings.apiKey.trim().length > 12 ? "ok" : "fail"), 1100);
+    try {
+      const res = await fetch("/api/chat");
+      const status = await res.json();
+      const hasProject = settings.project.trim().length > 0 && settings.projectNumber.trim().length > 0;
+      setTestState(res.ok && status.authConfigured && hasProject ? "ok" : "fail");
+    } catch {
+      setTestState("fail");
+    }
   };
 
   const field = { background: C2.canvas, border: `1px solid ${C2.hair}`, color: C2.ink, borderRadius: 10, padding: "10px 12px", fontSize: 14, outline: "none", width: "100%" };
@@ -390,51 +397,42 @@ function SettingsModal({ open, onClose, settings, setSettings }) {
         <div style={{ padding: 18, overflowY: "auto", flex: 1 }}>
           {tab === "api" ? (
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              <div>
-                <label style={labelS}>Google API key (Vertex AI / Gemini)</label>
-                <input type="password" value={settings.apiKey} onChange={(e) => { set("apiKey", e.target.value); setTestState("idle"); }}
-                  placeholder="AIza…" className="aria-focus" style={field} />
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <div>
+                  <label style={labelS}>Vertex project ID</label>
+                  <input value={settings.project} onChange={(e) => { set("project", e.target.value); setTestState("idle"); }} placeholder="capstoneprojectkpmg" className="aria-focus" style={field} />
+                </div>
+                <div>
+                  <label style={labelS}>Vertex project number</label>
+                  <input value={settings.projectNumber || ""} onChange={(e) => { set("projectNumber", e.target.value); setTestState("idle"); }} placeholder="52102703097" className="aria-focus" style={field} />
+                </div>
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 <div>
-                  <label style={labelS}>GCP project ID</label>
-                  <input value={settings.project} onChange={(e) => set("project", e.target.value)} placeholder="aria-capstone-2026" className="aria-focus" style={field} />
-                </div>
-                <div>
                   <label style={labelS}>Region</label>
-                  <select value={settings.region} onChange={(e) => set("region", e.target.value)} className="aria-focus" style={{ ...field, appearance: "none" }}>
-                    <option>europe-west1</option><option>europe-west4</option><option>us-central1</option>
+                  <select value={settings.region} onChange={(e) => { set("region", e.target.value); setTestState("idle"); }} className="aria-focus" style={{ ...field, appearance: "none" }}>
+                    <option>europe-west1</option><option>europe-west4</option><option>us-central1</option><option>global</option>
                   </select>
                 </div>
-              </div>
-              <div>
-                <label style={labelS}>Default model</label>
-                <select value={settings.defaultModel} onChange={(e) => set("defaultModel", e.target.value)} className="aria-focus" style={{ ...field, appearance: "none" }}>
-                  <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
-                  <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
-                </select>
+                <div>
+                  <label style={labelS}>Default model</label>
+                  <select value={settings.defaultModel} onChange={(e) => { set("defaultModel", e.target.value); setTestState("idle"); }} className="aria-focus" style={{ ...field, appearance: "none" }}>
+                    <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+                    <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
+                  </select>
+                </div>
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <button onClick={testConn} className="aria-focus"
                   style={{ display: "flex", alignItems: "center", gap: 8, padding: "9px 16px", borderRadius: 100, background: C2.s1, border: `1px solid ${C2.hair}`, color: C2.ink, fontSize: 13.5, fontWeight: 500 }}>
                   {testState === "testing" && <Icon name="Loader" size={15} className="aria-spin" />}
-                  Test connection
+                  Test backend
                 </button>
-                {testState === "ok" && <span style={{ display: "flex", alignItems: "center", gap: 6, color: C2.success, fontSize: 13.5 }}><Icon name="CircleCheck" size={16} /> Connected</span>}
-                {testState === "fail" && <span style={{ display: "flex", alignItems: "center", gap: 6, color: C2.coral, fontSize: 13.5 }}><Icon name="CircleX" size={16} /> Failed — check key</span>}
-              </div>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "13px 14px", borderRadius: 12, background: C2.s1, border: `1px solid ${C2.hair}` }}>
-                <div>
-                  <div style={{ fontSize: 14, fontWeight: 500 }}>Demo mode</div>
-                  <div style={{ fontSize: 12.5, color: C2.muted, marginTop: 2 }}>{settings.demoMode ? "Scripted responses (no API calls)" : "Live Gemini API responses"}</div>
-                </div>
-                <button onClick={() => set("demoMode", !settings.demoMode)} className="aria-focus"
-                  style={{ width: 46, height: 27, borderRadius: 100, background: settings.demoMode ? C2.s2 : C2.success, border: `1px solid ${C2.hair}`, position: "relative", transition: "background 0.18s", flexShrink: 0 }}>
-                  <span style={{ position: "absolute", top: 2, left: settings.demoMode ? 2 : 21, width: 21, height: 21, borderRadius: 100, background: C2.ink, transition: "left 0.18s" }} />
-                </button>
+                {testState === "ok" && <span style={{ display: "flex", alignItems: "center", gap: 6, color: C2.success, fontSize: 13.5 }}><Icon name="CircleCheck" size={16} /> Vertex backend ready</span>}
+                {testState === "fail" && <span style={{ display: "flex", alignItems: "center", gap: 6, color: C2.coral, fontSize: 13.5 }}><Icon name="CircleX" size={16} /> Needs Vercel auth</span>}
               </div>
               <div style={{ fontSize: 12, color: C2.muted, lineHeight: 1.5 }}>
-                Plain API keys call the Generative Language endpoint directly from the browser. True Vertex AI OAuth is out of MVP scope — the key field accepts a Gemini API key regardless.
+                Suggested prompts keep their scripted demo answers. Custom typed prompts call the server-side Vertex AI backend with this project ID and number. The project fields identify where to run the request; Vercel still needs a service account environment variable for authentication.
               </div>
             </div>
           ) : (

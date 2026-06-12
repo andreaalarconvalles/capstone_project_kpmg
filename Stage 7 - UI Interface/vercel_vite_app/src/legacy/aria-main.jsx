@@ -126,7 +126,7 @@ function App() {
   const [modelId, setModelId] = useState("gemini-2.5-pro");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settings, setSettings] = useState({
-    apiKey: "", project: "", region: "europe-west1", defaultModel: "gemini-2.5-pro", demoMode: true,
+    apiKey: "", project: "capstoneprojectkpmg", projectNumber: "52102703097", region: "europe-west1", defaultModel: "gemini-2.5-flash", demoMode: true,
   });
   const [live, setLive] = useState(null); // { convId, msg }
   const cancelRef = useRef(false);
@@ -211,7 +211,7 @@ function App() {
     setTimeout(tickTrace, SP.trace);
   }, []);
 
-  /* live Gemini path */
+  /* live Vertex AI path for custom prompts */
   const runLive = useCallback(async (convId, aId, prompt) => {
     cancelRef.current = false;
     const ag = AGENT_BY_ID[aId];
@@ -219,8 +219,9 @@ function App() {
     if (MODEL_BY_ID[model].ml) model = settings.defaultModel;
     const steps = [
       { node: "Orchestrator", detail: `routing to ${ag.name}` },
-      { node: "Retrieval Agent", detail: "retrieving project context" },
-      { node: "Gemini", detail: `generating with ${model}` },
+      { node: "Retrieval Agent", detail: "loading ARIA project context" },
+      { node: "Vertex AI", detail: `generating with ${model}` },
+      { node: "Orchestrator", detail: "composing grounded answer" },
     ];
     const base = {
       role: "assistant", agentId: aId, prompt, trace: steps, blocks: [],
@@ -232,22 +233,37 @@ function App() {
 
     upd({ traceDone: 1 });
     let text = "";
+    let brief = genericScript(ag, prompt).brief;
     try {
-      const sys = `You are ${ag.name}, ${ag.tagline}. Project context: Airbnb data for Paris (120,809 listings) and Athens (14,242 listings), 135,051-listing master dataset, XGBoost pricing, LightGBM risk, SHAP explainability. Answer in 150-220 words, grounded in this data.`;
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${settings.apiKey}`;
       upd({ traceDone: 2 });
-      const res = await fetch(url, {
+      const res = await fetch("/api/chat", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ systemInstruction: { parts: [{ text: sys }] }, contents: [{ role: "user", parts: [{ text: prompt }] }] }),
+        body: JSON.stringify({
+          prompt,
+          agentId: aId,
+          agentName: ag.name,
+          agentTagline: ag.tagline,
+          projectId: settings.project,
+          projectNumber: settings.projectNumber,
+          location: settings.region,
+          model,
+        }),
       });
       const j = await res.json();
-      text = j?.candidates?.[0]?.content?.parts?.[0]?.text
-        || (j?.error?.message ? `**API error:** ${j.error.message}\n\nCheck your key in Settings, or switch Demo mode back on.` : "No response returned.");
+      if (!res.ok) throw new Error(j?.error || "Vertex AI request failed.");
+      const sourceText = Array.isArray(j.sources) && j.sources.length
+        ? `\n\n**Sources used:** ${j.sources.map((s) => `\`${s}\``).join(", ")}`
+        : "";
+      text = `${j.answer || "No response returned."}${sourceText}`;
+      brief = {
+        title: `${ag.name} — Vertex Analysis`,
+        kpis: Array.isArray(j.kpis) && j.kpis.length ? j.kpis.slice(0, 4) : brief.kpis,
+      };
     } catch (e) {
-      text = `**Network error:** ${e.message}. Switch Demo mode on in Settings to use scripted responses.`;
+      text = `**Vertex AI is not connected yet:** ${e.message}\n\nThe UI is correctly routing custom prompts to the backend, but Vertex needs server-side Google Cloud authentication in Vercel before it can spend project credits. Keep using the suggested prompts for scripted demo responses while credentials are configured.`;
     }
     if (cancelRef.current) return;
-    upd({ traceDone: 3, traceRunning: false, blocks: [{ type: "text", text }] });
+    upd({ traceDone: steps.length, traceRunning: false, blocks: [{ type: "text", text }], brief });
 
     // stream the text
     const words = text.split(" ");
@@ -259,7 +275,7 @@ function App() {
       if (w < words.length) setTimeout(step, 14 + Math.random() * 20);
       else setLive((l) => {
         if (!l) return null;
-        const fin = { ...l.msg, done: true, progress: { block: 1, text: "" } };
+        const fin = { ...l.msg, brief, done: true, progress: { block: 1, text: "" } };
         setConversations((cs) => cs.map((c) => c.id === convId ? { ...c, messages: [...(c.messages || []), fin] } : c));
         return null;
       });
@@ -280,7 +296,8 @@ function App() {
     let convId = activeConvId;
     const isNew = !convId;
     if (isNew) convId = "c" + Date.now();
-    const useLive = !settings.demoMode && settings.apiKey.trim().length > 8;
+    const scripted = getScript(aid, prompt);
+    const useLive = !scripted;
 
     setConversations((cs) => {
       if (isNew) {
@@ -296,7 +313,7 @@ function App() {
     setTimeout(() => {
       if (useLive) runLive(convId, aid, prompt);
       else {
-        const s = getScript(aid, prompt) || genericScript(ag, prompt);
+        const s = scripted;
         const staticMsg = {
           role: "assistant", agentId: aid, prompt, trace: s.trace, blocks: s.blocks, brief: s.brief, elapsed: elapsedFor(s.trace),
         };
@@ -340,10 +357,14 @@ function App() {
       return { ...c, messages: c.messages.slice(0, idx) };
     }));
     setTimeout(() => {
-      const s = getScript(m.agentId, m.prompt) || genericScript(AGENT_BY_ID[m.agentId], m.prompt);
-      runStream(activeConvId, m.agentId, m.prompt, { role: "assistant", agentId: m.agentId, prompt: m.prompt, trace: s.trace, blocks: s.blocks, brief: s.brief, elapsed: elapsedFor(s.trace) });
+      const s = getScript(m.agentId, m.prompt);
+      if (s) {
+        runStream(activeConvId, m.agentId, m.prompt, { role: "assistant", agentId: m.agentId, prompt: m.prompt, trace: s.trace, blocks: s.blocks, brief: s.brief, elapsed: elapsedFor(s.trace) });
+      } else {
+        runLive(activeConvId, m.agentId, m.prompt);
+      }
     }, 40);
-  }, [live, activeConvId, runStream]);
+  }, [live, activeConvId, runStream, runLive]);
   const exportMsg = useCallback((m) => exportBrief(AGENT_BY_ID[m.agentId], m.prompt, m.brief), []);
 
   /* autoscroll while streaming */
@@ -401,7 +422,8 @@ function App() {
         onToggleFullscreen={toggleFullscreen} isFullscreen={isFullscreen}
         agents={AGENTS} activeAgentId={agentId} onPickAgent={pickAgent} onNewChat={newChat}
         apiKey={settings.apiKey}
-        onApiKey={(v) => setSettings((s) => ({ ...s, apiKey: v, demoMode: v.trim().length === 0 }))}
+        project={settings.project}
+        projectNumber={settings.projectNumber}
         conversations={conversations} activeConvId={activeConvId} onPickConv={pickConv}
         onRenameConv={renameConv} onDeleteConv={deleteConv}
         search={search} setSearch={setSearch} onOpenSettings={() => setSettingsOpen(true)} />
@@ -455,8 +477,8 @@ function App() {
             )}
           </div>
           <div style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 7, fontSize: 12, color: CA.muted, border: `1px solid ${CA.hair}`, borderRadius: 100, padding: "5px 11px" }}>
-            <span style={{ width: 6, height: 6, borderRadius: 4, background: settings.demoMode ? CA.orange : CA.success }} />
-            {settings.demoMode ? "Demo mode" : "Live · Gemini"}
+            <span style={{ width: 6, height: 6, borderRadius: 4, background: settings.project && settings.projectNumber ? CA.success : CA.orange }} />
+            {settings.project && settings.projectNumber ? "Scripted + Vertex" : "Project needed"}
           </div>
         </div>
 
