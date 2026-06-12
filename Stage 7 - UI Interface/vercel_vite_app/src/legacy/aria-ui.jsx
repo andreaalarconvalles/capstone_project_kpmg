@@ -184,13 +184,9 @@ function Sidebar({
             style={{ width: "100%", display: "flex", alignItems: "center", gap: 9, background: C.canvas, border: `1px solid ${project && projectNumber ? C.success + "55" : C.hair}`, color: C.ink, borderRadius: 10, padding: "9px 10px", fontSize: 13, outline: "none", textAlign: "left" }}>
             <Icon name="CloudCog" size={15} color={project && projectNumber ? C.success : C.muted} />
             <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {project && projectNumber ? project : "Add Vertex project details"}
+              {project && projectNumber ? "******************" : "Add Vertex project details"}
             </span>
           </button>
-          <div style={{ display: "flex", alignItems: "center", gap: 7, padding: "8px 4px 2px", fontSize: 11.5, color: C.muted }}>
-            <span style={{ width: 6, height: 6, borderRadius: 4, background: project && projectNumber ? C.success : C.orange, flexShrink: 0 }} />
-            {project && projectNumber ? "Custom prompts use Vertex" : "Suggested prompts are scripted"}
-          </div>
         </div>
 
         {/* conversations */}
