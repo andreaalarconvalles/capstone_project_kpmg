@@ -476,10 +476,6 @@ function App() {
               </div>
             )}
           </div>
-          <div style={{ flexShrink: 0, display: "flex", alignItems: "center", gap: 7, fontSize: 12, color: CA.muted, border: `1px solid ${CA.hair}`, borderRadius: 100, padding: "5px 11px" }}>
-            <span style={{ width: 6, height: 6, borderRadius: 4, background: settings.project && settings.projectNumber ? CA.success : CA.orange }} />
-            {settings.project && settings.projectNumber ? "Scripted + Vertex" : "Project needed"}
-          </div>
         </div>
 
         {showThread ? (
