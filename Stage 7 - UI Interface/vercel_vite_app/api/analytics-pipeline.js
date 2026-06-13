@@ -386,6 +386,43 @@ function topN(items, scoreKey, n = 6, desc = true) {
     .slice(0, n);
 }
 
+function confidenceRank(confidence) {
+  const c = String(confidence || "").trim().toLowerCase();
+  if (c === "observed") return 3;
+  if (c === "mixed") return 2;
+  if (c === "estimated") return 1;
+  return 0;
+}
+
+function mapRegionRows(rows, city, metricKey, lowerIsBetter) {
+  const byRegion = new Map();
+  rows.forEach((row) => {
+    const regionId = boundaryRegionId(city, row.area || row.label);
+    if (!regionId || !Number.isFinite(num(row[metricKey], NaN))) return;
+    const current = byRegion.get(regionId);
+    if (!current) {
+      byRegion.set(regionId, row);
+      return;
+    }
+
+    const rowConfidence = confidenceRank(row.confidence);
+    const currentConfidence = confidenceRank(current.confidence);
+    if (rowConfidence > currentConfidence) {
+      byRegion.set(regionId, row);
+      return;
+    }
+    if (rowConfidence < currentConfidence) return;
+
+    const rowMetric = num(row[metricKey]);
+    const currentMetric = num(current[metricKey]);
+    const better = lowerIsBetter ? rowMetric < currentMetric : rowMetric > currentMetric;
+    if (better) byRegion.set(regionId, row);
+  });
+
+  return [...byRegion.values()]
+    .sort((a, b) => lowerIsBetter ? num(a[metricKey]) - num(b[metricKey]) : num(b[metricKey]) - num(a[metricKey]));
+}
+
 function weightedAverage(sum, weight) {
   return weight ? sum / weight : 0;
 }
@@ -764,7 +801,8 @@ function wantsRegionMap(prompt) {
 
 function makeRegionMap(title, city, rows, metricKey, metricLabel, displayFormatter = fmtScore, options = {}) {
   const meta = CITY_MAP_META[city] || CITY_MAP_META.Paris;
-  const mapRows = rows.slice(0, city === "Paris" ? 20 : 12).map((r) => {
+  const sortedRows = mapRegionRows(rows, city, metricKey, Boolean(options.lowerIsBetter));
+  const mapRows = sortedRows.slice(0, city === "Paris" ? 20 : 12).map((r) => {
     const area = r.area || r.label;
     const regionId = boundaryRegionId(city, area);
     return {
@@ -809,14 +847,14 @@ async function marketAnalysis(prompt) {
   const rows = await loadNeighbourhoodStats();
   const city = cityFromPrompt(prompt) || "Paris";
   const cityRows = rows.filter((r) => r.city === city);
-  const cheap = /(cheap|cheapest|affordable|budget|low price|rent)/i.test(prompt);
+  const cheap = /(cheap|cheapest|affordable|budget|low price|lowest|nightly price|median price|rent)/i.test(prompt);
   const revenue = /(revenue|income|earning|yield)/i.test(prompt);
   const demand = /(occupancy|demand|booked|tourist)/i.test(prompt);
   const family = /(family|safe|safest|live|living)/i.test(prompt);
   const saturated = /(saturat|avoid|too high|crowd|overbuilt)/i.test(prompt);
   const scoreKey = cheap ? "medianPrice" : revenue ? "revenue" : demand ? "occupancy" : saturated ? "saturation" : family ? "saturation" : "opportunity";
   const ranked = topN(cityRows, scoreKey, 6, !cheap && !family);
-  const mapRanked = topN(cityRows, scoreKey, city === "Paris" ? 20 : 12, !cheap && !family);
+  const mapSourceRows = cityRows;
   const best = ranked[0] || cityRows[0] || {};
   const totalListings = cityRows.reduce((s, r) => s + r.listings, 0);
   const chartMetric = cheap ? "medianPrice" : revenue ? "revenue" : demand ? "occupancy" : saturated ? "saturation" : family ? "saturation" : "opportunity";
@@ -850,7 +888,7 @@ async function marketAnalysis(prompt) {
     ? makeRegionMap(
       mapTitle,
       city,
-        mapRanked,
+        mapSourceRows,
         chartMetric,
         cheap ? "Median nightly price" : revenue ? "Average revenue" : demand ? "Average occupancy" : saturated || family ? "Saturation score" : "Opportunity score",
         cheap || revenue ? fmtEuro : demand ? fmtPct : fmtScore,
