@@ -500,8 +500,10 @@ function classifyIntent(prompt, agentId) {
   const p = `${prompt} ${agentId}`.toLowerCase();
   const cityMentions = cityMentionsFromPrompt(prompt);
   if (/(portfolio|50-unit|fifty-unit)/.test(p) || cityMentions.has("Paris") && cityMentions.has("Athens")) return "portfolio-comparison";
+  if (/(underprice|underpriced|fair price|predicted price|pricing gap|price gap|shap|model driver)/.test(p)) return "pricing";
   if (/(family|safe|safest|live|living|cheap|cheapest|affordable|budget|rent|rental)/.test(p)) return "market-entry";
   if (/(risk|high-risk|declin|vulnerab|priority|churn|warning)/.test(p)) return "risk";
+  if (/(opportunity|saturat|distance zone|segment|heat.?map|short-term rental|market|investment|nightly prices?|median nightly|median price|revenue.*saturation|saturation.*revenue)/.test(p)) return "market-entry";
   if (/(map|region|regions|area comparison|compare areas|compare regions|neighbourhoods|neighborhoods|arrondissements|districts|where in|which areas|which regions)/.test(p)) return "market-entry";
   if (/(underprice|price|pricing|revenue|nightly|gap|earning|income|adr)/.test(p)) return "pricing";
   if (/(forecast|occupancy|tourist|demand|season|90 day|future|summer|peak)/.test(p)) return "demand";
@@ -867,8 +869,157 @@ function makeViz(title, data, yLabel = "Score", yKey = "value", options = {}) {
   }];
 }
 
+function visualizationRequest(prompt) {
+  const p = String(prompt || "").toLowerCase();
+  return {
+    map: wantsRegionMap(prompt),
+    heatmap: /(heat.?map|matrix|segment|segments|grid|quadrant)/i.test(p),
+    distribution: /(distribution|spread|range|histogram|how many|score range|price range|risk range)/i.test(p),
+    composition: /(share|breakdown|split|composition|mix|portion|percentage of|what percent)/i.test(p),
+    relationship: /(relationship|correlation|trade.?off|balance|versus| vs |compare .*with|price.*revenue|revenue.*price|revenue.*saturation|saturation.*revenue|opportunity.*saturation|saturation.*opportunity)/i.test(p),
+  };
+}
+
+function metricFormatter(metricKey) {
+  if (metricKey === "medianPrice" || metricKey === "meanPrice" || metricKey === "revenue" || metricKey === "avgGap" || metricKey === "avgActual" || metricKey === "avgPredicted") return fmtEuro;
+  if (metricKey === "occupancy" || metricKey === "highShare" || metricKey === "highRiskShare" || metricKey === "share") return fmtPct;
+  return fmtScore;
+}
+
+function makeHistogram(title, rows, metricKey, metricLabel, options = {}) {
+  const formatter = options.formatter || metricFormatter(metricKey);
+  const values = rows.map((r) => num(r[metricKey], NaN)).filter(Number.isFinite);
+  if (!values.length) return makeViz(title, [], metricLabel, "count", { kind: "histogram" });
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const bins = Math.min(options.bins || 6, Math.max(3, Math.ceil(Math.sqrt(values.length))));
+  const width = Math.max((max - min) / bins, 0.0001);
+  const data = Array.from({ length: bins }, (_, i) => {
+    const lo = min + i * width;
+    const hi = i === bins - 1 ? max : min + (i + 1) * width;
+    return { label: `${formatter(lo)}–${formatter(hi)}`, value: 0, count: 0, display: "0 regions" };
+  });
+  values.forEach((value) => {
+    const idx = Math.min(bins - 1, Math.max(0, Math.floor((value - min) / width)));
+    data[idx].value += 1;
+    data[idx].count += 1;
+    data[idx].display = `${data[idx].count} regions`;
+  });
+  return makeViz(title, data, "Regions", "count", {
+    kind: "histogram",
+    metricNote: options.metricNote || `${metricLabel} distribution: each bar shows how many regions fall into that value range.`,
+  });
+}
+
+function humanizeSegmentLabel(value) {
+  const raw = String(value || "Unknown").trim();
+  const known = {
+    near_1_3km: "Near centre, 1-3 km",
+    mid_3_5km: "Mid distance, 3-5 km",
+    outer_5km_plus: "Outer area, 5+ km",
+    centre_0_1km: "Central core, 0-1 km",
+    center_0_1km: "Central core, 0-1 km",
+    observed: "Observed data",
+    mixed: "Mixed confidence",
+    estimated: "Estimated data",
+  };
+  const key = raw.toLowerCase();
+  if (known[key]) return known[key];
+  return raw
+    .replace(/_/g, " ")
+    .replace(/\bkm\b/gi, "km")
+    .replace(/\bplus\b/gi, "+")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/^\w/, (ch) => ch.toUpperCase());
+}
+
+function makeDonut(title, rows, labelKey, valueKey, valueLabel, options = {}) {
+  const formatter = options.formatter || (valueKey === "listings" || valueKey === "count" ? fmtInt : metricFormatter(valueKey));
+  const total = rows.reduce((sum, row) => sum + num(row[valueKey]), 0);
+  return [{
+    kind: "donut",
+    title,
+    xKey: "label",
+    yKey: "value",
+    yLabel: valueLabel,
+    metricNote: options.metricNote || `${valueLabel} breakdown: each slice shows its share of the selected total.`,
+    data: rows.map((row) => {
+      const value = num(row[valueKey]);
+      const share = total ? value / total * 100 : 0;
+      return {
+        label: options.labelFormatter ? options.labelFormatter(row[labelKey] || row.label) : shortArea(row[labelKey] || row.label),
+        value: Number(value.toFixed(2)),
+        display: formatter(value),
+        shareDisplay: `${share.toFixed(1)}% of total`,
+      };
+    }),
+  }];
+}
+
+function makeBubbleScatter(title, rows, options = {}) {
+  const xKey = options.xKey || "saturation";
+  const yKey = options.yKey || "revenue";
+  const sizeKey = options.sizeKey || "listings";
+  return [{
+    kind: "bubble-scatter",
+    title,
+    xKey,
+    yKey,
+    sizeKey,
+    xLabel: options.xLabel || "Saturation score",
+    yLabel: options.yLabel || "Average revenue",
+    metricNote: options.metricNote || "Bubble chart: position shows the trade-off between two metrics, while bubble size reflects listing volume.",
+    data: rows.map((r) => {
+      const sizeValue = Math.max(1, Number(num(r[sizeKey] || r.count || 1).toFixed(0)));
+      return {
+        label: shortArea(r.area || r.label),
+        [xKey]: Number(num(r[xKey]).toFixed(2)),
+        [yKey]: Number(num(r[yKey]).toFixed(2)),
+        [sizeKey]: sizeValue,
+        display: options.display ? options.display(r) : "",
+        listingsDisplay: fmtInt(r[sizeKey] || r.count || 0),
+      };
+    }),
+  }];
+}
+
+function makeSegmentHeatmap(title, rows, metricKey, metricLabel, options = {}) {
+  const groups = new Map();
+  rows.forEach((row) => {
+    const y = humanizeSegmentLabel(row.zone || "Unknown zone");
+    const x = humanizeSegmentLabel(row.confidence || "Unknown confidence");
+    const key = `${y}|${x}`;
+    const current = groups.get(key) || { y, x, weight: 0, weighted: 0, label: row.area };
+    const weight = Math.max(1, num(row.listings || row.count || 1));
+    current.weight += weight;
+    current.weighted += num(row[metricKey]) * weight;
+    if (num(row[metricKey]) > num(rows.find((r) => r.area === current.label)?.[metricKey], -Infinity)) current.label = row.area;
+    groups.set(key, current);
+  });
+  const formatter = options.formatter || metricFormatter(metricKey);
+  return [{
+    kind: "heatmap",
+    title,
+    tone: options.tone || "opportunity",
+    metricNote: options.metricNote || `${metricLabel} heatmap: darker cells show stronger average values across market segments.`,
+    data: [...groups.values()].map((g) => {
+      const value = weightedAverage(g.weighted, g.weight);
+      return {
+        x: g.x,
+        y: g.y,
+        xLabel: g.x,
+        yLabel: g.y,
+        value: Number(value.toFixed(2)),
+        display: formatter(value),
+        label: shortArea(g.label),
+      };
+    }),
+  }];
+}
+
 function wantsRegionMap(prompt) {
-  return /(map|region|regions|area comparison|compare areas|compare regions|neighbourhoods|neighborhoods|arrondissements|districts|where in|which areas|which regions)/i.test(prompt);
+  return /(\bmap\b|region|regions|area comparison|compare areas|compare regions|neighbourhoods|neighborhoods|arrondissements|districts|where in|which areas|which regions)/i.test(prompt);
 }
 
 function makeRegionMap(title, city, rows, metricKey, metricLabel, displayFormatter = fmtScore, options = {}) {
@@ -975,6 +1126,9 @@ async function marketAnalysis(prompt) {
             { label: "Listings reviewed", value: fmtInt(totalListings) },
           ];
   const mapRequested = wantsRegionMap(prompt);
+  const vizRequest = visualizationRequest(prompt);
+  const metricLabel = cheap ? "Median nightly price" : revenue ? "Average revenue" : demand ? "Average occupancy" : saturated || family ? "Saturation score" : "Opportunity score";
+  const metricDisplay = cheap || revenue ? fmtEuro : demand ? fmtPct : fmtScore;
   const mapTitle = cheap
     ? `${city} map: lowest nightly prices`
     : revenue
@@ -992,8 +1146,8 @@ async function marketAnalysis(prompt) {
       city,
         mapSourceRows,
         chartMetric,
-        cheap ? "Median nightly price" : revenue ? "Average revenue" : demand ? "Average occupancy" : saturated || family ? "Saturation score" : "Opportunity score",
-        cheap || revenue ? fmtEuro : demand ? fmtPct : fmtScore,
+        metricLabel,
+        metricDisplay,
       {
         tone: cheap ? "price" : family ? "livability" : saturated ? "risk" : revenue ? "price" : "opportunity",
         lowerIsBetter: cheap || family,
@@ -1001,11 +1155,41 @@ async function marketAnalysis(prompt) {
         legendHigh: cheap ? "costlier" : family ? "more saturated" : "higher",
       }
     )
+    : vizRequest.heatmap
+      ? makeSegmentHeatmap(`${city} ${metricLabel.toLowerCase()} by segment`, cityRows, chartMetric, metricLabel, {
+        formatter: metricDisplay,
+        tone: cheap ? "price" : family ? "livability" : saturated ? "risk" : "opportunity",
+      })
+    : vizRequest.relationship
+      ? makeBubbleScatter(`${city} revenue versus saturation trade-off`, topN(cityRows, "opportunity", 10, true), {
+        xKey: "saturation",
+        yKey: "revenue",
+        sizeKey: "listings",
+        xLabel: "Saturation score",
+        yLabel: "Average revenue",
+        metricNote: "Bubble chart: use this when the question is about trade-offs. Higher revenue is attractive, while lower saturation means less competitive pressure; bubble size shows listing volume.",
+      })
+    : vizRequest.distribution
+      ? makeHistogram(`${city} ${metricLabel.toLowerCase()} distribution`, cityRows, chartMetric, metricLabel, {
+        formatter: metricDisplay,
+      })
+    : vizRequest.composition
+      ? makeDonut(`${city} listing share by distance zone`, [...cityRows.reduce((map, row) => {
+        const key = row.zone || "Unknown zone";
+        const current = map.get(key) || { label: key, listings: 0 };
+        current.listings += row.listings;
+        map.set(key, current);
+        return map;
+      }, new Map()).values()].sort((a, b) => b.listings - a.listings), "label", "listings", "Listings", {
+        formatter: fmtInt,
+        labelFormatter: humanizeSegmentLabel,
+        metricNote: "Donut chart: best for share questions. Each slice shows how much of the city dataset sits in each distance zone.",
+      })
     : makeViz(chartTitle, ranked.map((r) => ({
       label: r.area,
       value: r[chartMetric],
-      display: cheap || revenue ? fmtEuro(r[chartMetric]) : demand ? fmtPct(r[chartMetric]) : fmtScore(r[chartMetric]),
-    })), cheap ? "Median nightly price" : revenue ? "Average revenue" : demand ? "Occupancy" : saturated || family ? "Saturation" : "Opportunity", cheap ? "price" : revenue ? "revenue" : demand ? "occupancy" : "score", { kind: "horizontal-bar" });
+      display: metricDisplay(r[chartMetric]),
+    })), metricLabel, cheap ? "price" : revenue ? "revenue" : demand ? "occupancy" : "score", { kind: "horizontal-bar" });
   return {
     intent: "market-entry",
     title: `${city} market-entry recommendation`,
@@ -1052,6 +1236,7 @@ async function pricingAnalysis(prompt) {
   const best = ranked[0] || pricing.areas[0] || {};
   const driverFocused = /(why|driver|explain|feature|shap|model|reason)/i.test(prompt);
   const compareFocused = /(actual|predicted|fair|compare|versus|vs|current)/i.test(prompt);
+  const vizRequest = visualizationRequest(prompt);
   const sourceFiles = isParis
     ? [FILES.parisPredictions, FILES.shapParis]
     : [FILES.athensUnderpricing, FILES.shapAthens];
@@ -1074,6 +1259,20 @@ async function pricingAnalysis(prompt) {
           { key: "predicted", name: "Predicted fair price" },
         ],
       })
+      : vizRequest.distribution
+        ? makeHistogram(`${isParis ? "Paris" : "Athens"} pricing-gap distribution`, pricing.areas, "avgGap", "Average pricing gap", {
+          formatter: fmtEuro,
+          metricNote: "Histogram: best for seeing whether pricing upside is concentrated in a few areas or spread across the market.",
+        })
+        : vizRequest.relationship
+          ? makeBubbleScatter(`${isParis ? "Paris" : "Athens"} current versus fair price relationship`, topN(pricing.areas, "count", 10, true), {
+            xKey: "avgActual",
+            yKey: "avgPredicted",
+            sizeKey: "count",
+            xLabel: "Current average price",
+            yLabel: "Predicted fair price",
+            metricNote: "Bubble chart: best for comparing current price against model fair price. Points above the diagonal suggest pricing upside; larger bubbles represent more listings.",
+          })
       : makeViz(`${isParis ? "Paris" : "Athens"} average underpricing gap by area`, ranked.map((r) => ({
         label: r.area,
         value: r.avgGap,
@@ -1116,6 +1315,7 @@ async function riskAnalysis(prompt) {
   const priorityMode = /(priority|underprice|underpriced|intervention|action|coach|first)/i.test(prompt);
   const distributionMode = /(distribution|threshold|score range|risk score|how many|spread)/i.test(prompt);
   const mapMode = wantsRegionMap(prompt);
+  const vizRequest = visualizationRequest(prompt);
   const best = ranked[0] || risk.areas[0] || {};
   const priorityBest = priorityRanked[0] || {};
   const chart = mapMode
@@ -1146,13 +1346,30 @@ async function riskAnalysis(prompt) {
         occupancyDisplay: null,
       })),
     }]
+    : vizRequest.relationship
+      ? makeBubbleScatter("Athens risk versus underpricing trade-off", priorityRanked.slice(0, 10), {
+        xKey: "highRiskShare",
+        yKey: "avgGap",
+        sizeKey: "count",
+        xLabel: "High-risk share",
+        yLabel: "Average underpricing gap",
+        metricNote: "Bubble chart: best for action-priority questions. Higher risk and larger positive pricing gaps identify areas that may need review first.",
+      })
+    : vizRequest.composition
+      ? makeDonut("Athens high-risk listing share", [
+        { label: "High-risk listings", count: risk.high },
+        { label: "Not high-risk", count: Math.max(0, risk.total - risk.high) },
+      ], "label", "count", "Listings", {
+        formatter: fmtInt,
+        metricNote: "Donut chart: best for share questions. It separates listings above the risk threshold from the rest of the Athens dataset.",
+      })
     : distributionMode
     ? makeViz("Athens risk-score distribution", risk.bins.map((b) => ({
       label: b.label,
       value: b.share,
       display: fmtPct(b.share),
       count: b.count,
-    })), "Share of listings", "share", { kind: "bar" })
+    })), "Share of listings", "share", { kind: "histogram", metricNote: "Histogram: best for risk spread questions. Each bar shows the share of listings within a risk-score band." })
     : priorityMode
       ? makeViz("High-risk and underpriced listings by area", priorityRanked.map((r) => ({
         label: r.area,
@@ -1202,21 +1419,30 @@ async function demandAnalysis(prompt) {
   const best = ranked[0] || cityRows[0] || {};
   const forecastAsked = /(forecast|90 day|future|summer|season|peak)/i.test(prompt);
   const revenueAsked = /(revenue|income|earning|yield)/i.test(prompt);
-  const chart = revenueAsked || forecastAsked
-    ? [{
-      kind: "scatter",
-      title: forecastAsked ? `${city} demand proxy: occupancy vs revenue` : `${city} revenue-demand tradeoff`,
-      xKey: "revenue",
-      yKey: "occupancy",
-      xLabel: "Average revenue",
-      yLabel: "Occupancy",
-      data: ranked.map((r) => ({
-        label: shortArea(r.area),
-        revenue: Number(num(r.revenue).toFixed(2)),
-        occupancy: Number(num(r.occupancy).toFixed(2)),
-        listings: fmtInt(r.listings),
-      })),
-    }]
+  const vizRequest = visualizationRequest(prompt);
+  const chart = vizRequest.distribution
+    ? makeHistogram(`${city} occupancy distribution`, cityRows, "occupancy", "Occupancy", {
+      formatter: fmtPct,
+      metricNote: "Histogram: best for demand-spread questions. Each bar shows how many areas fall into an occupancy range.",
+    })
+    : vizRequest.composition
+      ? makeDonut(`${city} listing share by demand tier`, [
+        { label: "High occupancy", listings: cityRows.filter((r) => r.occupancy >= 70).reduce((s, r) => s + r.listings, 0) },
+        { label: "Medium occupancy", listings: cityRows.filter((r) => r.occupancy >= 50 && r.occupancy < 70).reduce((s, r) => s + r.listings, 0) },
+        { label: "Lower occupancy", listings: cityRows.filter((r) => r.occupancy < 50).reduce((s, r) => s + r.listings, 0) },
+      ], "label", "listings", "Listings", {
+        formatter: fmtInt,
+        metricNote: "Donut chart: best for share questions. It shows how much listing supply sits in higher, medium, or lower occupancy tiers.",
+      })
+    : revenueAsked || forecastAsked || vizRequest.relationship
+      ? makeBubbleScatter(forecastAsked ? `${city} demand proxy: occupancy vs revenue` : `${city} revenue-demand trade-off`, topN(cityRows, "revenue", 10, true), {
+        xKey: "revenue",
+        yKey: "occupancy",
+        sizeKey: "listings",
+        xLabel: "Average revenue",
+        yLabel: "Occupancy",
+        metricNote: "Bubble chart: best for demand trade-offs. Higher revenue and higher occupancy are better together; bubble size shows how much listing evidence supports the point.",
+      })
     : makeViz(`${city} occupancy by neighbourhood`, ranked.map((r) => ({
       label: r.area,
       value: r.occupancy,
@@ -1262,18 +1488,32 @@ async function portfolioAnalysis(prompt = "") {
   const winner = [...cities].sort((a, b) => b.opportunity - a.opportunity)[0];
   const revenueAsked = /(revenue|income|earning|money|yield)/i.test(prompt);
   const scaleAsked = /(scale|listings|size|supply)/i.test(prompt);
-  const chart = revenueAsked
+  const vizRequest = visualizationRequest(prompt);
+  const chart = vizRequest.composition || scaleAsked
+    ? makeDonut("Listing share by city", cities, "city", "listings", "Listings", {
+      formatter: fmtInt,
+      metricNote: "Donut chart: best for portfolio share questions. It shows how much of the available listing evidence comes from each city.",
+    })
+    : vizRequest.relationship
+      ? makeBubbleScatter("City opportunity versus saturation", cities.map((c) => ({
+        area: c.city,
+        opportunity: c.opportunity,
+        saturation: c.saturation,
+        listings: c.listings,
+      })), {
+        xKey: "saturation",
+        yKey: "opportunity",
+        sizeKey: "listings",
+        xLabel: "Saturation score",
+        yLabel: "Opportunity score",
+        metricNote: "Bubble chart: best for strategy trade-offs. Higher opportunity is better, lower saturation is calmer, and bubble size shows market scale.",
+      })
+    : revenueAsked
     ? makeViz("Average revenue by city", cities.map((c) => ({
       label: c.city,
       value: c.revenue,
       display: fmtEuro(c.revenue),
     })), "Average revenue", "revenue", { kind: "bar" })
-    : scaleAsked
-      ? makeViz("Portfolio scale by city", cities.map((c) => ({
-        label: c.city,
-        value: c.listings,
-        display: fmtInt(c.listings),
-      })), "Listings", "listings", { kind: "bar" })
       : [{
         kind: "grouped-bar",
         title: "Opportunity vs saturation by city",

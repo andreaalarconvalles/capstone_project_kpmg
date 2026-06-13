@@ -4,7 +4,8 @@ import AriaGeoMap from "./AriaGeoMap.jsx";
 
 const {
   ResponsiveContainer, BarChart, Bar, LineChart, Line, AreaChart, Area, ComposedChart,
-  ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, Cell, ReferenceLine,
+  ScatterChart, Scatter, XAxis, YAxis, ZAxis, CartesianGrid, Tooltip, Cell, ReferenceLine,
+  PieChart, Pie,
 } = Recharts;
 
 const CC = ARIA.c;
@@ -75,7 +76,23 @@ function ScatterTip({ active, payload, xKey, yKey, xLabel, yLabel }) {
         <span style={{ color: CC.muted }}>{yLabel}</span>
         <span style={{ fontWeight: 600 }}>{Number(row[yKey]).toLocaleString()}</span>
       </div>
-      {row.listings && <div style={{ color: CC.muted, marginTop: 4 }}>{row.listings} listings</div>}
+      {(row.listingsDisplay || row.listings) && <div style={{ color: CC.muted, marginTop: 4 }}>{row.listingsDisplay || row.listings} listings</div>}
+    </div>
+  );
+}
+
+function DonutTip({ active, payload }) {
+  if (!active || !payload || !payload.length) return null;
+  const row = payload[0].payload || {};
+  return (
+    <div style={{
+      background: CC.s2, border: `1px solid ${CC.hair}`, borderRadius: 10,
+      padding: "8px 11px", fontSize: 12.5, color: CC.ink, boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
+      letterSpacing: -0.15,
+    }}>
+      <div style={{ color: CC.muted, marginBottom: 4 }}>{row.label}</div>
+      <strong>{row.display || row.value}</strong>
+      {row.shareDisplay && <div style={{ color: CC.muted, marginTop: 3 }}>{row.shareDisplay}</div>}
     </div>
   );
 }
@@ -636,6 +653,60 @@ function GeoRegionMapCard({ chart }) {
   );
 }
 
+function HeatmapCard({ chart }) {
+  const rows = [...new Set((chart.data || []).map((d) => d.yLabel || d.y || "Row"))];
+  const cols = [...new Set((chart.data || []).map((d) => d.xLabel || d.x || "Column"))];
+  const values = (chart.data || []).map((d) => Number(d.value)).filter(Number.isFinite);
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = Math.max(max - min, 0.0001);
+  const lookup = new Map((chart.data || []).map((d) => [`${d.yLabel || d.y}|${d.xLabel || d.x}`, d]));
+  return (
+    <div className="aria-fadein" style={{
+      background: CC.s1, border: `1px solid ${CC.hair}`, borderRadius: 16,
+      padding: "16px 16px 14px", margin: "4px 0 2px",
+    }}>
+      {chart.title && <div style={{ fontSize: 12.5, color: CC.ink, fontWeight: 650, marginBottom: 4 }}>{chart.title}</div>}
+      {chart.metricNote && <div style={{ fontSize: 11.5, color: CC.muted, lineHeight: 1.35, marginBottom: 12 }}>{chart.metricNote}</div>}
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: `minmax(88px, 0.7fr) repeat(${cols.length}, minmax(88px, 1fr))`,
+        gap: 8,
+        alignItems: "stretch",
+      }}>
+        <div />
+        {cols.map((col) => (
+          <div key={col} style={{ color: CC.muted, fontSize: 11.5, textAlign: "center", minWidth: 0 }}>{compactAxisLabel(col, 18)}</div>
+        ))}
+        {rows.map((row) => (
+          <React.Fragment key={row}>
+            <div style={{ color: CC.muted, fontSize: 11.5, display: "flex", alignItems: "center", minWidth: 0 }}>
+              {compactAxisLabel(row, 18)}
+            </div>
+            {cols.map((col) => {
+              const item = lookup.get(`${row}|${col}`);
+              const value = Number(item?.value);
+              const t = Number.isFinite(value) ? (value - min) / range : 0;
+              return (
+                <div key={`${row}-${col}`} title={item?.display || ""} style={{
+                  minHeight: 58, borderRadius: 12, border: `1px solid ${CC.hair}`,
+                  background: item ? regionColor(0.18 + t * 0.82, chart.tone || "opportunity") : CC.s2,
+                  color: t > 0.45 ? "#fff" : CC.ink,
+                  display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                  gap: 3, padding: 8, textAlign: "center",
+                }}>
+                  <strong style={{ fontSize: 13 }}>{item?.display || "n/a"}</strong>
+                  {item?.label && <span style={{ fontSize: 10.5, opacity: 0.82 }}>{compactAxisLabel(item.label, 14)}</span>}
+                </div>
+              );
+            })}
+          </React.Fragment>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /* ---------- chart dispatcher ---------- */
 function ChartBlock({ chart }) {
   const { kind, title } = chart;
@@ -649,6 +720,55 @@ function ChartBlock({ chart }) {
     const yLabel = chart.yLabel || title || "Value";
     const xLabel = chart.xLabel || "Area";
     const data = chartDataWithLabels(chart.data, xKey, kind === "line" ? 8 : 6);
+    if (kind === "heatmap") {
+      return <HeatmapCard chart={chart} />;
+    }
+    if (kind === "donut") {
+      const donutData = chartDataWithLabels(chart.data, "label", 8);
+      const colors = [CC.violet, CC.teal || CC.success, CC.magenta || CC.coral, CC.orange, CC.muted, `${CC.violet}99`, `${CC.teal || CC.success}99`, `${CC.coral}99`];
+      return (
+        <ChartCard title={title || "Live breakdown"} note={chart.metricNote} height={250}>
+          <PieChart margin={{ left: 4, right: 4, top: 4, bottom: 4 }}>
+            <Tooltip content={<DonutTip />} />
+            <Pie data={donutData} dataKey={yKey} nameKey="label" innerRadius="54%" outerRadius="78%" paddingAngle={2}>
+              {donutData.map((_, i) => <Cell key={i} fill={colors[i % colors.length]} />)}
+            </Pie>
+          </PieChart>
+        </ChartCard>
+      );
+    }
+    if (kind === "histogram") {
+      const histogramData = chartDataWithLabels(chart.data, xKey, 8, "label");
+      return (
+        <ChartCard title={title || "Distribution"} note={chart.metricNote} height={240}>
+          <BarChart data={histogramData} margin={{ left: 4, right: 16, top: 8, bottom: 14 }} barCategoryGap="12%">
+            <CartesianGrid vertical={false} stroke={CC.s2} />
+            <XAxis dataKey="__axisLabel" tick={axisTick()} axisLine={false} tickLine={false} interval={0} tickMargin={8} height={36} />
+            <YAxis tick={axisTick()} axisLine={false} tickLine={false} width={42} allowDecimals={false} />
+            <Tooltip cursor={{ fill: "rgba(128,128,128,0.09)" }} content={<ChartTip labelKey="__fullLabel" />} />
+            <Bar dataKey={yKey} name={yLabel} radius={[5, 5, 0, 0]} isAnimationActive>
+              {histogramData.map((_, i) => <Cell key={i} fill={i >= histogramData.length - 2 ? CC.violet : `${CC.violet}88`} />)}
+            </Bar>
+          </BarChart>
+        </ChartCard>
+      );
+    }
+    if (kind === "bubble-scatter") {
+      const scatterData = chartDataWithLabels(chart.data, xKey, 10, "label");
+      const sizeKey = chart.sizeKey || "size";
+      return (
+        <ChartCard title={title || "Trade-off analysis"} note={chart.metricNote} height={272}>
+          <ScatterChart data={scatterData} margin={{ left: 4, right: 18, top: 8, bottom: 10 }}>
+            <CartesianGrid stroke={CC.s2} />
+            <XAxis type="number" dataKey={xKey} name={xLabel} tick={axisTick()} axisLine={false} tickLine={false} width={42} />
+            <YAxis type="number" dataKey={yKey} name={yLabel} tick={axisTick()} axisLine={false} tickLine={false} width={42} />
+            <ZAxis type="number" dataKey={sizeKey} range={[70, 520]} />
+            <Tooltip cursor={{ stroke: CC.hair }} content={<ScatterTip xKey={xKey} yKey={yKey} xLabel={xLabel} yLabel={yLabel} />} />
+            <Scatter name={title || "Live analysis"} data={scatterData} fill={CC.violet} fillOpacity={0.78} />
+          </ScatterChart>
+        </ChartCard>
+      );
+    }
     if (kind === "scatter") {
       const scatterData = chartDataWithLabels(chart.data, xKey, 8, "label");
       return (
