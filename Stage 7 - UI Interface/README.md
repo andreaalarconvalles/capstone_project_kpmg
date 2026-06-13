@@ -2,11 +2,15 @@
 
 **Live Vercel website:** [https://capstone-project-kpmg-git-main-lukatcheishvilis-projects.vercel.app/](https://capstone-project-kpmg-git-main-lukatcheishvilis-projects.vercel.app/)
 
+**Agent handoff and current operating rules:** [`../agent.md`](../agent.md)
+
 The front-end MVP for **ARIA** (Airbnb Revenue Intelligence & Analytics) — a ChatGPT-style,
 multi-agent AI platform built for the IE Business School × KPMG Spain Capstone 2026.
 The current public demo is deployed through Vercel from `vercel_vite_app/`, preserving the
 Claude Design layout, styling, animations, sidebar, composer, model picker, and agent
-experience in a Vite React build.
+experience in a Vite React build. Custom typed prompts route through the Vercel
+`/api/chat` function, which loads live GitHub project data, computes deterministic analytics,
+and uses Vertex AI Gemini for the final consumer-friendly explanation.
 
 Five KPMG-proposed agents on one interface, each selectable like a custom GPT:
 
@@ -18,9 +22,13 @@ Five KPMG-proposed agents on one interface, each selectable like a custom GPT:
 | 🚇 Tourism Demand Forecast | Infrastructure load intelligence |
 | 🏗️ Market Entry Advisor | Site selection & ROI intelligence |
 
-Every agent chat shows a LangGraph-style multi-agent reasoning trace, streams its answer,
-and renders inline Recharts/SVG visuals (SHAP drivers, revenue simulation, risk bars, demand
-forecast with confidence band, a pseudo-choropleth Athens map) plus a one-click brief export.
+Every agent chat shows a folded LangGraph-style multi-agent reasoning trace, streams its answer,
+and renders inline Recharts/SVG visuals. Scripted prompts keep polished demo answers, while
+custom prompts return up to 4 KPI cards, one chart or real map overlay when geography is
+available, and an expandable details panel with methodology, source files, caveats, and
+extra numbers. Conversations persist in the browser with `localStorage`, so refreshing the
+site keeps the chat history and active thread. A conversation disappears only when the user
+deletes it from the sidebar.
 
 ## Folder layout
 
@@ -46,6 +54,10 @@ Stage 7 - UI Interface/
 │   ├── aria_charts.py                # Legacy native Streamlit chart module
 │   └── requirements.txt
 └── vercel_vite_app/                  # Vercel-ready Vite React deployment
+    ├── api/
+    │   ├── chat.js                    # Server-side Vertex AI endpoint
+    │   ├── analytics-pipeline.js      # GitHub CSV fetch, caching, analytics, chart payloads
+    │   └── project-context.js         # Shared project facts and fallback context
     ├── index.html
     ├── package.json
     ├── public/
@@ -84,6 +96,10 @@ npm install
 npm run dev
 ```
 
+`npm run dev` starts the front-end locally. The deployed custom-prompt flow depends on Vercel
+Functions and the production environment variables, especially `GOOGLE_APPLICATION_CREDENTIALS_JSON`
+for server-side Vertex authentication.
+
 Live Vercel deployment:
 
 ```text
@@ -99,7 +115,7 @@ cd "Stage 7 - UI Interface/vercel_vite_app" && npm run build
 
 and serves `Stage 7 - UI Interface/vercel_vite_app/dist`.
 
-If you create a new Vercel project later, you can also set the Vercel root directory to `Stage 7 - UI Interface/vercel_vite_app`; the nested `vercel.json` then uses `npm run build` and serves `dist`.
+If you create a new Vercel project later, you can also set the Vercel root directory directly to `Stage 7 - UI Interface/vercel_vite_app`; the nested `vercel.json` then uses `npm run build` and serves `dist`.
 
 ## Run the React prototype
 
@@ -117,18 +133,41 @@ python -m http.server 8000
 - **Demo mode (default):** scripted, project-grounded answers. Every number ties to the real
   project — Paris 120,809 listings · Athens 14,242 · master dataset 135,051 × 96 columns ·
   XGBoost pricing · LightGBM risk · SHAP explainability.
-- **Live mode:** paste a Google / Vertex AI **Gemini API key** into the sidebar **Access Key**
-  field. The app auto-switches and routes free-form questions to the Generative Language API
-  (`gemini-2.5-pro` / `gemini-2.5-flash`). Clear the key to return to demo.
+- **Live custom prompts:** suggested prompts keep the scripted demo answers. Any other typed
+  prompt calls `/api/chat`, which uses public raw GitHub CSV files by default, optional
+  `GITHUB_TOKEN` for rate limits, runtime caching, deterministic analytics, and Vertex AI Gemini
+  (`gemini-2.5-flash` by default, `gemini-2.5-pro` available in the model picker).
+- **Authentication:** the user can enter the Vertex project ID and project number in Settings,
+  but the actual Google Cloud service-account credential must stay server-side in Vercel as
+  `GOOGLE_APPLICATION_CREDENTIALS_JSON`. The sidebar masks the project details with asterisks.
 
 The model picker also exposes the project's own ML engines: **XGBoost Pricing v1**,
 **LightGBM Risk v1**, and **Prophet Forecast**.
 
-> Note: live calls hit the Generative Language endpoint directly with the pasted key (works for
-> Gemini API keys). True Vertex AI OAuth is out of MVP scope, matching the original design spec.
+The backend response contract is structured: `answer`, `intent`, `kpis`, `visualizations`,
+`details`, and `sources`. The UI renders the answer first, centers the KPI cards, selects the
+chart type based on the prompt, hides internal quality scores, avoids raw snake_case labels,
+transliterates Greek place names into English with the original in brackets, keeps the agent
+workflow folded unless the user opens it, and uses Leaflet/OpenStreetMap-derived maps for
+supported geographic prompts instead of fake region grids.
+
+## Scripted prompts
+
+The landing page shows 4 scripted prompts by default, with a show-more control for all 8:
+
+1. Which Paris arrondissement is best for a new short-term rental investment?
+2. Which Paris areas look saturated and should I avoid?
+3. Is my Paris listing underpriced compared with similar listings?
+4. What price change could improve my Athens listing revenue?
+5. Which Athens neighbourhoods offer the strongest short-term rental yield?
+6. Which Athens listings need attention first because they are high-risk and underpriced?
+7. Where is host risk highest in Athens?
+8. Compare Paris vs Athens for a small short-term rental portfolio.
 
 ## Design system
 
 Framer-style system from the Claude Design handoff. The prototype defaults to light mode
 with Inter, neutral surfaces, hairline borders, pill-shaped CTAs, compact rounded controls,
-agent accent gradients, the checked-in ARIA wordmark, and the built-in theme toggle for dark mode.
+agent accent gradients, the checked-in ARIA wordmark, and a theme dropdown for Airbnb, KPMG,
+and Dark modes. The About tab credits the group members' guidance plus Codex and Claude Code
+assistance in the UI build process.

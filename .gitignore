@@ -7,6 +7,8 @@ data/processed/aria_mega_dataset_v4_1_final.csv
 # macOS
 .DS_Store
 **/.DS_Store
+DS_Store
+**/DS_Store
 
 # Jupyter checkpoints
 .ipynb_checkpoints/
@@ -21,14 +23,22 @@ __pycache__/
 !.env.example
 venv/
 .venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.log
 
 # Frontend
 node_modules/
 dist/
+.vercel/
 
 # IDE
 .vscode/
 .idea/
+
+# Local Codex worktrees
+.codex-worktrees/
 
 # Prophet model files
 *.pkl

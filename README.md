@@ -1,7 +1,9 @@
 # ARIA — Agentic Real-estate Intelligence Advisor
-### IE Sci-Tech School × KPMG Spain · Corporate Capstone 2026
+### IE Business School × KPMG Spain · Corporate Capstone 2026
 
 **Vercel website:** [https://capstone-project-kpmg-git-main-lukatcheishvilis-projects.vercel.app/](https://capstone-project-kpmg-git-main-lukatcheishvilis-projects.vercel.app/)
+
+**Agent handoff and project memory:** [`agent.md`](agent.md)
 
 ---
 
@@ -14,7 +16,7 @@ ARIA targets three primary personas:
 - **Host / property manager** — am I priced correctly, is my listing declining, what should I improve
 - **Real estate developer / PE fund** — where is the supply shock opportunity, what is the entry price
 
-The system combines five specialist ML agents orchestrated via LangGraph, with a Streamlit demo interface and ReportLab PDF output. It covers **135,051 listings** across Paris and Athens.
+The system combines validated machine learning outputs, a Vercel React chat interface, and a server-side Vertex AI backend. Scripted prompts stay available for polished demos, while custom prompts use live GitHub CSV outputs, deterministic analytics, one consumer-friendly visualization, and an expandable methodology/source panel. It covers **135,051 listings** across Paris and Athens.
 
 ---
 
@@ -45,15 +47,19 @@ LangGraph Orchestrator  ←─────────────────�
 │  → Cites specific article per listing                 │
 │  → 137 unlicensed Athens listings as primary targets  │
 ├───────────────────────────────────────────────────────┤
-│  Agent 5: GPT-4o Listing Coach     (Phase 6)          │
+│  Agent 5: LLM Listing Coach        (Phase 6)          │
 │  → Uses SHAP values as context                        │
 │  → Writes personalised improvement recommendation     │
 │  → Output: "Raise price by €X, improve Y feature"    │
 └───────────────────────────────────────────────────────┘
 ↓
-Streamlit app (Phase 7) — 3 tabs: Investor · Host · Developer
+Vercel React UI (Phase 7) — scripted prompts + custom prompt composer
 ↓
-ReportLab PDF brief — KPMG-formatted output
+Vercel `/api/chat` backend — service-account-authenticated Vertex AI call
+↓
+GitHub Data Agent → Analytics Agent → Visualization Agent → Narrative Agent → Quality checks
+↓
+KPIs + dynamic chart/map + expandable details + PDF brief export
 ```
 
 ---
@@ -93,11 +99,15 @@ KPMG Capstone/
 │   └── prophet_athens_v1.pkl                # Phase 4 — not yet (gitignored)
 ├── rag/                                     # Phase 5 — ChromaDB index + RAG agent
 ├── agents/                                  # Phase 6 — LangGraph orchestration code
-├── Stage 7 - UI Interface/                  # Phase 7 — all UI assets, prototypes, and Vercel app
+├── Stage 7 - UI Interface/                  # Phase 7 — all UI assets, prototypes, Vercel app, and API backend
+│   └── vercel_vite_app/
+│       ├── api/                             # /api/chat + grounded analytics pipeline
+│       ├── public/                          # ARIA wordmark asset
+│       └── src/legacy/                      # Claude Design React UI modules
 ├── docs/                                    # Methodology docs, proposals, planner
 ├── KPMG Capstone.pdf
 ├── KPMG Proposal - Regulators.pdf
-├── CLAUDE.md
+├── agent.md
 ├── README.md
 └── .gitignore
 ```
@@ -229,20 +239,22 @@ Output files: `lgb_athens_risk_v1.txt` · `athens_risk_scores_v1.csv`
 ### Phase 6 — LangGraph Orchestrator (Member 4)
 **Location:** `agents/`
 
-**What to build:** A LangGraph directed graph with 5 specialist agent nodes. The orchestrator receives a natural language query, identifies the persona (investor/host/developer), routes to the appropriate agents, collects their outputs, and passes everything to GPT-4o for natural language synthesis.
+**What to build:** A LangGraph directed graph with 5 specialist agent nodes. The orchestrator receives a natural language query, identifies the persona (investor/host/developer), routes to the appropriate agents, collects their outputs, and passes everything to a narrative model for natural language synthesis. The deployed Vercel demo currently uses Vertex AI Gemini for this narrative step.
 
 **The 5 nodes:**
 1. XGBoost pricing node — loads `xgb_athens_v1.json`, returns predicted fair price and underpricing gap
 2. Prophet forecast node — loads `prophet_athens_v1.pkl`, returns occupancy trend and buy/hold signal
 3. LightGBM risk node — loads `lgb_athens_risk_v1.txt`, returns risk probability and band
 4. RAG compliance node — queries ChromaDB index, returns regulation citation and compliance status
-5. GPT-4o coach node — takes SHAP values from `shap_athens_v1.csv` as context, returns personalised listing improvement recommendation
+5. LLM coach node — takes SHAP values from `shap_athens_v1.csv` as context, returns personalised listing improvement recommendation
 
 **Dynamic pricing layer:** Add a rule-based pricing agent that combines XGBoost fair price with Prophet occupancy forecast. When forecast occupancy for next 30 days is above neighbourhood median → recommend raising price by 10–15%. When below → lower by 5–10%. When review_velocity_l30d = 0 → lower by 10% to restart booking momentum.
 
 **Human-in-the-loop:** Before the investor brief PDF is generated, route through a human approval step. This is the Trusted AI / Governance component required by the KPMG brief.
 
 **Universal join key:** `listing_id` is the join key across all output CSVs. Use it to merge Phase 2 and 3 outputs when assembling context for a query.
+
+**Current implementation note:** A Vercel Function version of the orchestration layer is now implemented in `Stage 7 - UI Interface/vercel_vite_app/api/`. It is not the final LangGraph package yet, but it already performs the practical demo workflow: classify the prompt, fetch live GitHub CSV outputs, compute deterministic statistics, choose a chart/map payload, call Vertex AI Gemini for the narrative, and return structured KPIs, visualization data, sources, methodology, and limitations.
 
 **Critical:** This phase depends on all other phases being complete (or mocked). Start with mock outputs and swap in real files when ready.
 
@@ -251,7 +263,7 @@ Output files: `lgb_athens_risk_v1.txt` · `athens_risk_scores_v1.csv`
 ### Phase 7 — Streamlit MVP (Member 5)
 **Location:** `app/` (3-tab persona MVP) · `Stage 7 - UI Interface/` (agent-chat UI)
 
-> **Built — agent-chat UI (`Stage 7 - UI Interface/`):** a ChatGPT-style multi-agent interface implemented from the claude.ai/design handoff. Surfaces all 5 KPMG agents (Host Revenue, Gentrification Early Warning, STR Financial Crime, Tourism Demand, Market Entry) with LangGraph-style reasoning traces, inline Recharts/SVG visuals, a pseudo-choropleth Athens map, a model picker, and a hybrid Demo / live-Gemini mode. The Streamlit deployment embeds the exact React/HTML prototype (`prototype/`) through `streamlit_app/`, preserving the Claude Design layout and interaction model. Run: `cd "Stage 7 - UI Interface/streamlit_app" && pip install -r requirements.txt && streamlit run app.py`.
+> **Built — Vercel agent-chat UI (`Stage 7 - UI Interface/`):** a ChatGPT-style multi-agent interface implemented from the Claude Design handoff. It surfaces 5 KPMG agents (Host Revenue, Gentrification Early Warning, STR Financial Crime, Tourism Demand, Market Entry), 8 scripted demo prompts with a show-more control, KPI cards from recent analyses, image upload previews, theme switching, a settings modal, persistent browser conversations, LangGraph-style folded reasoning traces, adaptive charts, real Leaflet map overlays for supported geographic prompts, enhanced PDF brief export, and server-side Vertex AI custom-prompt support through `/api/chat`. The legacy Streamlit host remains available as an optional wrapper for the original prototype.
 
 **What to build:** A 3-tab Streamlit application that serves the three personas. This tab **can be started now** using the existing CSV outputs from Phases 2 and 3 — it does not require Phase 4, 5, or 6 to be complete.
 
@@ -267,7 +279,7 @@ Output files: `lgb_athens_risk_v1.txt` · `athens_risk_scores_v1.csv`
 - SHAP feature breakdown from `shap_athens_v1.csv` — which features are suppressing price
 - Risk probability from `athens_risk_scores_v1.csv`
 - 3-action coaching plan (pricing, quality, velocity)
-- GPT-4o personalised recommendation (Phase 6, placeholder until ready)
+- LLM personalised recommendation (Phase 6, placeholder until ready)
 
 **Tab 3 — Developer:**
 - Sweet-spot neighbourhood map (high opportunity + low risk + compliant)
@@ -288,13 +300,16 @@ Output files: `lgb_athens_risk_v1.txt` · `athens_risk_scores_v1.csv`
 **Existing assets:**
 - `KPMG Capstone.pdf` — original brief with use case definition
 - `KPMG Proposal - Regulators.pdf` — regulatory framing for the compliance agent
-- The ARIA Project Summary document produced in the main session covers Phases 1–3
+- `docs/PROJECT_SUMMARY.md` — mentor-facing project summary with value proposition and detailed non-technical explanations
+- `docs/MENTOR_MEETING_SUMMARY.md` — meeting-prep summary and discussion material
 
 ---
 
 ## Data Access
 
 Large files are excluded from version control. Download from the sources below.
+
+For repository data contracts and Git policy, see `data/README.md`.
 
 | File | Source | Local path |
 |---|---|---|
@@ -324,6 +339,10 @@ Large files are excluded from version control. Download from the sources below.
 
 **Priority target list (865 listings):** Cross-reference of `athens_underpricing_v1.csv` and `athens_risk_scores_v1.csv` on `listing_id`. These listings are underpriced AND declining. Revenue opportunity: €1.43M potential (€0.71M realisable). This is the ARIA host agent's primary output.
 
+For model artifact governance, metrics, limitations, and feature rationale, see `models/MODEL_CARD.md`.
+
+For the repository organization and MLOps hygiene review, see `docs/MLOPS_REPO_REVIEW.md`.
+
 ---
 
 ## Project Phases & Team Assignments
@@ -337,8 +356,8 @@ Large files are excluded from version control. Download from the sources below.
 | Phase 3 — LightGBM Risk | Member 1 | ✅ Done |
 | Phase 4 — Prophet Forecasting | Member 2 | 🔲 Not started |
 | Phase 5 — RAG Compliance | Member 3 | 🔲 Not started |
-| Phase 6 — LangGraph Orchestrator | Member 4 | 🔲 Not started |
-| Phase 7 — Streamlit MVP | Member 5 | 🔄 In progress |
-| Documentation + Presentation | Member 6 | 🔲 Not started |
+| Phase 6 — LangGraph Orchestrator | Member 4 | 🔄 In progress |
+| Phase 7 — UI Demo / Streamlit MVP | Member 5 | 🔄 In progress |
+| Documentation + Presentation | Member 6 | 🔄 In progress |
 
 Status key: ✅ Done · 🔄 In progress · 🔲 Not started · ⏳ Blocked
