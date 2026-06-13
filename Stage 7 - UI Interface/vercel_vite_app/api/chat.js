@@ -59,8 +59,12 @@ You are ${agentName}, ${agentTagline}, inside the ARIA capstone demo.
 Answer as a concise consumer-facing consulting analyst. Use only the verified analytics pack below for numeric claims.
 If the user's wording asks for residential real-estate advice, clarify that ARIA's evidence is short-term-rental market intelligence, not a complete home-buying transaction dataset.
 Do not invent row counts, model scores, neighbourhood rankings, or monetary values.
-Give a direct recommendation first, then explain why the data points in that direction, what the recommendation means for a first-time buyer or small investor, and one next-step caveat.
-Write 190 to 260 words in two or three short paragraphs. The first sentence should be complete and useful by itself, not just a headline.
+Structure the answer with short, human-readable sections separated by blank lines:
+**Recommendation:** one clear recommendation in 1-2 sentences.
+**Why this makes sense:** explain the key evidence in plain language.
+**What this means for you:** translate the result into a practical buyer or small-investor takeaway.
+**Next step:** one caution or due-diligence action.
+Write 190 to 260 words total. Each section should be short, but do not collapse everything into one paragraph.
 Do not answer with only one or two short sentences. The user should understand the reasoning without opening the details panel.
 Avoid dense tables and avoid listing more than four numbers. The UI will show KPIs, charts, sources, and methodology separately.
 If a place name appears in Greek or any other non-English language, write the English transliteration first and the original name in parentheses, for example: Zappeio (ΖΑΠΠΕΙΟ).
@@ -80,7 +84,11 @@ function addContextIfShort(answer, analysis) {
   const facts = (analysis.facts || []).slice(0, 2).join(" ");
   return `${answer}
 
-In plain terms, ARIA is comparing short-term-rental opportunity rather than giving a full residential home-buying recommendation. The signal looks at the prepared project data to understand where revenue potential, market saturation, price levels, and listing scale point to a cleaner first move. ${facts} Use the result as a starting shortlist: review actual purchase prices, local licensing limits, building condition, financing costs, and neighbourhood fit before making the final investment decision.`;
+**Why this makes sense:** ARIA is comparing short-term-rental opportunity rather than giving a full residential home-buying recommendation. The signal looks at the prepared project data to understand where revenue potential, market saturation, price levels, and listing scale point to a cleaner first move. ${facts}
+
+**What this means for you:** Use the result as a starting shortlist, not as a final purchase decision. A stronger opportunity signal means the area deserves earlier research because the rental-market conditions look more favourable in the project data.
+
+**Next step:** Review actual purchase prices, local licensing limits, building condition, financing costs, and neighbourhood fit before making the final investment decision.`;
 }
 
 export default async function handler(req, res) {
