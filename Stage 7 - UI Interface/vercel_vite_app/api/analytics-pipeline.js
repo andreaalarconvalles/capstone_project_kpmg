@@ -243,6 +243,7 @@ function weightedAverage(sum, weight) {
 function classifyIntent(prompt, agentId) {
   const p = `${prompt} ${agentId}`.toLowerCase();
   if (/(portfolio|paris.*athens|athens.*paris|50-unit|fifty-unit)/.test(p)) return "portfolio-comparison";
+  if (/(family|safe|safest|live|living|cheap|cheapest|affordable|budget|rent)/.test(p)) return "market-entry";
   if (/(risk|high-risk|declin|vulnerab|priority|churn|warning)/.test(p)) return "risk";
   if (/(underprice|price|pricing|revenue|nightly|gap|earning|income|adr)/.test(p)) return "pricing";
   if (/(forecast|occupancy|tourist|demand|season|90 day|future|summer|peak)/.test(p)) return "demand";
@@ -375,6 +376,14 @@ async function loadAthensRisk() {
   return cached("athens-risk", async () => {
     const text = await fetchCsv(FILES.athensRisk);
     const byArea = new Map();
+    const bins = [
+      { label: "0.00-0.20", min: 0, max: 0.2, count: 0 },
+      { label: "0.20-0.40", min: 0.2, max: 0.4, count: 0 },
+      { label: "0.40-0.60", min: 0.4, max: 0.6, count: 0 },
+      { label: "0.60-0.70", min: 0.6, max: 0.7, count: 0 },
+      { label: "0.70-0.85", min: 0.7, max: 0.85, count: 0 },
+      { label: "0.85-1.00", min: 0.85, max: 1.01, count: 0 },
+    ];
     const highIds = new Set();
     let total = 0;
     let high = 0;
@@ -386,6 +395,8 @@ async function loadAthensRisk() {
       high += isHigh ? 1 : 0;
       if (isHigh && row.listing_id) highIds.add(String(row.listing_id));
       riskSum += risk;
+      const bin = bins.find((b) => risk >= b.min && risk < b.max);
+      if (bin) bin.count += 1;
       groupMetric(byArea, row.neighbourhood, (g = {}) => ({
         area: row.neighbourhood || "Unknown",
         count: (g.count || 0) + 1,
@@ -398,7 +409,18 @@ async function loadAthensRisk() {
       avgRisk: weightedAverage(g.riskSum, g.count),
       highShare: weightedAverage(g.high, g.count) * 100,
     }));
-    return { total, high, highIds, avgRisk: weightedAverage(riskSum, total), areas };
+    return {
+      total,
+      high,
+      highIds,
+      avgRisk: weightedAverage(riskSum, total),
+      areas,
+      bins: bins.map((b) => ({
+        label: b.label,
+        count: b.count,
+        share: weightedAverage(b.count, total) * 100,
+      })),
+    };
   });
 }
 
@@ -434,17 +456,22 @@ function sourceDetails(sourceFiles, methodology, limitations, extra = []) {
   };
 }
 
-function makeViz(title, data, yLabel = "Score", yKey = "value") {
+function makeViz(title, data, yLabel = "Score", yKey = "value", options = {}) {
   return [{
-    kind: "bar",
+    kind: options.kind || "bar",
     title,
-    xKey: "label",
+    xKey: options.xKey || "label",
     yKey,
     yLabel,
+    series: options.series,
+    xLabel: options.xLabel,
     data: data.map((d) => ({
       label: shortArea(d.label),
       [yKey]: Number(num(d.value).toFixed(2)),
       display: d.display || String(d.value),
+      ...Object.fromEntries(Object.entries(d)
+        .filter(([key]) => !["label", "value", "display"].includes(key))
+        .map(([key, value]) => [key, Number.isFinite(num(value, NaN)) ? Number(num(value).toFixed(2)) : value])),
     })),
   }];
 }
@@ -453,16 +480,32 @@ async function marketAnalysis(prompt) {
   const rows = await loadNeighbourhoodStats();
   const city = cityFromPrompt(prompt) || "Paris";
   const cityRows = rows.filter((r) => r.city === city);
-  const saturated = /(saturat|avoid|too high|risk)/i.test(prompt);
-  const ranked = topN(cityRows, saturated ? "saturation" : "opportunity", 6, true);
+  const cheap = /(cheap|cheapest|affordable|budget|low price|rent)/i.test(prompt);
+  const family = /(family|safe|safest|live|living)/i.test(prompt);
+  const saturated = /(saturat|avoid|too high|crowd|overbuilt)/i.test(prompt);
+  const scoreKey = cheap ? "medianPrice" : saturated ? "saturation" : family ? "saturation" : "opportunity";
+  const ranked = topN(cityRows, scoreKey, 6, !cheap && !family);
   const best = ranked[0] || cityRows[0] || {};
   const totalListings = cityRows.reduce((s, r) => s + r.listings, 0);
-  const chartMetric = saturated ? "saturation" : "opportunity";
-  const chartTitle = saturated ? `${city} areas with highest saturation pressure` : `${city} opportunity ranking`;
+  const chartMetric = cheap ? "medianPrice" : saturated ? "saturation" : family ? "saturation" : "opportunity";
+  const chartTitle = cheap
+    ? `${city} lowest median nightly prices`
+    : family
+      ? `${city} lower-saturation areas for a calmer shortlist`
+      : saturated
+        ? `${city} areas with highest saturation pressure`
+        : `${city} opportunity ranking`;
+  const mainKpi = cheap ? "Cheapest area" : family ? "Lower-pressure area" : saturated ? "Highest saturation" : "Best opportunity";
+  const mainScoreLabel = cheap ? "Median nightly price" : family || saturated ? "Saturation score" : "Opportunity score";
+  const mainScoreValue = cheap ? fmtEuro(best.medianPrice) : fmtScore(best[chartMetric]);
   return {
     intent: "market-entry",
     title: `${city} market-entry recommendation`,
-    recommendation: saturated
+    recommendation: cheap
+      ? `${shortArea(best.area)} is the lowest-price area in the current ${city} neighbourhood summary, so it is the clearest affordability shortlist.`
+      : family
+        ? `${shortArea(best.area)} is a calmer first shortlist because it combines lower saturation with enough listing activity to benchmark the market.`
+        : saturated
       ? `Avoid starting with ${shortArea(best.area)}; it has the strongest saturation signal among the ${city} areas in the project data.`
       : `Start with ${shortArea(best.area)}; it has the strongest opportunity signal among the ${city} areas in the project data.`,
     facts: [
@@ -471,8 +514,8 @@ async function marketAnalysis(prompt) {
       `Median nightly price in ${shortArea(best.area)} is ${fmtEuro(best.medianPrice)} with average annual revenue around ${fmtEuro(best.revenue)}.`,
     ],
     kpis: [
-      { label: saturated ? "Highest saturation" : "Best opportunity", value: shortArea(best.area) },
-      { label: "Opportunity score", value: fmtScore(best.opportunity) },
+      { label: mainKpi, value: shortArea(best.area) },
+      { label: mainScoreLabel, value: mainScoreValue },
       { label: "Median nightly price", value: fmtEuro(best.medianPrice) },
       { label: "Listings reviewed", value: fmtInt(totalListings) },
     ],
@@ -480,10 +523,10 @@ async function marketAnalysis(prompt) {
       label: r.area,
       value: r[chartMetric],
       display: fmtScore(r[chartMetric]),
-    })), saturated ? "Saturation" : "Opportunity"),
+    })), cheap ? "Median nightly price" : saturated || family ? "Saturation" : "Opportunity", cheap ? "price" : "score", { kind: "horizontal-bar" }),
     details: sourceDetails(
       [FILES.neighbourhoodStats],
-      "Rank neighbourhoods using the prepared neighbourhood summary table, prioritising opportunity score unless the user asks about saturation or areas to avoid.",
+      "Rank neighbourhoods using the prepared neighbourhood summary table. The chart metric changes with the prompt: opportunity for investment, saturation for avoid/family-style shortlist prompts, and median nightly price for affordability prompts.",
       ["This is short-term-rental market intelligence, not a complete home-purchase or mortgage dataset."],
       ranked.map((r) => `${shortArea(r.area)}: opportunity ${fmtScore(r.opportunity)}, saturation ${fmtScore(r.saturation)}, median price ${fmtEuro(r.medianPrice)}`)
     ),
@@ -497,9 +540,35 @@ async function pricingAnalysis(prompt) {
   const shap = await loadShap(isParis ? FILES.shapParis : FILES.shapAthens, isParis ? "shap-paris" : "shap-athens");
   const ranked = topN(pricing.areas, "avgGap", 6, true);
   const best = ranked[0] || pricing.areas[0] || {};
+  const driverFocused = /(why|driver|explain|feature|shap|model|reason)/i.test(prompt);
+  const compareFocused = /(actual|predicted|fair|compare|versus|vs|current)/i.test(prompt);
   const sourceFiles = isParis
     ? [FILES.parisPredictions, FILES.shapParis]
     : [FILES.athensUnderpricing, FILES.shapAthens];
+  const chart = driverFocused
+    ? makeViz(`${isParis ? "Paris" : "Athens"} main pricing model drivers`, shap.map((s) => ({
+      label: s.displayFeature,
+      value: s.impact,
+      display: fmtScore(s.impact, 3),
+    })), "Average SHAP impact", "impact", { kind: "horizontal-bar" })
+    : compareFocused
+      ? makeViz(`${isParis ? "Paris" : "Athens"} current vs predicted nightly price`, ranked.slice(0, 5).map((r) => ({
+        label: r.area,
+        actual: r.avgActual,
+        predicted: r.avgPredicted,
+        value: r.avgPredicted,
+      })), "Nightly price", "predicted", {
+        kind: "grouped-bar",
+        series: [
+          { key: "actual", name: "Current price" },
+          { key: "predicted", name: "Predicted fair price" },
+        ],
+      })
+      : makeViz(`${isParis ? "Paris" : "Athens"} average underpricing gap by area`, ranked.map((r) => ({
+        label: r.area,
+        value: r.avgGap,
+        display: fmtEuro(r.avgGap),
+      })), "Avg gap", "gap", { kind: "horizontal-bar" });
   return {
     intent: "pricing",
     title: `${isParis ? "Paris" : "Athens"} pricing opportunity`,
@@ -517,14 +586,10 @@ async function pricingAnalysis(prompt) {
       { label: isParis ? "Positive-gap listings" : "Underpriced listings", value: fmtInt(isParis ? pricing.positive : pricing.total) },
       { label: "Main driver", value: shap[0]?.displayFeature || "Model features" },
     ],
-    visualizations: makeViz(`${isParis ? "Paris" : "Athens"} average underpricing gap by area`, ranked.map((r) => ({
-      label: r.area,
-      value: r.avgGap,
-      display: fmtEuro(r.avgGap),
-    })), "Avg gap", "gap"),
+    visualizations: chart,
     details: sourceDetails(
       sourceFiles,
-      "Use XGBoost prediction outputs to compare model-predicted fair nightly price with observed nightly price, then aggregate the gap by area.",
+      "Use XGBoost prediction outputs to compare model-predicted fair nightly price with observed nightly price, then select the visualization that matches the prompt: price-gap ranking, current-versus-predicted comparison, or SHAP driver importance.",
       ["Small nightly gaps should be interpreted cautiously because pricing models have forecast error.", "If the user has a specific listing ID, it should be supplied for listing-level analysis."],
       shap.map((s) => `${s.displayFeature}: average absolute SHAP impact ${fmtScore(s.impact, 3)}`)
     ),
@@ -536,11 +601,35 @@ async function riskAnalysis(prompt) {
   const underpricing = await loadAthensUnderpricing();
   const priorityOverlap = [...underpricing.listingIds].filter((id) => risk.highIds.has(id)).length;
   const ranked = topN(risk.areas, "highShare", 6, true);
+  const priorityRanked = topN(underpricing.areas, "highRisk", 6, true);
+  const priorityMode = /(priority|underprice|underpriced|intervention|action|coach|first)/i.test(prompt);
+  const distributionMode = /(distribution|threshold|score range|risk score|how many|spread)/i.test(prompt);
   const best = ranked[0] || risk.areas[0] || {};
+  const priorityBest = priorityRanked[0] || {};
+  const chart = distributionMode
+    ? makeViz("Athens risk-score distribution", risk.bins.map((b) => ({
+      label: b.label,
+      value: b.share,
+      display: fmtPct(b.share),
+      count: b.count,
+    })), "Share of listings", "share", { kind: "bar" })
+    : priorityMode
+      ? makeViz("High-risk and underpriced listings by area", priorityRanked.map((r) => ({
+        label: r.area,
+        value: r.highRisk,
+        display: fmtInt(r.highRisk),
+      })), "Priority listings", "count", { kind: "horizontal-bar" })
+      : makeViz("Athens high-risk share by neighbourhood", ranked.map((r) => ({
+        label: r.area,
+        value: r.highShare,
+        display: fmtPct(r.highShare),
+      })), "High-risk share", "share", { kind: "horizontal-bar" });
   return {
     intent: "risk",
     title: "Athens host-risk prioritisation",
-    recommendation: `${shortArea(best.area)} should be watched first because it has the highest share of high-risk listings in the Athens risk output.`,
+    recommendation: priorityMode && priorityBest.area
+      ? `${shortArea(priorityBest.area)} should be reviewed first because it has the largest count of listings that are both underpriced and high risk.`
+      : `${shortArea(best.area)} should be watched first because it has the highest share of high-risk listings in the Athens risk output.`,
     facts: [
       `${fmtInt(risk.high)} of ${fmtInt(risk.total)} Athens listings are above the high-risk threshold.`,
       `${fmtInt(priorityOverlap)} listings are both underpriced and high risk, making them strong coaching or intervention candidates.`,
@@ -549,17 +638,13 @@ async function riskAnalysis(prompt) {
     kpis: [
       { label: "High-risk listings", value: fmtInt(risk.high) },
       { label: "Priority overlap", value: fmtInt(priorityOverlap) },
-      { label: "Highest-risk area", value: shortArea(best.area) },
+      { label: priorityMode ? "Priority area" : "Highest-risk area", value: shortArea(priorityMode && priorityBest.area ? priorityBest.area : best.area) },
       { label: "Threshold", value: "0.70" },
     ],
-    visualizations: makeViz("Athens high-risk share by neighbourhood", ranked.map((r) => ({
-      label: r.area,
-      value: r.highShare,
-      display: fmtPct(r.highShare),
-    })), "High-risk share", "share"),
+    visualizations: chart,
     details: sourceDetails(
       [FILES.athensRisk, FILES.athensUnderpricing],
-      "Aggregate LightGBM risk probabilities by neighbourhood and combine them with the underpricing output to identify high-risk listings with revenue upside.",
+      "Aggregate LightGBM risk probabilities by neighbourhood and combine them with the underpricing output. The visualization changes with the prompt: high-risk share, priority overlap count, or risk-score distribution.",
       ["Risk is a prioritisation signal for analyst review, not a final decision about a host."],
       ranked.map((r) => `${shortArea(r.area)}: ${fmtPct(r.highShare)} high-risk share, ${fmtInt(r.high)} high-risk listings`)
     ),
@@ -572,6 +657,28 @@ async function demandAnalysis(prompt) {
   const cityRows = rows.filter((r) => r.city === city);
   const ranked = topN(cityRows, "occupancy", 6, true);
   const best = ranked[0] || cityRows[0] || {};
+  const forecastAsked = /(forecast|90 day|future|summer|season|peak)/i.test(prompt);
+  const revenueAsked = /(revenue|income|earning|yield)/i.test(prompt);
+  const chart = revenueAsked || forecastAsked
+    ? [{
+      kind: "scatter",
+      title: forecastAsked ? `${city} demand proxy: occupancy vs revenue` : `${city} revenue-demand tradeoff`,
+      xKey: "revenue",
+      yKey: "occupancy",
+      xLabel: "Average revenue",
+      yLabel: "Occupancy",
+      data: ranked.map((r) => ({
+        label: shortArea(r.area),
+        revenue: Number(num(r.revenue).toFixed(2)),
+        occupancy: Number(num(r.occupancy).toFixed(2)),
+        listings: fmtInt(r.listings),
+      })),
+    }]
+    : makeViz(`${city} occupancy by neighbourhood`, ranked.map((r) => ({
+      label: r.area,
+      value: r.occupancy,
+      display: fmtPct(r.occupancy),
+    })), "Occupancy", "occupancy", { kind: "horizontal-bar" });
   return {
     intent: "demand",
     title: `${city} occupancy signal`,
@@ -585,23 +692,19 @@ async function demandAnalysis(prompt) {
       { label: "Top demand area", value: shortArea(best.area) },
       { label: "Avg occupancy", value: fmtPct(best.occupancy) },
       { label: "Avg revenue", value: fmtEuro(best.revenue) },
-      { label: "City", value: city },
+      { label: forecastAsked ? "Forecast status" : "City", value: forecastAsked ? "Proxy only" : city },
     ],
-    visualizations: makeViz(`${city} occupancy by neighbourhood`, ranked.map((r) => ({
-      label: r.area,
-      value: r.occupancy,
-      display: fmtPct(r.occupancy),
-    })), "Occupancy", "occupancy"),
+    visualizations: chart,
     details: sourceDetails(
       [FILES.neighbourhoodStats],
-      "Use prepared neighbourhood-level occupancy and revenue fields as a demand proxy for direct consumer-facing ranking.",
+      "Use prepared neighbourhood-level occupancy and revenue fields as a demand proxy. If the user asks for a forecast, the chart remains grounded in current prepared data because no committed Prophet forecast output is available in the deployed repository yet.",
       ["This is not yet a live Prophet forecast; it is a grounded demand proxy from the prepared project dataset."],
       ranked.map((r) => `${shortArea(r.area)}: occupancy ${fmtPct(r.occupancy)}, average revenue ${fmtEuro(r.revenue)}`)
     ),
   };
 }
 
-async function portfolioAnalysis() {
+async function portfolioAnalysis(prompt = "") {
   const rows = await loadNeighbourhoodStats();
   const cities = ["Paris", "Athens"].map((city) => {
     const cityRows = rows.filter((r) => r.city === city);
@@ -613,6 +716,36 @@ async function portfolioAnalysis() {
     return { city, listings, revenue, opportunity, saturation, bestArea: best.area };
   });
   const winner = [...cities].sort((a, b) => b.opportunity - a.opportunity)[0];
+  const revenueAsked = /(revenue|income|earning|money|yield)/i.test(prompt);
+  const scaleAsked = /(scale|listings|size|supply)/i.test(prompt);
+  const chart = revenueAsked
+    ? makeViz("Average revenue by city", cities.map((c) => ({
+      label: c.city,
+      value: c.revenue,
+      display: fmtEuro(c.revenue),
+    })), "Average revenue", "revenue", { kind: "bar" })
+    : scaleAsked
+      ? makeViz("Portfolio scale by city", cities.map((c) => ({
+        label: c.city,
+        value: c.listings,
+        display: fmtInt(c.listings),
+      })), "Listings", "listings", { kind: "bar" })
+      : [{
+        kind: "grouped-bar",
+        title: "Opportunity vs saturation by city",
+        xKey: "label",
+        yKey: "opportunity",
+        yLabel: "Score",
+        series: [
+          { key: "opportunity", name: "Opportunity" },
+          { key: "saturation", name: "Saturation" },
+        ],
+        data: cities.map((c) => ({
+          label: c.city,
+          opportunity: Number(num(c.opportunity).toFixed(2)),
+          saturation: Number(num(c.saturation).toFixed(2)),
+        })),
+      }];
   return {
     intent: "portfolio-comparison",
     title: "Paris vs Athens portfolio comparison",
@@ -624,14 +757,10 @@ async function portfolioAnalysis() {
       { label: "Athens listings", value: fmtInt(cities.find((c) => c.city === "Athens")?.listings) },
       { label: "Best first area", value: shortArea(winner.bestArea) },
     ],
-    visualizations: makeViz("Average portfolio opportunity by city", cities.map((c) => ({
-      label: c.city,
-      value: c.opportunity,
-      display: fmtScore(c.opportunity),
-    })), "Opportunity"),
+    visualizations: chart,
     details: sourceDetails(
       [FILES.neighbourhoodStats],
-      "Compare city-level weighted averages from neighbourhood summaries, using listing counts as weights and opportunity score as the main portfolio entry signal.",
+      "Compare city-level weighted averages from neighbourhood summaries. The visualization changes with the prompt: opportunity versus saturation for strategic choice, average revenue for revenue questions, and listing count for scale/supply questions.",
       ["The comparison is strategic market intelligence; final investment decisions still require property cost, financing, and regulation checks."],
       cities.map((c) => `${c.city}: saturation ${fmtScore(c.saturation)}, average revenue ${fmtEuro(c.revenue)}, best area ${shortArea(c.bestArea)}`)
     ),

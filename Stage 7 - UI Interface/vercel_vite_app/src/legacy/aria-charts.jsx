@@ -2,7 +2,7 @@
 
 const {
   ResponsiveContainer, BarChart, Bar, LineChart, Line, AreaChart, Area, ComposedChart,
-  XAxis, YAxis, CartesianGrid, Tooltip, Cell, ReferenceLine,
+  ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, Cell, ReferenceLine,
 } = Recharts;
 
 const CC = ARIA.c;
@@ -26,11 +26,11 @@ function compactAxisLabel(value, max = 16) {
   return label.length > max ? `${label.slice(0, max - 1)}…` : label;
 }
 
-function chartDataWithLabels(data, xKey, maxItems = 6) {
+function chartDataWithLabels(data, xKey, maxItems = 6, labelKey = xKey) {
   return data.slice(0, maxItems).map((d) => ({
     ...d,
-    __axisLabel: compactAxisLabel(d[xKey]),
-    __fullLabel: d[xKey],
+    __axisLabel: compactAxisLabel(d[labelKey] ?? d[xKey]),
+    __fullLabel: d[labelKey] ?? d[xKey],
   }));
 }
 
@@ -51,6 +51,29 @@ function ChartTip({ active, payload, label, suffix = "", labelKey }) {
           <span style={{ marginLeft: "auto", fontWeight: 600 }}>{typeof p.value === "number" ? p.value.toLocaleString() : p.value}{suffix}</span>
         </div>
       ))}
+    </div>
+  );
+}
+
+function ScatterTip({ active, payload, xKey, yKey, xLabel, yLabel }) {
+  if (!active || !payload || !payload.length) return null;
+  const row = payload[0].payload || {};
+  return (
+    <div style={{
+      background: CC.s2, border: `1px solid ${CC.hair}`, borderRadius: 10,
+      padding: "8px 11px", fontSize: 12.5, color: CC.ink, boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
+      letterSpacing: -0.15,
+    }}>
+      <div style={{ color: CC.muted, marginBottom: 5 }}>{row.__fullLabel}</div>
+      <div style={{ display: "flex", gap: 10 }}>
+        <span style={{ color: CC.muted }}>{xLabel}</span>
+        <span style={{ fontWeight: 600 }}>{Number(row[xKey]).toLocaleString()}</span>
+      </div>
+      <div style={{ display: "flex", gap: 10, marginTop: 3 }}>
+        <span style={{ color: CC.muted }}>{yLabel}</span>
+        <span style={{ fontWeight: 600 }}>{Number(row[yKey]).toLocaleString()}</span>
+      </div>
+      {row.listings && <div style={{ color: CC.muted, marginTop: 4 }}>{row.listings} listings</div>}
     </div>
   );
 }
@@ -228,7 +251,54 @@ function ChartBlock({ chart }) {
     const xKey = chart.xKey || "label";
     const yKey = chart.yKey || "value";
     const yLabel = chart.yLabel || title || "Value";
+    const xLabel = chart.xLabel || "Area";
     const data = chartDataWithLabels(chart.data, xKey, kind === "line" ? 8 : 6);
+    if (kind === "scatter") {
+      const scatterData = chartDataWithLabels(chart.data, xKey, 8, "label");
+      return (
+        <ChartCard title={title || "Live analysis"} height={252}>
+          <ScatterChart data={scatterData} margin={{ left: 4, right: 18, top: 8, bottom: 10 }}>
+            <CartesianGrid stroke={CC.s2} />
+            <XAxis type="number" dataKey={xKey} name={xLabel} tick={axisTick()} axisLine={false} tickLine={false} width={42} />
+            <YAxis type="number" dataKey={yKey} name={yLabel} tick={axisTick()} axisLine={false} tickLine={false} width={42} />
+            <Tooltip cursor={{ stroke: CC.hair }} content={<ScatterTip xKey={xKey} yKey={yKey} xLabel={xLabel} yLabel={yLabel} />} />
+            <Scatter name={title || "Live analysis"} data={scatterData} fill={CC.violet} />
+          </ScatterChart>
+        </ChartCard>
+      );
+    }
+    if (kind === "horizontal-bar") {
+      return (
+        <ChartCard title={title || "Live analysis"} height={252}>
+          <BarChart layout="vertical" data={data} margin={{ left: 8, right: 22, top: 8, bottom: 8 }} barCategoryGap="28%">
+            <CartesianGrid horizontal={false} stroke={CC.s2} />
+            <XAxis type="number" tick={axisTick()} axisLine={false} tickLine={false} />
+            <YAxis type="category" dataKey="__axisLabel" tick={axisTick()} axisLine={false} tickLine={false} width={138} interval={0} />
+            <Tooltip cursor={{ fill: "rgba(128,128,128,0.09)" }} content={<ChartTip labelKey="__fullLabel" />} />
+            <Bar dataKey={yKey} name={yLabel} radius={[0, 5, 5, 0]} isAnimationActive>
+              {data.map((_, i) => <Cell key={i} fill={i === 0 ? CC.violet : `${CC.violet}99`} />)}
+            </Bar>
+          </BarChart>
+        </ChartCard>
+      );
+    }
+    if (kind === "grouped-bar") {
+      const series = chart.series && chart.series.length ? chart.series : [{ key: yKey, name: yLabel }];
+      const colors = [CC.violet, CC.teal || CC.success, CC.magenta || CC.coral, CC.muted];
+      return (
+        <ChartCard title={title || "Live analysis"} height={252}>
+          <BarChart data={data} margin={{ left: 4, right: 16, top: 8, bottom: 14 }} barCategoryGap="28%">
+            <CartesianGrid vertical={false} stroke={CC.s2} />
+            <XAxis dataKey="__axisLabel" tick={axisTick()} axisLine={false} tickLine={false} interval={0} tickMargin={8} height={36} />
+            <YAxis tick={axisTick()} axisLine={false} tickLine={false} width={42} />
+            <Tooltip cursor={{ fill: "rgba(128,128,128,0.09)" }} content={<ChartTip labelKey="__fullLabel" />} />
+            {series.map((s, i) => (
+              <Bar key={s.key} dataKey={s.key} name={s.name || s.key} radius={[5, 5, 0, 0]} fill={colors[i % colors.length]} isAnimationActive />
+            ))}
+          </BarChart>
+        </ChartCard>
+      );
+    }
     if (kind === "line") {
       return (
         <ChartCard title={title || "Live analysis"}>
