@@ -99,25 +99,60 @@ function sanitizeAnswer(text) {
     });
 }
 
-function removeIncompleteSectionEndings(text) {
-  const danglingEnd = /\b(among|between|with|for|of|to|from|by|in|on|as|than|into|because|while|where|which|that|and|or|but|the|a|an)$/i;
+function endsWithDanglingPhrase(text) {
+  const stripped = String(text || "")
+    .trim()
+    .replace(/[.!?]["')\]]?$/g, "")
+    .trim();
+  return /\b(among|between|with|for|of|to|from|by|in|on|as|than|into|because|while|where|which|that|and|or|but|the|a|an)$/i.test(stripped);
+}
+
+function hasTerminalPunctuation(text) {
+  return /[.!?]["')\]]?$/.test(String(text || "").trim());
+}
+
+function sectionLabel(section) {
+  const match = String(section || "").trim().match(/^([A-Za-z][A-Za-z\s]{2,48}):/);
+  return match?.[1]?.toLowerCase() || "";
+}
+
+function sectionLookup(text) {
+  return new Map(
+    String(text || "")
+      .split(/\n{2,}/)
+      .map((section) => [sectionLabel(section), section.trim()])
+      .filter(([label, section]) => label && section)
+  );
+}
+
+function trimToLastCompleteSentence(section) {
   const terminal = /[.!?]["')\]]?$/;
   const sentenceBoundary = /[.!?]["')\]]?(?=\s+[A-Z]|\s*$)/g;
+  const trimmed = String(section || "").trim();
+  const matches = [...trimmed.matchAll(sentenceBoundary)];
+  const lastMatch = matches.at(-1);
+  if (lastMatch && lastMatch.index > 24) {
+    const candidate = trimmed.slice(0, lastMatch.index + lastMatch[0].length).trim();
+    if (terminal.test(candidate) && !endsWithDanglingPhrase(candidate)) return candidate;
+  }
+  return "";
+}
 
+function completeAnswerSections(text, fallbackText) {
+  const fallbackSections = sectionLookup(fallbackText);
   return String(text || "")
     .split(/\n{2,}/)
     .map((section) => {
       const trimmed = section.trim();
       if (!trimmed) return "";
-      if (terminal.test(trimmed) && !danglingEnd.test(trimmed)) return trimmed;
+      if (hasTerminalPunctuation(trimmed) && !endsWithDanglingPhrase(trimmed)) return trimmed;
 
-      const matches = [...trimmed.matchAll(sentenceBoundary)];
-      const lastMatch = matches.at(-1);
-      if (lastMatch && lastMatch.index > 24) {
-        return trimmed.slice(0, lastMatch.index + lastMatch[0].length).trim();
+      const fallbackSection = fallbackSections.get(sectionLabel(trimmed));
+      if (fallbackSection && hasTerminalPunctuation(fallbackSection) && !endsWithDanglingPhrase(fallbackSection)) {
+        return fallbackSection;
       }
 
-      return terminal.test(trimmed) ? trimmed : `${trimmed}.`;
+      return trimToLastCompleteSentence(trimmed);
     })
     .filter(Boolean)
     .join("\n\n");
@@ -130,13 +165,21 @@ function addContextIfShort(answer, analysis) {
     .slice(0, 3)
     .map((g) => `${g.label} means ${g.meaning} ${g.good}`)
     .join(" ");
-  return `${answer}
+  const sections = [String(answer || "").trim()];
 
-Why this makes sense: ARIA is comparing short-term-rental opportunity rather than giving a full residential home-buying recommendation. The signal looks at the prepared project data to understand where revenue potential, market saturation, price levels, and listing scale point to a cleaner first move. ${facts} ${metricContext}
+  if (!/\bWhy this makes sense:/i.test(answer)) {
+    sections.push(`Why this makes sense: ARIA is comparing short-term-rental opportunity rather than giving a full residential home-buying recommendation. The signal looks at the prepared project data to understand where revenue potential, market saturation, price levels, and listing scale point to a cleaner first move. ${facts} ${metricContext}`);
+  }
 
-What this means for you: Use the result as a starting shortlist, not as a final purchase decision. A stronger opportunity signal means the area deserves earlier research because the rental-market conditions look more favourable in the project data.
+  if (!/\bWhat this means for you:/i.test(answer)) {
+    sections.push("What this means for you: Use the result as a starting shortlist, not as a final purchase decision. A stronger opportunity signal means the area deserves earlier research because the rental-market conditions look more favourable in the project data.");
+  }
 
-Next step: Review actual purchase prices, local licensing limits, building condition, financing costs, and neighbourhood fit before making the final investment decision.`;
+  if (!/\bNext step:/i.test(answer)) {
+    sections.push("Next step: Review actual purchase prices, local licensing limits, building condition, financing costs, and neighbourhood fit before making the final investment decision.");
+  }
+
+  return sections.filter(Boolean).join("\n\n");
 }
 
 export default async function handler(req, res) {
@@ -249,9 +292,9 @@ export default async function handler(req, res) {
       .join("")
       .trim();
     const rawAnswer = candidate?.finishReason === "MAX_TOKENS" ? analysis.fallbackAnswer : (answer || analysis.fallbackAnswer);
-    const polishedAnswer = removeIncompleteSectionEndings(
-      sanitizeAnswer(localizePlaceNames(addContextIfShort(rawAnswer, analysis)))
-    );
+    const fallbackAnswer = sanitizeAnswer(localizePlaceNames(addContextIfShort(analysis.fallbackAnswer, analysis)));
+    const primaryAnswer = sanitizeAnswer(localizePlaceNames(addContextIfShort(rawAnswer, analysis)));
+    const polishedAnswer = completeAnswerSections(primaryAnswer, fallbackAnswer) || fallbackAnswer;
 
     return json(res, 200, {
       answer: polishedAnswer,
