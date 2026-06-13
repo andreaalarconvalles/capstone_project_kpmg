@@ -56,9 +56,9 @@ function MiniBars({ data, color, w = 96, h = 30 }) {
 function Delta({ value, positive = true }) {
   const col = positive ? CD.success : CD.coral;
   return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: 12.5, fontWeight: 600, color: col }}>
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 3, maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 12.5, fontWeight: 600, color: col }}>
       <Icon name={positive ? "TrendingUp" : "TrendingDown"} size={13} color={col} sw={2.2} />
-      {value}
+      <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{value}</span>
     </span>
   );
 }
@@ -68,22 +68,23 @@ function KpiCard({ icon, accent, label, value, sub, viz, foot }) {
   return (
     <div className="aria-elev" style={{
       background: CD.s1, border: `1px solid ${CD.hair}`, borderRadius: 16, padding: "14px 15px",
+      height: "100%", minHeight: 128, boxSizing: "border-box", overflow: "hidden",
       display: "flex", flexDirection: "column", gap: 8, minWidth: 0,
     }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <div style={{ width: 24, height: 24, borderRadius: 7, display: "grid", placeItems: "center", background: `${accent}1f` }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+        <div style={{ width: 24, height: 24, borderRadius: 7, display: "grid", placeItems: "center", background: `${accent}1f`, flexShrink: 0 }}>
           <Icon name={icon} size={14} color={accent} sw={2.1} />
         </div>
-        <span style={{ fontSize: 12, color: CD.muted, fontWeight: 500, letterSpacing: -0.1 }}>{label}</span>
+        <span style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 12, color: CD.muted, fontWeight: 500, letterSpacing: -0.1 }}>{label}</span>
       </div>
-      <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 8 }}>
+      <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 8, minWidth: 0, minHeight: 48 }}>
         <div style={{ minWidth: 0 }}>
-          <div style={{ fontSize: 24, fontWeight: 600, letterSpacing: -0.8, lineHeight: 1, whiteSpace: "nowrap" }}>{value}</div>
+          <div style={{ fontSize: 23, fontWeight: 600, letterSpacing: -0.5, lineHeight: 1.05, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{value}</div>
           {sub && <div style={{ fontSize: 11.5, color: CD.muted, marginTop: 4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{sub}</div>}
         </div>
-        {viz && <div style={{ flexShrink: 0 }}>{viz}</div>}
+        {viz && <div style={{ width: 96, maxWidth: "42%", flexShrink: 0, overflow: "hidden", display: "flex", justifyContent: "flex-end" }}>{viz}</div>}
       </div>
-      {foot}
+      {foot && <div style={{ marginTop: "auto", minHeight: 18, maxHeight: 18, overflow: "hidden", display: "flex", alignItems: "center" }}>{foot}</div>}
     </div>
   );
 }
@@ -112,14 +113,14 @@ function SignalRow({ accent, icon, label, value, onClick }) {
 /* ---------- the dashboard ---------- */
 function LandingDashboard({ onSignal }) {
   const A = Object.fromEntries(AGENTS.map((a) => [a.id, a.accent]));
-  const cardButton = { width: "100%", display: "block", padding: 0, border: 0, background: "transparent", color: "inherit", font: "inherit", textAlign: "left" };
+  const cardButton = { width: "100%", height: "100%", display: "block", padding: 0, border: 0, background: "transparent", color: "inherit", font: "inherit", textAlign: "left" };
   return (
     <div className="aria-fadein" style={{ display: "flex", flexDirection: "column", gap: 10, width: "100%" }}>
       <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
         <div style={{ fontSize: 13, fontWeight: 600, color: CD.ink }}>Dataset insight cards</div>
         <div style={{ fontSize: 12, color: CD.muted }}>Paris + Athens · 135,051 listings</div>
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: 10 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gridAutoRows: 128, alignItems: "stretch", gap: 10 }}>
         <button className="aria-focus" onClick={() => onSignal("market", "Which Athens neighbourhoods offer the strongest short-term rental yield?")}
           style={cardButton}>
           <KpiCard icon="UsersRound" accent={A["market"]} label="Family-friendly stay base" value="Koukaki"
