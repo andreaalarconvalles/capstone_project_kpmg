@@ -245,6 +245,7 @@ function classifyIntent(prompt, agentId) {
   if (/(portfolio|paris.*athens|athens.*paris|50-unit|fifty-unit)/.test(p)) return "portfolio-comparison";
   if (/(family|safe|safest|live|living|cheap|cheapest|affordable|budget|rent)/.test(p)) return "market-entry";
   if (/(risk|high-risk|declin|vulnerab|priority|churn|warning)/.test(p)) return "risk";
+  if (/(map|region|regions|area comparison|compare areas|compare regions|neighbourhoods|neighborhoods|arrondissements|districts|where in|which areas|which regions)/.test(p)) return "market-entry";
   if (/(underprice|price|pricing|revenue|nightly|gap|earning|income|adr)/.test(p)) return "pricing";
   if (/(forecast|occupancy|tourist|demand|season|90 day|future|summer|peak)/.test(p)) return "demand";
   if (/(license|licence|legal|law|regulation|compliance|permit)/.test(p)) return "compliance";
@@ -476,33 +477,87 @@ function makeViz(title, data, yLabel = "Score", yKey = "value", options = {}) {
   }];
 }
 
+function wantsRegionMap(prompt) {
+  return /(map|region|regions|area comparison|compare areas|compare regions|neighbourhoods|neighborhoods|arrondissements|districts|where in|which areas|which regions)/i.test(prompt);
+}
+
+function makeRegionMap(title, city, rows, metricKey, metricLabel, displayFormatter = fmtScore, options = {}) {
+  return [{
+    kind: "region-map",
+    city,
+    title,
+    metricKey: "value",
+    metricLabel,
+    tone: options.tone || "opportunity",
+    data: rows.slice(0, city === "Paris" ? 20 : 12).map((r) => ({
+      label: shortArea(r.area || r.label),
+      value: Number(num(r[metricKey]).toFixed(2)),
+      display: displayFormatter(r[metricKey]),
+      listings: Number(num(r.listings).toFixed(0)),
+      listingsDisplay: fmtInt(r.listings),
+      priceDisplay: fmtEuro(r.medianPrice),
+      revenueDisplay: fmtEuro(r.revenue),
+      opportunityDisplay: fmtScore(r.opportunity),
+      saturationDisplay: fmtScore(r.saturation),
+      occupancyDisplay: fmtPct(r.occupancy),
+    })),
+  }];
+}
+
 async function marketAnalysis(prompt) {
   const rows = await loadNeighbourhoodStats();
   const city = cityFromPrompt(prompt) || "Paris";
   const cityRows = rows.filter((r) => r.city === city);
   const cheap = /(cheap|cheapest|affordable|budget|low price|rent)/i.test(prompt);
+  const revenue = /(revenue|income|earning|yield)/i.test(prompt);
+  const demand = /(occupancy|demand|booked|tourist)/i.test(prompt);
   const family = /(family|safe|safest|live|living)/i.test(prompt);
   const saturated = /(saturat|avoid|too high|crowd|overbuilt)/i.test(prompt);
-  const scoreKey = cheap ? "medianPrice" : saturated ? "saturation" : family ? "saturation" : "opportunity";
+  const scoreKey = cheap ? "medianPrice" : revenue ? "revenue" : demand ? "occupancy" : saturated ? "saturation" : family ? "saturation" : "opportunity";
   const ranked = topN(cityRows, scoreKey, 6, !cheap && !family);
+  const mapRanked = topN(cityRows, scoreKey, city === "Paris" ? 20 : 12, !cheap && !family);
   const best = ranked[0] || cityRows[0] || {};
   const totalListings = cityRows.reduce((s, r) => s + r.listings, 0);
-  const chartMetric = cheap ? "medianPrice" : saturated ? "saturation" : family ? "saturation" : "opportunity";
+  const chartMetric = cheap ? "medianPrice" : revenue ? "revenue" : demand ? "occupancy" : saturated ? "saturation" : family ? "saturation" : "opportunity";
   const chartTitle = cheap
     ? `${city} lowest median nightly prices`
-    : family
-      ? `${city} lower-saturation areas for a calmer shortlist`
-      : saturated
-        ? `${city} areas with highest saturation pressure`
-        : `${city} opportunity ranking`;
-  const mainKpi = cheap ? "Cheapest area" : family ? "Lower-pressure area" : saturated ? "Highest saturation" : "Best opportunity";
-  const mainScoreLabel = cheap ? "Median nightly price" : family || saturated ? "Saturation score" : "Opportunity score";
-  const mainScoreValue = cheap ? fmtEuro(best.medianPrice) : fmtScore(best[chartMetric]);
+    : revenue
+      ? `${city} average revenue by region`
+      : demand
+        ? `${city} occupancy by region`
+        : family
+          ? `${city} lower-saturation areas for a calmer shortlist`
+          : saturated
+            ? `${city} areas with highest saturation pressure`
+            : `${city} opportunity ranking`;
+  const mainKpi = cheap ? "Cheapest area" : revenue ? "Top revenue area" : demand ? "Top demand area" : family ? "Lower-pressure area" : saturated ? "Highest saturation" : "Best opportunity";
+  const mainScoreLabel = cheap ? "Median nightly price" : revenue ? "Average revenue" : demand ? "Average occupancy" : family || saturated ? "Saturation score" : "Opportunity score";
+  const mainScoreValue = cheap ? fmtEuro(best.medianPrice) : revenue ? fmtEuro(best.revenue) : demand ? fmtPct(best.occupancy) : fmtScore(best[chartMetric]);
+  const mapRequested = wantsRegionMap(prompt);
+  const visualizations = mapRequested
+    ? makeRegionMap(
+      `${city} regional comparison map`,
+      city,
+      mapRanked,
+      chartMetric,
+      cheap ? "Median nightly price" : revenue ? "Average revenue" : demand ? "Average occupancy" : saturated || family ? "Saturation score" : "Opportunity score",
+      cheap || revenue ? fmtEuro : demand ? fmtPct : fmtScore,
+      { tone: cheap || revenue ? "price" : saturated || family ? "risk" : "opportunity" }
+    )
+    : makeViz(chartTitle, ranked.map((r) => ({
+      label: r.area,
+      value: r[chartMetric],
+      display: cheap || revenue ? fmtEuro(r[chartMetric]) : demand ? fmtPct(r[chartMetric]) : fmtScore(r[chartMetric]),
+    })), cheap ? "Median nightly price" : revenue ? "Average revenue" : demand ? "Occupancy" : saturated || family ? "Saturation" : "Opportunity", cheap ? "price" : revenue ? "revenue" : demand ? "occupancy" : "score", { kind: "horizontal-bar" });
   return {
     intent: "market-entry",
     title: `${city} market-entry recommendation`,
     recommendation: cheap
       ? `${shortArea(best.area)} is the lowest-price area in the current ${city} neighbourhood summary, so it is the clearest affordability shortlist.`
+      : revenue
+        ? `${shortArea(best.area)} has the strongest average revenue signal among the ${city} regions in the prepared project data.`
+        : demand
+          ? `${shortArea(best.area)} has the strongest occupancy signal among the ${city} regions in the prepared project data.`
       : family
         ? `${shortArea(best.area)} is a calmer first shortlist because it combines lower saturation with enough listing activity to benchmark the market.`
         : saturated
@@ -519,14 +574,12 @@ async function marketAnalysis(prompt) {
       { label: "Median nightly price", value: fmtEuro(best.medianPrice) },
       { label: "Listings reviewed", value: fmtInt(totalListings) },
     ],
-    visualizations: makeViz(chartTitle, ranked.map((r) => ({
-      label: r.area,
-      value: r[chartMetric],
-      display: fmtScore(r[chartMetric]),
-    })), cheap ? "Median nightly price" : saturated || family ? "Saturation" : "Opportunity", cheap ? "price" : "score", { kind: "horizontal-bar" }),
+    visualizations,
     details: sourceDetails(
       [FILES.neighbourhoodStats],
-      "Rank neighbourhoods using the prepared neighbourhood summary table. The chart metric changes with the prompt: opportunity for investment, saturation for avoid/family-style shortlist prompts, and median nightly price for affordability prompts.",
+      mapRequested
+        ? "Rank neighbourhoods using the prepared neighbourhood summary table and render an interactive SVG region map for city/area comparison prompts. The map metric changes with the prompt: opportunity, saturation, median nightly price, average revenue, or occupancy. The map uses a city-shaped region layout, not official cadastral boundaries."
+        : "Rank neighbourhoods using the prepared neighbourhood summary table. The chart metric changes with the prompt: opportunity for investment, saturation for avoid/family-style shortlist prompts, median nightly price for affordability prompts, average revenue for revenue prompts, and occupancy for demand prompts.",
       ["This is short-term-rental market intelligence, not a complete home-purchase or mortgage dataset."],
       ranked.map((r) => `${shortArea(r.area)}: opportunity ${fmtScore(r.opportunity)}, saturation ${fmtScore(r.saturation)}, median price ${fmtEuro(r.medianPrice)}`)
     ),
@@ -604,9 +657,31 @@ async function riskAnalysis(prompt) {
   const priorityRanked = topN(underpricing.areas, "highRisk", 6, true);
   const priorityMode = /(priority|underprice|underpriced|intervention|action|coach|first)/i.test(prompt);
   const distributionMode = /(distribution|threshold|score range|risk score|how many|spread)/i.test(prompt);
+  const mapMode = wantsRegionMap(prompt);
   const best = ranked[0] || risk.areas[0] || {};
   const priorityBest = priorityRanked[0] || {};
-  const chart = distributionMode
+  const chart = mapMode
+    ? [{
+      kind: "region-map",
+      city: "Athens",
+      title: "Athens high-risk regional map",
+      metricKey: "value",
+      metricLabel: "High-risk share",
+      tone: "risk",
+      data: ranked.slice(0, 12).map((r) => ({
+        label: shortArea(r.area),
+        value: Number(num(r.highShare).toFixed(2)),
+        display: fmtPct(r.highShare),
+        listings: Number(num(r.count).toFixed(0)),
+        listingsDisplay: fmtInt(r.count),
+        priceDisplay: null,
+        revenueDisplay: null,
+        opportunityDisplay: null,
+        saturationDisplay: null,
+        occupancyDisplay: null,
+      })),
+    }]
+    : distributionMode
     ? makeViz("Athens risk-score distribution", risk.bins.map((b) => ({
       label: b.label,
       value: b.share,
@@ -644,7 +719,9 @@ async function riskAnalysis(prompt) {
     visualizations: chart,
     details: sourceDetails(
       [FILES.athensRisk, FILES.athensUnderpricing],
-      "Aggregate LightGBM risk probabilities by neighbourhood and combine them with the underpricing output. The visualization changes with the prompt: high-risk share, priority overlap count, or risk-score distribution.",
+      mapMode
+        ? "Aggregate LightGBM risk probabilities by neighbourhood and render an interactive SVG region map for risk-by-area comparison prompts. The map uses a city-shaped region layout, not official cadastral boundaries."
+        : "Aggregate LightGBM risk probabilities by neighbourhood and combine them with the underpricing output. The visualization changes with the prompt: high-risk share, priority overlap count, or risk-score distribution.",
       ["Risk is a prioritisation signal for analyst review, not a final decision about a host."],
       ranked.map((r) => `${shortArea(r.area)}: ${fmtPct(r.highShare)} high-risk share, ${fmtInt(r.high)} high-risk listings`)
     ),

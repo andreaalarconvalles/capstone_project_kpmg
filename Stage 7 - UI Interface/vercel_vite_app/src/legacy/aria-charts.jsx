@@ -243,9 +243,157 @@ function NeighbourhoodMap({ city = "Athens", title, metric = "risk" }) {
   );
 }
 
+const PARIS_REGION_LAYOUT = [
+  { x: 3, y: 2 }, { x: 2, y: 2 }, { x: 2, y: 3 }, { x: 3, y: 3 }, { x: 4, y: 3 },
+  { x: 4, y: 2 }, { x: 4, y: 1 }, { x: 3, y: 1 }, { x: 2, y: 1 }, { x: 1, y: 1 },
+  { x: 1, y: 2 }, { x: 1, y: 3 }, { x: 2, y: 4 }, { x: 3, y: 4 }, { x: 4, y: 4 },
+  { x: 5, y: 3 }, { x: 5, y: 2 }, { x: 5, y: 1 }, { x: 4, y: 0 }, { x: 3, y: 0 },
+];
+
+const ATHENS_REGION_LAYOUT = [
+  { x: 1, y: 0 }, { x: 2, y: 0 }, { x: 3, y: 0 }, { x: 0, y: 1 },
+  { x: 1, y: 1 }, { x: 2, y: 1 }, { x: 3, y: 1 }, { x: 4, y: 1 },
+  { x: 0, y: 2 }, { x: 1, y: 2 }, { x: 2, y: 2 }, { x: 3, y: 2 },
+];
+
+function regionLayout(city, count) {
+  const base = city === "Paris" ? PARIS_REGION_LAYOUT : ATHENS_REGION_LAYOUT;
+  return Array.from({ length: count }, (_, i) => base[i] || { x: i % 6, y: Math.floor(i / 6) + 4 });
+}
+
+function regionPath(x, y, w, h, i) {
+  const s = ((i % 3) - 1) * 3;
+  return [
+    `M ${x + 9} ${y + 2}`,
+    `L ${x + w - 7 + s} ${y}`,
+    `L ${x + w} ${y + h - 10}`,
+    `L ${x + w - 10} ${y + h}`,
+    `L ${x + 6 - s} ${y + h - 2}`,
+    `L ${x} ${y + 10}`,
+    "Z",
+  ].join(" ");
+}
+
+function regionColor(t, tone) {
+  t = Math.max(0, Math.min(1, t));
+  const toneColor = tone === "risk"
+    ? (CC.coral || "#ff5577")
+    : tone === "price"
+      ? (CC.teal || CC.success || "#22c55e")
+      : (CC.violet || "#6a4cf5");
+  const a = hexToRgb(CC.s2), b = hexToRgb(toneColor);
+  const e = Math.pow(t, 0.82);
+  const c = a.map((v, i) => Math.round(v + (b[i] - v) * e));
+  return `rgb(${c[0]},${c[1]},${c[2]})`;
+}
+
+function RegionMapCard({ chart }) {
+  const [hover, setHover] = React.useState(null);
+  const data = (chart.data || []).slice(0, chart.city === "Paris" ? 20 : 12);
+  const layout = regionLayout(chart.city, data.length);
+  const cell = chart.city === "Paris" ? 58 : 72;
+  const gap = 7;
+  const maxX = Math.max(...layout.map((p) => p.x), 0);
+  const maxY = Math.max(...layout.map((p) => p.y), 0);
+  const W = (maxX + 1) * cell + maxX * gap;
+  const H = (maxY + 1) * cell + maxY * gap;
+  const values = data.map((d) => Number(d.value)).filter(Number.isFinite);
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = Math.max(max - min, 0.0001);
+  const invert = chart.tone === "price";
+  const tooltipRows = hover ? [
+    [chart.metricLabel || "Metric", hover.display],
+    ["Listings", hover.listingsDisplay],
+    ["Median nightly price", hover.priceDisplay],
+    ["Average revenue", hover.revenueDisplay],
+    ["Opportunity", hover.opportunityDisplay],
+    ["Saturation", hover.saturationDisplay],
+    ["Occupancy", hover.occupancyDisplay],
+  ].filter((row) => row[1]) : [];
+  return (
+    <div className="aria-fadein" style={{
+      background: CC.s1, border: `1px solid ${CC.hair}`, borderRadius: 16,
+      padding: "16px 16px 12px", margin: "4px 0 2px",
+    }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12, marginBottom: 12 }}>
+        <div style={{ fontSize: 12.5, color: CC.muted, fontWeight: 500, letterSpacing: 0 }}>{chart.title || `${chart.city} regional map`}</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 7, color: CC.muted, fontSize: 11.5, whiteSpace: "nowrap" }}>
+          lower
+          <span style={{ width: 72, height: 7, borderRadius: 999, background: invert
+            ? `linear-gradient(90deg, ${regionColor(1, chart.tone)}, ${regionColor(0.1, chart.tone)})`
+            : `linear-gradient(90deg, ${regionColor(0.1, chart.tone)}, ${regionColor(1, chart.tone)})` }} />
+          higher
+        </div>
+      </div>
+      <div style={{ position: "relative", width: "100%", minHeight: 304, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <svg viewBox={`-10 -10 ${W + 20} ${H + 20}`} width="100%" height="304" style={{ maxWidth: Math.max(W + 20, 460), overflow: "visible" }}>
+          <path d={`M 4 6 L ${W - 8} 0 L ${W + 4} ${H - 12} L ${W - 22} ${H + 4} L 12 ${H} L -4 ${H / 2} Z`}
+            fill="none" stroke={CC.hair} strokeWidth="1.2" strokeDasharray="5 5" opacity="0.9" />
+          {data.map((region, i) => {
+            const p = layout[i];
+            const x = p.x * (cell + gap);
+            const y = p.y * (cell + gap);
+            const rawT = (Number(region.value) - min) / range;
+            const t = invert ? 1 - rawT : rawT;
+            const active = hover && hover.label === region.label;
+            const fill = regionColor(0.18 + t * 0.82, chart.tone);
+            return (
+              <g key={`${region.label}-${i}`} onMouseEnter={() => setHover(region)} onMouseLeave={() => setHover(null)} style={{ cursor: "default" }}>
+                <path d={regionPath(x, y, cell, cell, i)}
+                  fill={fill}
+                  stroke={active ? CC.ink : CC.hair}
+                  strokeWidth={active ? 2 : 1}
+                  style={{
+                    transition: "stroke 0.15s, filter 0.15s, transform 0.15s",
+                    filter: active ? "brightness(1.13)" : "none",
+                    transform: active ? "translateY(-2px)" : "none",
+                  }} />
+                <text x={x + cell / 2} y={y + cell / 2 - 3} textAnchor="middle"
+                  fontSize={chart.city === "Paris" ? "9.5" : "10.5"} fontWeight="600" fill={t > 0.45 ? "#fff" : CC.ink}
+                  style={{ pointerEvents: "none", letterSpacing: 0 }}>
+                  {compactAxisLabel(region.label, chart.city === "Paris" ? 9 : 12)}
+                </text>
+                <text x={x + cell / 2} y={y + cell / 2 + 13} textAnchor="middle"
+                  fontSize="10.5" fontWeight="500" fill={t > 0.45 ? "rgba(255,255,255,0.78)" : CC.muted}
+                  style={{ pointerEvents: "none", letterSpacing: 0 }}>
+                  {region.display}
+                </text>
+              </g>
+            );
+          })}
+        </svg>
+        {hover && (
+          <div style={{
+            position: "absolute", top: 4, right: 4, minWidth: 220,
+            background: CC.s2, border: `1px solid ${CC.hair}`, borderRadius: 12,
+            padding: "10px 12px", fontSize: 12.5, color: CC.ink,
+            boxShadow: "0 12px 30px rgba(0,0,0,0.45)", pointerEvents: "none",
+          }}>
+            <div style={{ fontSize: 13.5, fontWeight: 650, marginBottom: 6 }}>{hover.label}</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "4px 12px" }}>
+              {tooltipRows.map(([label, value]) => (
+                <React.Fragment key={label}>
+                  <span style={{ color: CC.muted }}>{label}</span><strong>{value}</strong>
+                </React.Fragment>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+      <div style={{ marginTop: 8, color: CC.muted, fontSize: 11.5, lineHeight: 1.4 }}>
+        Hover a region to inspect the local market signals. Layout is an analytical region map for comparison, not an official boundary file.
+      </div>
+    </div>
+  );
+}
+
 /* ---------- chart dispatcher ---------- */
 function ChartBlock({ chart }) {
   const { kind, title } = chart;
+  if (kind === "region-map" && Array.isArray(chart.data) && chart.data.length) {
+    return <RegionMapCard chart={chart} />;
+  }
 
   if (Array.isArray(chart.data) && chart.data.length) {
     const xKey = chart.xKey || "label";
@@ -446,4 +594,4 @@ function ChartBlock({ chart }) {
   return null;
 }
 
-Object.assign(window, { ChartBlock, NeighbourhoodMap });
+Object.assign(window, { ChartBlock, NeighbourhoodMap, RegionMapCard });
