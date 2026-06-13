@@ -31,6 +31,10 @@ function AnswerView({ m, live, onCopy, onRegen, onExport }) {
       blocks.push(<ChartBlock key={bi} chart={block.chart} />);
     } else if (block.type === "map") {
       blocks.push(<NeighbourhoodMap key={bi} {...block.map} />);
+    } else if (block.type === "kpis") {
+      blocks.push(<LiveKpiGrid key={bi} kpis={block.kpis} />);
+    } else if (block.type === "details") {
+      blocks.push(<AnalysisDetails key={bi} details={block.details} quality={block.quality} />);
     }
   }
   return (
@@ -47,6 +51,80 @@ function AnswerView({ m, live, onCopy, onRegen, onExport }) {
             onMouseLeave={(e) => e.currentTarget.style.background = CA.s1}>
             <Icon name="Download" size={15} /> Export PDF Brief
           </button>
+        </div>
+      )}
+    </div>
+  );
+}
+function LiveKpiGrid({ kpis = [] }) {
+  if (!kpis.length) return null;
+  return (
+    <div className="aria-fadein" style={{
+      display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+      gap: 10, margin: "6px 0 12px",
+    }}>
+      {kpis.slice(0, 4).map((kpi, i) => (
+        <div key={`${kpi.label}-${i}`} style={{
+          background: CA.s1, border: `1px solid ${CA.hair}`, borderRadius: 12,
+          padding: "12px 13px", minHeight: 76,
+        }}>
+          <div style={{ fontSize: 11.5, color: CA.muted, fontWeight: 500, lineHeight: 1.25, marginBottom: 6 }}>{kpi.label}</div>
+          <div style={{ fontSize: 19, color: CA.ink, fontWeight: 650, lineHeight: 1.12, letterSpacing: -0.35, overflowWrap: "anywhere" }}>{kpi.value}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+function AnalysisDetails({ details = {}, quality }) {
+  const [open, setOpen] = useState(false);
+  const sources = details.sourceFiles || [];
+  const limits = details.limitations || [];
+  const extra = details.extra || [];
+  return (
+    <div className="aria-fadein" style={{ marginTop: 10, border: `1px solid ${CA.hair}`, borderRadius: 12, background: CA.s1, overflow: "hidden" }}>
+      <button onClick={() => setOpen((v) => !v)} className="aria-focus"
+        style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "10px 13px", color: CA.ink }}>
+        <Icon name="ChevronDown" size={16} color={CA.muted}
+          style={{ transform: open ? "none" : "rotate(-90deg)", transition: "transform 0.18s" }} />
+        <span style={{ fontSize: 13.5, fontWeight: 600 }}>View details</span>
+        {quality?.score != null && (
+          <span style={{ marginLeft: "auto", fontSize: 12, color: quality.passed ? CA.success : CA.muted }}>
+            Quality {quality.score}/100
+          </span>
+        )}
+      </button>
+      {open && (
+        <div style={{ borderTop: `1px solid ${CA.hairSoft}`, padding: "12px 14px 14px", fontSize: 13, lineHeight: 1.55, color: CA.inkSoft }}>
+          {details.methodology && (
+            <div style={{ marginBottom: 10 }}>
+              <div style={{ fontSize: 11.5, color: CA.muted, fontWeight: 600, marginBottom: 4 }}>Methodology</div>
+              <div>{details.methodology}</div>
+            </div>
+          )}
+          {!!sources.length && (
+            <div style={{ marginBottom: 10 }}>
+              <div style={{ fontSize: 11.5, color: CA.muted, fontWeight: 600, marginBottom: 4 }}>Sources</div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {sources.map((s) => (
+                  <span key={s} style={{ border: `1px solid ${CA.hair}`, borderRadius: 999, padding: "4px 8px", background: CA.canvas, color: CA.muted, fontSize: 12 }}>
+                    {s}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+          {!!limits.length && (
+            <div style={{ marginBottom: extra.length ? 10 : 0 }}>
+              <div style={{ fontSize: 11.5, color: CA.muted, fontWeight: 600, marginBottom: 4 }}>Limitations</div>
+              {limits.map((l) => <div key={l}>- {l}</div>)}
+            </div>
+          )}
+          {!!extra.length && (
+            <div>
+              <div style={{ fontSize: 11.5, color: CA.muted, fontWeight: 600, marginBottom: 4 }}>Additional signals</div>
+              {extra.slice(0, 8).map((item) => <div key={item}>- {item}</div>)}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -219,9 +297,11 @@ function App() {
     if (MODEL_BY_ID[model].ml) model = settings.defaultModel;
     const steps = [
       { node: "Orchestrator", detail: `routing to ${ag.name}` },
-      { node: "Retrieval Agent", detail: "loading ARIA project context" },
+      { node: "GitHub Data Agent", detail: "fetching live ARIA CSV outputs" },
+      { node: "Analytics Agent", detail: "computing verified metrics" },
+      { node: "Visualization Agent", detail: "preparing chart payload" },
       { node: "Vertex AI", detail: `generating with ${model}` },
-      { node: "Orchestrator", detail: "composing grounded answer" },
+      { node: "Quality Agent", detail: "checking sources and answer shape" },
     ];
     const base = {
       role: "assistant", agentId: aId, prompt, trace: steps, blocks: [],
@@ -233,6 +313,7 @@ function App() {
 
     upd({ traceDone: 1 });
     let text = "";
+    let blocks = [];
     let brief = genericScript(ag, prompt).brief;
     try {
       upd({ traceDone: 2 });
@@ -251,19 +332,21 @@ function App() {
       });
       const j = await res.json();
       if (!res.ok) throw new Error(j?.error || "Vertex AI request failed.");
-      const sourceText = Array.isArray(j.sources) && j.sources.length
-        ? `\n\n**Sources used:** ${j.sources.map((s) => `\`${s}\``).join(", ")}`
-        : "";
-      text = `${j.answer || "No response returned."}${sourceText}`;
+      text = j.answer || "No response returned.";
+      blocks = [{ type: "text", text }];
+      if (Array.isArray(j.kpis) && j.kpis.length) blocks.push({ type: "kpis", kpis: j.kpis.slice(0, 4) });
+      if (Array.isArray(j.visualizations) && j.visualizations.length) blocks.push({ type: "chart", chart: j.visualizations[0] });
+      if (j.details) blocks.push({ type: "details", details: j.details, quality: j.quality });
       brief = {
         title: `${ag.name} — Vertex Analysis`,
         kpis: Array.isArray(j.kpis) && j.kpis.length ? j.kpis.slice(0, 4) : brief.kpis,
       };
     } catch (e) {
-      text = `**Vertex AI is not connected yet:** ${e.message}\n\nThe UI is correctly routing custom prompts to the backend, but Vertex needs server-side Google Cloud authentication in Vercel before it can spend project credits. Keep using the suggested prompts for scripted demo responses while credentials are configured.`;
+      text = `**Live analysis needs attention:** ${e.message}\n\nThe UI is correctly routing custom prompts to the backend. Check Vercel Vertex authentication and GitHub data access, and keep using the suggested prompts for scripted demo responses while the live path is being configured.`;
+      blocks = [{ type: "text", text }];
     }
     if (cancelRef.current) return;
-    upd({ traceDone: steps.length, traceRunning: false, blocks: [{ type: "text", text }], brief });
+    upd({ traceDone: steps.length, traceRunning: false, blocks, brief });
 
     // stream the text
     const words = text.split(" ");
@@ -275,7 +358,7 @@ function App() {
       if (w < words.length) setTimeout(step, 14 + Math.random() * 20);
       else setLive((l) => {
         if (!l) return null;
-        const fin = { ...l.msg, brief, done: true, progress: { block: 1, text: "" } };
+        const fin = { ...l.msg, brief, done: true, progress: { block: blocks.length, text: "" } };
         setConversations((cs) => cs.map((c) => c.id === convId ? { ...c, messages: [...(c.messages || []), fin] } : c));
         return null;
       });

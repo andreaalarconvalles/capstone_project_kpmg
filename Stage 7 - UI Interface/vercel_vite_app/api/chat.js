@@ -1,5 +1,5 @@
 import { GoogleAuth } from "google-auth-library";
-import { buildGroundingContext } from "./project-context.js";
+import { buildGroundedAnalysis } from "./analytics-pipeline.js";
 
 const CLOUD_PLATFORM_SCOPE = "https://www.googleapis.com/auth/cloud-platform";
 const DEFAULT_LOCATION = "europe-west1";
@@ -52,18 +52,19 @@ function endpointFor({ projectId, location, model }) {
   return `https://${host}/v1/projects/${projectId}/locations/${location}/publishers/google/models/${model}:generateContent`;
 }
 
-function buildSystemPrompt({ agentName, agentTagline, grounding }) {
+function buildSystemPrompt({ agentName, agentTagline, analysis }) {
   return `
 You are ${agentName}, ${agentTagline}, inside the ARIA capstone demo.
 
-Answer as a concise consulting analyst. Use only the project context below for numeric claims.
+Answer as a concise consumer-facing consulting analyst. Use only the verified analytics pack below for numeric claims.
 If the user's wording asks for residential real-estate advice, clarify that ARIA's evidence is short-term-rental market intelligence, not a complete home-buying transaction dataset.
 Do not invent row counts, model scores, neighbourhood rankings, or monetary values.
-Give a direct recommendation first, then the evidence, then the limitation.
-Keep the answer between 170 and 260 words.
+Give a direct recommendation first, then only the most important evidence, then one limitation.
+Keep the answer between 90 and 150 words.
+Avoid dense tables and avoid listing more than four numbers. The UI will show KPIs, charts, sources, and methodology separately.
 
-Grounded project context:
-${grounding.contextText}
+Verified analytics pack:
+${analysis.contextText}
 `;
 }
 
@@ -107,7 +108,15 @@ export default async function handler(req, res) {
   if (!projectId) return json(res, 400, { error: "Vertex project ID is required." });
   if (!projectNumber) return json(res, 400, { error: "Vertex project number is required." });
 
-  const grounding = buildGroundingContext({ prompt, agentId });
+  let analysis;
+  try {
+    analysis = await buildGroundedAnalysis({ prompt, agentId });
+  } catch (error) {
+    return json(res, 502, {
+      error: error.message || "Could not load live GitHub data for the ARIA analysis.",
+      stage: "github-data-agent",
+    });
+  }
 
   try {
     const accessToken = await getAccessToken();
@@ -121,7 +130,7 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         systemInstruction: {
-          parts: [{ text: buildSystemPrompt({ agentName, agentTagline, grounding }) }],
+          parts: [{ text: buildSystemPrompt({ agentName, agentTagline, analysis }) }],
         },
         contents: [
           { role: "user", parts: [{ text: prompt }] },
@@ -139,7 +148,6 @@ export default async function handler(req, res) {
         error: data?.error?.message || "Vertex AI request failed.",
         details: data?.error || data,
         projectId,
-        projectNumber,
         location,
         model,
       });
@@ -151,12 +159,14 @@ export default async function handler(req, res) {
       .trim();
 
     return json(res, 200, {
-      answer: answer || "Vertex AI returned no text response.",
-      intent: grounding.intent,
-      sources: grounding.sources,
-      kpis: grounding.kpis,
+      answer: answer || analysis.fallbackAnswer,
+      intent: analysis.intent,
+      sources: analysis.sources,
+      kpis: analysis.kpis,
+      visualizations: analysis.visualizations,
+      details: analysis.details,
+      quality: analysis.quality,
       projectId,
-      projectNumber,
       location,
       model,
     });
@@ -164,7 +174,6 @@ export default async function handler(req, res) {
     return json(res, 500, {
       error: error.message || "Unexpected Vertex AI backend error.",
       projectId,
-      projectNumber,
       location,
       model,
     });

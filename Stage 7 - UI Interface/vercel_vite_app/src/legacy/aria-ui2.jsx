@@ -432,7 +432,7 @@ function SettingsModal({ open, onClose, settings, setSettings }) {
                 {testState === "fail" && <span style={{ display: "flex", alignItems: "center", gap: 6, color: C2.coral, fontSize: 13.5 }}><Icon name="CircleX" size={16} /> Needs Vercel auth</span>}
               </div>
               <div style={{ fontSize: 12, color: C2.muted, lineHeight: 1.5 }}>
-                Suggested prompts keep their scripted demo answers. Custom typed prompts call the server-side Vertex AI backend with this project ID and number. The project fields identify where to run the request; Vercel still needs a service account environment variable for authentication.
+                Suggested prompts keep their scripted demo answers. Custom typed prompts call the server-side Vertex AI backend, load live GitHub project data, and return grounded KPIs, charts, and sources. The project fields identify where to run the Vertex request; Vercel still needs a service account environment variable for authentication.
               </div>
             </div>
           ) : (

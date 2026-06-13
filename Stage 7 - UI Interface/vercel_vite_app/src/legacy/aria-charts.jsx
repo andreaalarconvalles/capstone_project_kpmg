@@ -199,6 +199,39 @@ function NeighbourhoodMap({ city = "Athens", title, metric = "risk" }) {
 function ChartBlock({ chart }) {
   const { kind, title } = chart;
 
+  if (Array.isArray(chart.data) && chart.data.length) {
+    const xKey = chart.xKey || "label";
+    const yKey = chart.yKey || "value";
+    const yLabel = chart.yLabel || title || "Value";
+    const data = chart.data.slice(0, 8);
+    if (kind === "line") {
+      return (
+        <ChartCard title={title || "Live analysis"}>
+          <LineChart data={data} margin={{ left: 4, right: 16, top: 6, bottom: 2 }}>
+            <CartesianGrid vertical={false} stroke={CC.s2} />
+            <XAxis dataKey={xKey} tick={axisTick()} axisLine={false} tickLine={false} interval={0} />
+            <YAxis tick={axisTick()} axisLine={false} tickLine={false} width={42} />
+            <Tooltip cursor={{ stroke: CC.hair }} content={<ChartTip labelKey={xKey} />} />
+            <Line type="monotone" dataKey={yKey} name={yLabel} stroke={CC.violet} strokeWidth={2.5} dot={{ r: 2.5, fill: CC.violet }} />
+          </LineChart>
+        </ChartCard>
+      );
+    }
+    return (
+      <ChartCard title={title || "Live analysis"} height={232}>
+        <BarChart data={data} margin={{ left: 4, right: 16, top: 8, bottom: 2 }} barCategoryGap="28%">
+          <CartesianGrid vertical={false} stroke={CC.s2} />
+          <XAxis dataKey={xKey} tick={axisTick()} axisLine={false} tickLine={false} interval={0} />
+          <YAxis tick={axisTick()} axisLine={false} tickLine={false} width={42} />
+          <Tooltip cursor={{ fill: "rgba(128,128,128,0.09)" }} content={<ChartTip labelKey={xKey} />} />
+          <Bar dataKey={yKey} name={yLabel} radius={[5, 5, 0, 0]} isAnimationActive>
+            {data.map((_, i) => <Cell key={i} fill={i === 0 ? CC.violet : `${CC.violet}99`} />)}
+          </Bar>
+        </BarChart>
+      </ChartCard>
+    );
+  }
+
   if (kind === "shap") {
     return (
       <ChartCard title={title} height={220}>

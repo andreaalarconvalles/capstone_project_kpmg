@@ -20,10 +20,8 @@ const AGENTS = [
     tagline: "Your personal revenue manager", icon: "Coins",
     accent: "#ff385c", emoji: "💶",
     chips: [
-      "Why is my listing underpriced vs the neighbourhood?",
-      "Forecast my occupancy for the next 90 days",
-      "Rewrite my listing description to convert better",
-      "Simulate revenue: current vs recommended pricing",
+      "Is my Paris listing underpriced compared with similar listings?",
+      "What price change could improve my Athens listing revenue?",
     ],
   },
   {
@@ -31,10 +29,8 @@ const AGENTS = [
     tagline: "Displacement risk 12–24 months ahead", icon: "Building2",
     accent: "#00a699", emoji: "🏘️",
     chips: [
-      "Which Athens neighbourhoods show displacement risk in the next 12 months?",
-      "Show STR density growth by dist_zone",
-      "Draft a policy brief for the city housing department",
-      "What intervention thresholds should Paris adopt?",
+      "Which Athens listings need attention first because they are high-risk and underpriced?",
+      "Where is host risk highest in Athens?",
     ],
   },
   {
@@ -42,10 +38,8 @@ const AGENTS = [
     tagline: "AML anomaly & SAR intelligence", icon: "Fingerprint",
     accent: "#8a2d62", emoji: "🕵️",
     chips: [
-      "Flag listings with ghost-listing patterns in Paris",
-      "Show the top AML risk scores with SHAP explanations",
-      "Any circular booking network signals?",
-      "Draft a SAR for listing #48213",
+      "Where is host risk highest in Athens?",
+      "Which Athens listings need attention first because they are high-risk and underpriced?",
     ],
   },
   {
@@ -53,10 +47,8 @@ const AGENTS = [
     tagline: "Infrastructure load intelligence", icon: "TrainFront",
     accent: "#fc642d", emoji: "🚇",
     chips: [
-      "Forecast tourist-nights in central Athens for peak season",
-      "Which districts hit infrastructure stress in August?",
-      "Translate occupancy into waste & transit load",
-      "Run high/base/low scenario for summer 2026",
+      "Which Athens neighbourhoods offer the strongest short-term rental yield?",
+      "Compare Paris vs Athens for a small short-term rental portfolio.",
     ],
   },
   {
@@ -64,10 +56,10 @@ const AGENTS = [
     tagline: "Site selection & ROI intelligence", icon: "Hammer",
     accent: "#e0116f", emoji: "🏗️",
     chips: [
-      "Which Paris arrondissements are supply-constrained?",
-      "Rank Athens neighbourhoods by projected STR yield",
-      "Where is regulatory risk too high to build?",
-      "Compare Paris vs Athens for a 50-unit portfolio",
+      "Which Paris arrondissement is best for a new short-term rental investment?",
+      "Which Paris areas look saturated and should I avoid?",
+      "Which Athens neighbourhoods offer the strongest short-term rental yield?",
+      "Compare Paris vs Athens for a small short-term rental portfolio.",
     ],
   },
 ];
@@ -282,6 +274,155 @@ const SCRIPTS = {
   },
 };
 
+SCRIPTS["market::Which Paris arrondissement is best for a new short-term rental investment?"] = {
+  trace: [
+    T("Orchestrator", "routing to Market Entry Advisor"),
+    T("GitHub Data Agent", "loading Paris neighbourhood summary"),
+    T("Analytics Agent", "ranking opportunity vs saturation"),
+    T("Visualization Agent", "preparing area comparison"),
+    T("Orchestrator", "composing consumer brief"),
+  ],
+  blocks: [
+    { type: "text", text: "**Start with the 19th arrondissement.** In the ARIA market-entry analysis, the 19th has the strongest supply-constrained signal, followed by the 20th and then the 11th. That means demand is present, but the competitive pressure is cleaner than in the central tourist core." },
+    { type: "chart", chart: { kind: "supplygap", title: "Paris supply-demand opportunity signal" } },
+    { type: "text", text: "For a consumer or small operator, the key benefit is that the eastern arrondissements offer room to enter without competing directly against the most saturated central districts. The recommendation is not a home-buying verdict; it is a short-term-rental market-entry signal." },
+  ],
+  brief: { title: "Paris Investment Entry Brief", kpis: [
+    { label: "Best first area", value: "19th" }, { label: "Runner-up", value: "20th" },
+    { label: "Secondary option", value: "11th" }, { label: "Avoid first", value: "1st-4th" },
+  ]},
+};
+
+SCRIPTS["market::Which Paris areas look saturated and should I avoid?"] = {
+  trace: [
+    T("Orchestrator", "routing to Market Entry Advisor"),
+    T("Supply Agent", "checking Paris saturation signals"),
+    T("Risk Agent", "flagging high-friction entry zones"),
+    T("Orchestrator", "composing avoid-first brief"),
+  ],
+  blocks: [
+    { type: "text", text: "**Avoid the 1st-4th arrondissements as a first move.** They are the most saturated and regulation-constrained zones in the current ARIA Paris view. They may still work for premium operators, but they are not the cleanest entry point for a small portfolio." },
+    { type: "chart", chart: { kind: "supplygap", title: "Paris supply-demand gap: positive is cleaner entry" } },
+    { type: "text", text: "The more attractive consumer-friendly answer is to look east: the 19th, 20th, and 11th show stronger supply-demand imbalance with less direct competition than the central core." },
+  ],
+  brief: { title: "Paris Saturation Brief", kpis: [
+    { label: "Avoid first", value: "1st-4th" }, { label: "Reason", value: "Saturated" },
+    { label: "Cleaner entry", value: "19th" }, { label: "Backup", value: "20th" },
+  ]},
+};
+
+SCRIPTS["host-revenue::Is my Paris listing underpriced compared with similar listings?"] = {
+  trace: [
+    T("Orchestrator", "routing to Host Revenue Intelligence"),
+    T("Pricing Agent", "checking XGBoost fair-price signal"),
+    T("SHAP Explainer", "identifying pricing drivers"),
+    T("Orchestrator", "composing pricing brief"),
+  ],
+  blocks: [
+    { type: "text", text: "**Yes, the demo listing appears underpriced.** The current nightly price is **€118**, while the XGBoost pricing signal points to a fair value near **€147** for comparable Paris listings. That is a meaningful pricing gap, not a tiny model-noise difference." },
+    { type: "chart", chart: { kind: "shap", title: "Main drivers behind the fair-price estimate" } },
+    { type: "text", text: "A practical move would be to test a conservative lift toward **€142** rather than jumping straight to the full model estimate. That keeps the listing competitive while reducing revenue left on the table." },
+  ],
+  brief: { title: "Paris Listing Pricing Brief", kpis: [
+    { label: "Current price", value: "€118" }, { label: "Fair value", value: "€147" },
+    { label: "Gap", value: "+€29" }, { label: "Suggested test", value: "€142" },
+  ]},
+};
+
+SCRIPTS["host-revenue::What price change could improve my Athens listing revenue?"] = {
+  trace: [
+    T("Orchestrator", "routing to Host Revenue Intelligence"),
+    T("Pricing Agent", "loading Athens underpricing output"),
+    T("Risk Agent", "checking high-risk overlap"),
+    T("Orchestrator", "composing revenue action"),
+  ],
+  blocks: [
+    { type: "text", text: "**Use a measured price increase, not a blind jump.** ARIA flags **2,945 Athens listings** as underpriced, and the strongest opportunities are the listings where the fair-price gap is large enough to matter after model error." },
+    { type: "chart", chart: { kind: "shap", title: "Athens price drivers to check before repricing" } },
+    { type: "text", text: "For a host, the practical rule is to move in steps: raise listings with a gap above roughly **€25-€40**, monitor conversion, and prioritise the **865** listings that are both underpriced and high-risk for coaching or review." },
+  ],
+  brief: { title: "Athens Revenue Action Brief", kpis: [
+    { label: "Underpriced listings", value: "2,945" }, { label: "Priority overlap", value: "865" },
+    { label: "Action", value: "Stepwise lift" }, { label: "Watch band", value: "€25-€40" },
+  ]},
+};
+
+SCRIPTS["market::Which Athens neighbourhoods offer the strongest short-term rental yield?"] = {
+  trace: [
+    T("Orchestrator", "routing to Market Entry Advisor"),
+    T("Yield Agent", "ranking Athens neighbourhoods"),
+    T("Risk Agent", "checking saturation discount"),
+    T("Orchestrator", "composing yield brief"),
+  ],
+  blocks: [
+    { type: "text", text: "**Pangrati is the strongest first look.** In the current ARIA yield view, Pangrati leads with **11.4% projected net short-term-rental yield**, followed by Kypseli and Mets." },
+    { type: "chart", chart: { kind: "yield", title: "Projected Athens short-term-rental yield" } },
+    { type: "text", text: "The consumer-friendly takeaway is simple: avoid choosing only by tourist fame. Core tourist zones can have high nightly prices but weaker net yield after saturation and regulatory pressure." },
+  ],
+  brief: { title: "Athens Yield Brief", kpis: [
+    { label: "Top area", value: "Pangrati" }, { label: "Yield", value: "11.4%" },
+    { label: "Runner-up", value: "Kypseli" }, { label: "Core caution", value: "Plaka" },
+  ]},
+};
+SCRIPTS["demand::Which Athens neighbourhoods offer the strongest short-term rental yield?"] = SCRIPTS["market::Which Athens neighbourhoods offer the strongest short-term rental yield?"];
+
+SCRIPTS["gentrification::Which Athens listings need attention first because they are high-risk and underpriced?"] = {
+  trace: [
+    T("Orchestrator", "routing to Gentrification Early Warning"),
+    T("Risk Agent", "loading LightGBM risk output"),
+    T("Pricing Agent", "intersecting with underpricing output"),
+    T("Orchestrator", "composing priority list"),
+  ],
+  blocks: [
+    { type: "text", text: "**Prioritise the overlap group first.** ARIA identifies **865 Athens listings** that are both underpriced and high-risk. These listings matter because they combine revenue upside with signs that the host or listing may need intervention." },
+    { type: "chart", chart: { kind: "riskbar", title: "Athens risk concentration by neighbourhood" } },
+    { type: "text", text: "This is the best first action queue for a service team: coach pricing where there is upside, but focus human attention where risk is also elevated." },
+  ],
+  brief: { title: "Athens Priority Intervention Brief", kpis: [
+    { label: "Priority listings", value: "865" }, { label: "High-risk threshold", value: "0.70" },
+    { label: "Use case", value: "Host coaching" }, { label: "City", value: "Athens" },
+  ]},
+};
+SCRIPTS["crime::Which Athens listings need attention first because they are high-risk and underpriced?"] = SCRIPTS["gentrification::Which Athens listings need attention first because they are high-risk and underpriced?"];
+
+SCRIPTS["gentrification::Where is host risk highest in Athens?"] = {
+  trace: [
+    T("Orchestrator", "routing to Gentrification Early Warning"),
+    T("Risk Model", "grouping Athens risk scores"),
+    T("Visualization Agent", "mapping highest-risk neighbourhoods"),
+    T("Orchestrator", "composing host-risk brief"),
+  ],
+  blocks: [
+    { type: "text", text: "**Central Athens needs the closest monitoring.** The risk model flags **4,695 high-risk listings** overall, with central neighbourhoods carrying the strongest concentration of warning signals." },
+    { type: "chart", chart: { kind: "riskbar", title: "Athens high-risk signal by neighbourhood" } },
+    { type: "text", text: "Risk here means prioritisation for review: weak recent review velocity, high availability, host profile weakness, or related observable signs. It should guide analyst attention, not replace human judgement." },
+  ],
+  brief: { title: "Athens Host-Risk Brief", kpis: [
+    { label: "High-risk listings", value: "4,695" }, { label: "Threshold", value: "0.70" },
+    { label: "Top signal", value: "Central areas" }, { label: "Use", value: "Review queue" },
+  ]},
+};
+SCRIPTS["crime::Where is host risk highest in Athens?"] = SCRIPTS["gentrification::Where is host risk highest in Athens?"];
+
+SCRIPTS["market::Compare Paris vs Athens for a small short-term rental portfolio."] = {
+  trace: [
+    T("Orchestrator", "routing to Market Entry Advisor"),
+    T("Portfolio Agent", "comparing Paris and Athens summaries"),
+    T("Risk Agent", "checking saturation and regulation signals"),
+    T("Orchestrator", "composing portfolio brief"),
+  ],
+  blocks: [
+    { type: "text", text: "**Use Paris for scale and Athens for targeted upside.** Paris offers the larger market with **120,809 listings**, while Athens is smaller at **14,242 listings** but easier to explain through neighbourhood-level pricing and risk opportunities." },
+    { type: "chart", chart: { kind: "yield", title: "Athens yield benchmark for targeted upside" } },
+    { type: "text", text: "For a small portfolio, the practical answer is not either/or: start with a focused Athens value-add thesis, then use Paris eastern arrondissements as the scale pathway once the operating model is proven." },
+  ],
+  brief: { title: "Paris vs Athens Portfolio Brief", kpis: [
+    { label: "Paris scale", value: "120,809" }, { label: "Athens depth", value: "14,242" },
+    { label: "Athens play", value: "Yield" }, { label: "Paris play", value: "Scale" },
+  ]},
+};
+SCRIPTS["demand::Compare Paris vs Athens for a small short-term rental portfolio."] = SCRIPTS["market::Compare Paris vs Athens for a small short-term rental portfolio."];
+
 /* Generic fallback for free-form / unscripted prompts */
 function genericScript(agent, prompt) {
   return {
@@ -292,7 +433,7 @@ function genericScript(agent, prompt) {
       T("Orchestrator", "composing answer"),
     ],
     blocks: [
-      { type: "text", text: `Working from the ARIA master dataset (**135,051 listings × 96 columns** — Paris 120,809, Athens 14,242), here's how **${agent.name}** reads your question.\n\nI don't have a pre-scored brief for this exact query in demo mode, but the relevant signals — \`price_eur\`, \`dist_zone\`, \`risk score\`, and SHAP attributions — all point in a consistent direction. For a fully grounded, numbers-cited answer, switch off Demo mode in Settings and add a Gemini API key, or pick one of the suggested prompts to see a complete scripted analysis with charts.` },
+      { type: "text", text: `Working from the ARIA master dataset (**135,051 listings × 96 columns** — Paris 120,809, Athens 14,242), here's how **${agent.name}** reads your question.\n\nFor custom prompts, ARIA routes through the server-side Vertex AI backend and live GitHub project data when Vercel authentication is configured. Pick one of the suggested prompts for a polished scripted analysis, or type your own question for a grounded live response with KPIs, a chart, and expandable sources.` },
     ],
     brief: { title: `${agent.name} — Analysis`, kpis: [
       { label: "Master dataset", value: "135,051" }, { label: "Paris", value: "120,809" },
@@ -308,21 +449,21 @@ function getScript(agentId, prompt) {
 /* ---------- Seeded conversation history ---------- */
 const SEED_CONVERSATIONS = [
   { id: "c1", agentId: "host-revenue", title: "Underpricing vs neighbourhood", group: "Today",
-    prompt: "Why is my listing underpriced vs the neighbourhood?" },
-  { id: "c2", agentId: "demand", title: "Central Athens peak forecast", group: "Today",
-    prompt: "Forecast tourist-nights in central Athens for peak season" },
-  { id: "c3", agentId: "crime", title: "Top AML risk scores", group: "Today",
-    prompt: "Show the top AML risk scores with SHAP explanations" },
-  { id: "c4", agentId: "gentrification", title: "Athens displacement risk", group: "Yesterday",
-    prompt: "Which Athens neighbourhoods show displacement risk in the next 12 months?" },
-  { id: "c5", agentId: "market", title: "Paris supply-constrained zones", group: "Yesterday",
-    prompt: "Which Paris arrondissements are supply-constrained?" },
-  { id: "c6", agentId: "host-revenue", title: "Revenue simulation", group: "Previous 7 days",
-    prompt: "Simulate revenue: current vs recommended pricing" },
-  { id: "c7", agentId: "demand", title: "August infrastructure stress", group: "Previous 7 days",
-    prompt: "Which districts hit infrastructure stress in August?" },
-  { id: "c8", agentId: "market", title: "Athens yield ranking", group: "Previous 7 days",
-    prompt: "Rank Athens neighbourhoods by projected STR yield" },
+    prompt: "Is my Paris listing underpriced compared with similar listings?" },
+  { id: "c2", agentId: "host-revenue", title: "Athens revenue action", group: "Today",
+    prompt: "What price change could improve my Athens listing revenue?" },
+  { id: "c3", agentId: "market", title: "Paris investment area", group: "Today",
+    prompt: "Which Paris arrondissement is best for a new short-term rental investment?" },
+  { id: "c4", agentId: "market", title: "Paris saturation watch", group: "Yesterday",
+    prompt: "Which Paris areas look saturated and should I avoid?" },
+  { id: "c5", agentId: "market", title: "Athens yield ranking", group: "Yesterday",
+    prompt: "Which Athens neighbourhoods offer the strongest short-term rental yield?" },
+  { id: "c6", agentId: "gentrification", title: "High-risk underpriced queue", group: "Previous 7 days",
+    prompt: "Which Athens listings need attention first because they are high-risk and underpriced?" },
+  { id: "c7", agentId: "gentrification", title: "Athens host risk", group: "Previous 7 days",
+    prompt: "Where is host risk highest in Athens?" },
+  { id: "c8", agentId: "market", title: "Paris vs Athens portfolio", group: "Previous 7 days",
+    prompt: "Compare Paris vs Athens for a small short-term rental portfolio." },
 ];
 
 /* ---------- Theme palettes ----------
