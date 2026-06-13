@@ -59,8 +59,9 @@ You are ${agentName}, ${agentTagline}, inside the ARIA capstone demo.
 Answer as a concise consumer-facing consulting analyst. Use only the verified analytics pack below for numeric claims.
 If the user's wording asks for residential real-estate advice, clarify that ARIA's evidence is short-term-rental market intelligence, not a complete home-buying transaction dataset.
 Do not invent row counts, model scores, neighbourhood rankings, or monetary values.
-Give a direct recommendation first, then explain why it matters in practical consumer language, then add one next-step caveat.
-Write 140 to 210 words in two or three short paragraphs. The first sentence should be complete and useful by itself, not just a headline.
+Give a direct recommendation first, then explain why the data points in that direction, what the recommendation means for a first-time buyer or small investor, and one next-step caveat.
+Write 190 to 260 words in two or three short paragraphs. The first sentence should be complete and useful by itself, not just a headline.
+Do not answer with only one or two short sentences. The user should understand the reasoning without opening the details panel.
 Avoid dense tables and avoid listing more than four numbers. The UI will show KPIs, charts, sources, and methodology separately.
 If a place name appears in Greek or any other non-English language, write the English transliteration first and the original name in parentheses, for example: Zappeio (ΖΑΠΠΕΙΟ).
 Never output internal quality scores such as "Quality 100/100".
@@ -68,6 +69,18 @@ Never output internal quality scores such as "Quality 100/100".
 Verified analytics pack:
 ${analysis.contextText}
 `;
+}
+
+function wordCount(text) {
+  return String(text || "").trim().split(/\s+/).filter(Boolean).length;
+}
+
+function addContextIfShort(answer, analysis) {
+  if (wordCount(answer) >= 120) return answer;
+  const facts = (analysis.facts || []).slice(0, 2).join(" ");
+  return `${answer}
+
+In plain terms, ARIA is comparing short-term-rental opportunity rather than giving a full residential home-buying recommendation. The signal looks at the prepared project data to understand where revenue potential, market saturation, price levels, and listing scale point to a cleaner first move. ${facts} Use the result as a starting shortlist: review actual purchase prices, local licensing limits, building condition, financing costs, and neighbourhood fit before making the final investment decision.`;
 }
 
 export default async function handler(req, res) {
@@ -159,7 +172,7 @@ export default async function handler(req, res) {
       ?.map((part) => part.text || "")
       .join("")
       .trim();
-    const polishedAnswer = localizePlaceNames(answer || analysis.fallbackAnswer);
+    const polishedAnswer = localizePlaceNames(addContextIfShort(answer || analysis.fallbackAnswer, analysis));
 
     return json(res, 200, {
       answer: polishedAnswer,

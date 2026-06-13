@@ -622,8 +622,9 @@ function deterministicAnswer(analysis) {
   const facts = analysis.facts.slice(0, 3).join(" ");
   return localizePlaceNames(
     `Based on our short-term rental market analysis, ${analysis.recommendation} ` +
-    `This recommendation is grounded in the project dataset rather than a generic travel ranking. ${facts} ` +
-    `For a first investment, use this as a shortlist direction: compare actual purchase prices, local licensing rules, and property condition before committing.`
+    `This recommendation is grounded in the project dataset rather than a generic travel ranking, so it is focused on market-entry potential, pricing conditions, demand signals, and saturation risk. ${facts} ` +
+    `In practical terms, this gives you a starting point for where to search first and what to compare next. A stronger opportunity signal does not automatically mean every apartment in that area is a good deal; it means the area deserves earlier due diligence because the market conditions look more favourable in the data. ` +
+    `For a first investment, use this as a shortlist direction: compare actual purchase prices, local licensing rules, building quality, financing costs, and property condition before committing.`
   );
 }
 
