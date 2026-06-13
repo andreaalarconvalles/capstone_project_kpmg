@@ -8,17 +8,42 @@ const {
 const CC = ARIA.c;
 
 /* ---------- shared theme bits ---------- */
-const axisTick = () => ({ fill: CC.muted, fontSize: 11, letterSpacing: -0.2 });
+const axisTick = () => ({ fill: CC.muted, fontSize: 11, letterSpacing: 0 });
+
+function compactAxisLabel(value, max = 16) {
+  let label = String(value || "");
+  label = label.replace(/\s*\([^)]*\)\s*/g, " ").replace(/\s+/g, " ").trim();
+  label = label.replace(/\s+Arrondissement$/i, "");
+  if (label.length <= max) return label;
+  if (label.includes("-")) label = label.split("-")[0].trim();
+  if (label.length <= max) return label;
+  const words = label.split(" ").filter(Boolean);
+  if (words.length > 1) {
+    const twoWords = words.slice(0, 2).join(" ");
+    if (twoWords.length <= max) return twoWords;
+    label = words[0];
+  }
+  return label.length > max ? `${label.slice(0, max - 1)}…` : label;
+}
+
+function chartDataWithLabels(data, xKey, maxItems = 6) {
+  return data.slice(0, maxItems).map((d) => ({
+    ...d,
+    __axisLabel: compactAxisLabel(d[xKey]),
+    __fullLabel: d[xKey],
+  }));
+}
 
 function ChartTip({ active, payload, label, suffix = "", labelKey }) {
   if (!active || !payload || !payload.length) return null;
+  const labelText = labelKey ? payload[0].payload[labelKey] : label;
   return (
     <div style={{
       background: CC.s2, border: `1px solid ${CC.hair}`, borderRadius: 10,
       padding: "8px 11px", fontSize: 12.5, color: CC.ink, boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
       letterSpacing: -0.15,
     }}>
-      {label != null && <div style={{ color: CC.muted, marginBottom: 4 }}>{labelKey ? payload[0].payload[labelKey] : label}</div>}
+      {labelText != null && <div style={{ color: CC.muted, marginBottom: 4 }}>{labelText}</div>}
       {payload.map((p, i) => (
         <div key={i} style={{ display: "flex", alignItems: "center", gap: 7, marginTop: i ? 3 : 0 }}>
           <span style={{ width: 8, height: 8, borderRadius: 2, background: p.color || p.fill || CC.ink }} />
@@ -203,27 +228,27 @@ function ChartBlock({ chart }) {
     const xKey = chart.xKey || "label";
     const yKey = chart.yKey || "value";
     const yLabel = chart.yLabel || title || "Value";
-    const data = chart.data.slice(0, 8);
+    const data = chartDataWithLabels(chart.data, xKey, kind === "line" ? 8 : 6);
     if (kind === "line") {
       return (
         <ChartCard title={title || "Live analysis"}>
           <LineChart data={data} margin={{ left: 4, right: 16, top: 6, bottom: 2 }}>
             <CartesianGrid vertical={false} stroke={CC.s2} />
-            <XAxis dataKey={xKey} tick={axisTick()} axisLine={false} tickLine={false} interval={0} />
+            <XAxis dataKey="__axisLabel" tick={axisTick()} axisLine={false} tickLine={false} interval={0} tickMargin={8} height={34} />
             <YAxis tick={axisTick()} axisLine={false} tickLine={false} width={42} />
-            <Tooltip cursor={{ stroke: CC.hair }} content={<ChartTip labelKey={xKey} />} />
+            <Tooltip cursor={{ stroke: CC.hair }} content={<ChartTip labelKey="__fullLabel" />} />
             <Line type="monotone" dataKey={yKey} name={yLabel} stroke={CC.violet} strokeWidth={2.5} dot={{ r: 2.5, fill: CC.violet }} />
           </LineChart>
         </ChartCard>
       );
     }
     return (
-      <ChartCard title={title || "Live analysis"} height={232}>
-        <BarChart data={data} margin={{ left: 4, right: 16, top: 8, bottom: 2 }} barCategoryGap="28%">
+      <ChartCard title={title || "Live analysis"} height={252}>
+        <BarChart data={data} margin={{ left: 4, right: 16, top: 8, bottom: 14 }} barCategoryGap="32%">
           <CartesianGrid vertical={false} stroke={CC.s2} />
-          <XAxis dataKey={xKey} tick={axisTick()} axisLine={false} tickLine={false} interval={0} />
+          <XAxis dataKey="__axisLabel" tick={axisTick()} axisLine={false} tickLine={false} interval={0} tickMargin={8} height={36} />
           <YAxis tick={axisTick()} axisLine={false} tickLine={false} width={42} />
-          <Tooltip cursor={{ fill: "rgba(128,128,128,0.09)" }} content={<ChartTip labelKey={xKey} />} />
+          <Tooltip cursor={{ fill: "rgba(128,128,128,0.09)" }} content={<ChartTip labelKey="__fullLabel" />} />
           <Bar dataKey={yKey} name={yLabel} radius={[5, 5, 0, 0]} isAnimationActive>
             {data.map((_, i) => <Cell key={i} fill={i === 0 ? CC.violet : `${CC.violet}99`} />)}
           </Bar>
