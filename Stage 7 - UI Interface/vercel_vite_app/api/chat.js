@@ -60,15 +60,16 @@ Answer as a concise consumer-facing consulting analyst. Use only the verified an
 If the user's wording asks for residential real-estate advice, clarify that ARIA's evidence is short-term-rental market intelligence, not a complete home-buying transaction dataset.
 Do not invent row counts, model scores, neighbourhood rankings, or monetary values.
 Structure the answer with short, human-readable sections separated by blank lines:
-**Recommendation:** one clear recommendation in 1-2 sentences.
-**Why this makes sense:** explain the key evidence in plain language.
-**What this means for you:** translate the result into a practical buyer or small-investor takeaway.
-**Next step:** one caution or due-diligence action.
+Recommendation: one clear recommendation in 1-2 sentences.
+Why this makes sense: explain the key evidence in plain language.
+What this means for you: translate the result into a practical buyer or small-investor takeaway.
+Next step: one caution or due-diligence action.
 Write 190 to 260 words total. Each section should be short, but do not collapse everything into one paragraph.
 Do not answer with only one or two short sentences. The user should understand the reasoning without opening the details panel.
 Avoid dense tables and avoid listing more than four numbers. The UI will show KPIs, charts, sources, and methodology separately.
 If a place name appears in Greek or any other non-English language, write the English transliteration first and the original name in parentheses, for example: Zappeio (ΖΑΠΠΕΙΟ).
 Never output internal quality scores such as "Quality 100/100".
+Do not use Markdown bold markers or asterisks around section labels.
 
 Verified analytics pack:
 ${analysis.contextText}
@@ -79,16 +80,22 @@ function wordCount(text) {
   return String(text || "").trim().split(/\s+/).filter(Boolean).length;
 }
 
+function sanitizeAnswer(text) {
+  return String(text || "")
+    .replace(/\*\*([^*]+)\*\*/g, "$1")
+    .replace(/\*\*/g, "");
+}
+
 function addContextIfShort(answer, analysis) {
   if (wordCount(answer) >= 120) return answer;
   const facts = (analysis.facts || []).slice(0, 2).join(" ");
   return `${answer}
 
-**Why this makes sense:** ARIA is comparing short-term-rental opportunity rather than giving a full residential home-buying recommendation. The signal looks at the prepared project data to understand where revenue potential, market saturation, price levels, and listing scale point to a cleaner first move. ${facts}
+Why this makes sense: ARIA is comparing short-term-rental opportunity rather than giving a full residential home-buying recommendation. The signal looks at the prepared project data to understand where revenue potential, market saturation, price levels, and listing scale point to a cleaner first move. ${facts}
 
-**What this means for you:** Use the result as a starting shortlist, not as a final purchase decision. A stronger opportunity signal means the area deserves earlier research because the rental-market conditions look more favourable in the project data.
+What this means for you: Use the result as a starting shortlist, not as a final purchase decision. A stronger opportunity signal means the area deserves earlier research because the rental-market conditions look more favourable in the project data.
 
-**Next step:** Review actual purchase prices, local licensing limits, building condition, financing costs, and neighbourhood fit before making the final investment decision.`;
+Next step: Review actual purchase prices, local licensing limits, building condition, financing costs, and neighbourhood fit before making the final investment decision.`;
 }
 
 export default async function handler(req, res) {
@@ -180,7 +187,7 @@ export default async function handler(req, res) {
       ?.map((part) => part.text || "")
       .join("")
       .trim();
-    const polishedAnswer = localizePlaceNames(addContextIfShort(answer || analysis.fallbackAnswer, analysis));
+    const polishedAnswer = sanitizeAnswer(localizePlaceNames(addContextIfShort(answer || analysis.fallbackAnswer, analysis)));
 
     return json(res, 200, {
       answer: polishedAnswer,

@@ -339,7 +339,7 @@ function App() {
         kpis: Array.isArray(j.kpis) && j.kpis.length ? j.kpis.slice(0, 4) : brief.kpis,
       };
     } catch (e) {
-      text = `**Live analysis needs attention:** ${e.message}\n\nThe UI is correctly routing custom prompts to the backend. Check Vercel Vertex authentication and GitHub data access, and keep using the suggested prompts for scripted demo responses while the live path is being configured.`;
+      text = `Live analysis needs attention: ${e.message}\n\nThe UI is correctly routing custom prompts to the backend. Check Vercel Vertex authentication and GitHub data access, and keep using the suggested prompts for scripted demo responses while the live path is being configured.`;
       blocks = [{ type: "text", text }];
     }
     if (cancelRef.current) return;
