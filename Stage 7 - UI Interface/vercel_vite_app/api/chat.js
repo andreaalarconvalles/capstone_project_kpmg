@@ -3,8 +3,9 @@ import { buildGroundedAnalysis, localizePlaceNames } from "./analytics-pipeline.
 
 const CLOUD_PLATFORM_SCOPE = "https://www.googleapis.com/auth/cloud-platform";
 const DEFAULT_LOCATION = "europe-west1";
-const DEFAULT_MODEL = "gemini-2.5-flash";
+const DEFAULT_MODEL = "gemini-2.5-pro";
 const PARIS_ARRONDISSEMENTS_GEOJSON_URL = "https://geo.api.gouv.fr/communes?codeDepartement=75&type=arrondissement-municipal&format=geojson&geometry=contour";
+const ANTHROPIC_VERTEX_VERSION = "vertex-2023-10-16";
 
 function json(res, status, payload) {
   res.status(status).setHeader("Content-Type", "application/json");
@@ -46,11 +47,101 @@ async function getAccessToken() {
   return typeof token === "string" ? token : token?.token;
 }
 
+function modelProvider(model) {
+  return String(model || "").startsWith("claude-") ? "anthropic" : "google";
+}
+
 function endpointFor({ projectId, location, model }) {
   const host = location === "global"
     ? "aiplatform.googleapis.com"
     : `${location}-aiplatform.googleapis.com`;
-  return `https://${host}/v1/projects/${projectId}/locations/${location}/publishers/google/models/${model}:generateContent`;
+  const provider = modelProvider(model);
+  const method = provider === "anthropic" ? "rawPredict" : "generateContent";
+  return `https://${host}/v1/projects/${projectId}/locations/${location}/publishers/${provider}/models/${model}:${method}`;
+}
+
+async function callGeminiVertex({ accessToken, projectId, location, model, prompt, systemPrompt }) {
+  const vertexRes = await fetch(endpointFor({ projectId, location, model }), {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      systemInstruction: {
+        parts: [{ text: systemPrompt }],
+      },
+      contents: [
+        { role: "user", parts: [{ text: prompt }] },
+      ],
+      generationConfig: {
+        temperature: 0.35,
+        maxOutputTokens: 900,
+      },
+    }),
+  });
+
+  const data = await vertexRes.json();
+  if (!vertexRes.ok) {
+    const error = new Error(data?.error?.message || "Vertex AI request failed.");
+    error.status = vertexRes.status;
+    error.details = data?.error || data;
+    throw error;
+  }
+
+  const candidate = data?.candidates?.[0];
+  const answer = candidate?.content?.parts
+    ?.map((part) => part.text || "")
+    .join("")
+    .trim();
+  return {
+    answer,
+    finishReason: candidate?.finishReason || "",
+  };
+}
+
+async function callClaudeVertex({ accessToken, projectId, location, model, prompt, systemPrompt }) {
+  const vertexRes = await fetch(endpointFor({ projectId, location, model }), {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${accessToken}`,
+      "Content-Type": "application/json; charset=utf-8",
+    },
+    body: JSON.stringify({
+      anthropic_version: ANTHROPIC_VERTEX_VERSION,
+      system: systemPrompt,
+      messages: [
+        { role: "user", content: prompt },
+      ],
+      temperature: 0.35,
+      max_tokens: 900,
+      stream: false,
+    }),
+  });
+
+  const data = await vertexRes.json();
+  if (!vertexRes.ok) {
+    const error = new Error(data?.error?.message || "Vertex AI request failed.");
+    error.status = vertexRes.status;
+    error.details = data?.error || data;
+    throw error;
+  }
+
+  const answer = Array.isArray(data?.content)
+    ? data.content.map((part) => typeof part === "string" ? part : (part?.text || "")).join("").trim()
+    : String(data?.completion || data?.text || "").trim();
+
+  return {
+    answer,
+    finishReason: data?.stop_reason || "",
+  };
+}
+
+async function callVertexModel({ accessToken, projectId, location, model, prompt, systemPrompt }) {
+  if (modelProvider(model) === "anthropic") {
+    return callClaudeVertex({ accessToken, projectId, location, model, prompt, systemPrompt });
+  }
+  return callGeminiVertex({ accessToken, projectId, location, model, prompt, systemPrompt });
 }
 
 function buildSystemPrompt({ agentName, agentTagline, analysis }) {
@@ -266,43 +357,9 @@ export default async function handler(req, res) {
     const accessToken = await getAccessToken();
     if (!accessToken) throw new Error("Could not create a Google Cloud access token.");
 
-    const vertexRes = await fetch(endpointFor({ projectId, location, model }), {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        systemInstruction: {
-          parts: [{ text: buildSystemPrompt({ agentName, agentTagline, analysis }) }],
-        },
-        contents: [
-          { role: "user", parts: [{ text: prompt }] },
-        ],
-        generationConfig: {
-          temperature: 0.35,
-          maxOutputTokens: 900,
-        },
-      }),
-    });
-
-    const data = await vertexRes.json();
-    if (!vertexRes.ok) {
-      return json(res, vertexRes.status, {
-        error: data?.error?.message || "Vertex AI request failed.",
-        details: data?.error || data,
-        projectId,
-        location,
-        model,
-      });
-    }
-
-    const candidate = data?.candidates?.[0];
-    const answer = candidate?.content?.parts
-      ?.map((part) => part.text || "")
-      .join("")
-      .trim();
-    const rawAnswer = candidate?.finishReason === "MAX_TOKENS" ? analysis.fallbackAnswer : (answer || analysis.fallbackAnswer);
+    const systemPrompt = buildSystemPrompt({ agentName, agentTagline, analysis });
+    const vertex = await callVertexModel({ accessToken, projectId, location, model, prompt, systemPrompt });
+    const rawAnswer = vertex.finishReason === "MAX_TOKENS" ? analysis.fallbackAnswer : (vertex.answer || analysis.fallbackAnswer);
     const fallbackAnswer = sanitizeAnswer(localizePlaceNames(addContextIfShort(analysis.fallbackAnswer, analysis)));
     const primaryAnswer = sanitizeAnswer(localizePlaceNames(addContextIfShort(rawAnswer, analysis)));
     const polishedAnswer = completeAnswerSections(primaryAnswer, fallbackAnswer) || fallbackAnswer;
@@ -319,8 +376,9 @@ export default async function handler(req, res) {
       model,
     });
   } catch (error) {
-    return json(res, 500, {
+    return json(res, error.status || 500, {
       error: error.message || "Unexpected Vertex AI backend error.",
+      details: error.details,
       projectId,
       location,
       model,

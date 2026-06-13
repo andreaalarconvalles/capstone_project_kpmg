@@ -10,7 +10,7 @@ The current public demo is deployed through Vercel from `vercel_vite_app/`, pres
 Claude Design layout, styling, animations, sidebar, composer, model picker, and agent
 experience in a Vite React build. Custom typed prompts route through the Vercel
 `/api/chat` function, which loads live GitHub project data, computes deterministic analytics,
-and uses Vertex AI Gemini for the final consumer-friendly explanation.
+and uses Vertex AI models for the final consumer-friendly explanation.
 
 Five KPMG-proposed agents on one interface, each selectable like a custom GPT:
 
@@ -136,14 +136,17 @@ python -m http.server 8000
   XGBoost pricing · LightGBM risk · SHAP explainability.
 - **Live custom prompts:** suggested prompts keep the scripted demo answers. Any other typed
   prompt calls `/api/chat`, which uses public raw GitHub CSV files by default, optional
-  `GITHUB_TOKEN` for rate limits, runtime caching, deterministic analytics, and Vertex AI Gemini
-  (`gemini-2.5-flash` by default, `gemini-2.5-pro` available in the model picker).
+  `GITHUB_TOKEN` for rate limits, runtime caching, deterministic analytics, and Vertex AI
+  model routing. Gemini 2.5 Pro is the default in every fresh session; Gemini 2.5 Flash,
+  Gemini 3.5 Flash, Gemini 3.1 Pro, Claude Sonnet 4.6, and Claude Opus 4.7 are also exposed
+  in the model picker.
 - **Authentication:** the user can enter the Vertex project ID and project number in Settings,
   but the actual Google Cloud service-account credential must stay server-side in Vercel as
   `GOOGLE_APPLICATION_CREDENTIALS_JSON`. The sidebar masks the project details with asterisks.
 
-The model picker also exposes the project's own ML engines: **XGBoost Pricing v1**,
-**LightGBM Risk v1**, and **Prophet Forecast**.
+The Claude options use the Vertex AI Anthropic partner-model route in `/api/chat`, while the
+Gemini options use the Google `generateContent` route. The model picker also exposes the
+project's own ML engines: **XGBoost Pricing v1**, **LightGBM Risk v1**, and **Prophet Forecast**.
 
 The backend response contract is structured: `answer`, `intent`, `kpis`, `visualizations`,
 `details`, and `sources`. The UI renders the answer first, centers the KPI cards, selects the

@@ -12,7 +12,7 @@
 - **Cities:** Paris (120,809 listings: 63,520 Maven 2021 + 57,289 IAB 2025) · Athens (14,242 listings) · Total 135,051
 - **Master dataset:** `aria_mega_dataset_v4_1_final.csv` — 135,051 listings × 96 columns
 - **Models:** XGBoost price prediction (Paris + Athens) · LightGBM risk classification (Athens)
-- **Stack:** Python · Jupyter · XGBoost · LightGBM · Prophet · LangGraph · ChromaDB · Streamlit · Vite React · Vercel Functions · Vertex AI Gemini · Leaflet/OpenStreetMap · SHAP · Optuna · Pandas · Seaborn · ReportLab
+- **Stack:** Python · Jupyter · XGBoost · LightGBM · Prophet · LangGraph · ChromaDB · Streamlit · Vite React · Vercel Functions · Vertex AI Gemini/Claude partner models · Leaflet/OpenStreetMap · SHAP · Optuna · Pandas · Seaborn · ReportLab
 - **GitHub repo:** https://github.com/lukatcheishvili/capstone_project_kpmg
 
 ---
@@ -353,7 +353,7 @@ Start every new conversation by reading this file, then inspect `README.md` and 
 
 The live demo is the Vercel React app at: https://capstone-project-kpmg-git-main-lukatcheishvilis-projects.vercel.app/
 
-The active UI/backend code lives in `Stage 7 - UI Interface/vercel_vite_app/`. The custom-prompt path is `api/chat.js` plus `api/analytics-pipeline.js`: it fetches committed GitHub CSV outputs, computes deterministic analytics, calls Vertex AI Gemini server-side, and returns structured `answer`, `kpis`, `visualizations`, `details`, and `sources`.
+The active UI/backend code lives in `Stage 7 - UI Interface/vercel_vite_app/`. The custom-prompt path is `api/chat.js` plus `api/analytics-pipeline.js`: it fetches committed GitHub CSV outputs, computes deterministic analytics, calls Vertex AI server-side, and returns structured `answer`, `kpis`, `visualizations`, `details`, and `sources`. Gemini 2.5 Pro is the default model for every fresh session; the picker also exposes Gemini 2.5 Flash, Gemini 3.5 Flash, Gemini 3.1 Pro, Claude Sonnet 4.6, and Claude Opus 4.7. Gemini models use the Google `generateContent` route; Claude models use the Vertex AI Anthropic partner `rawPredict` route.
 
 Keep the scripted prompt experience polished as the demo fallback. Typed custom prompts should use grounded live data when Vertex authentication is configured, with the workflow folded by default, no internal quality score displayed, no raw snake_case labels, no repeated KPI cards, and readable sectioned answers.
 
@@ -420,3 +420,4 @@ Remaining roadmap: finalize Phase 4 Prophet forecasting, implement the Phase 5 R
 - [2026-06-13] Session 49: Upgraded PDF brief export to capture generated visual context, then switched the map basemap to a CARTO light OpenStreetMap-derived layer for a cleaner, more English-friendly demo view.
 - [2026-06-13] Session 50: Renamed the canonical project operating manual from `CLAUDE.md` to `agent.md`, updated documentation references, and added a current handoff section for future LLM/agent sessions.
 - [2026-06-13] Session 51: Added a composer-level `Chat brief` export beside the model picker so users can generate a PDF-ready brief for the full active conversation while keeping the existing per-answer export buttons.
+- [2026-06-13] Session 52: Expanded the UI model picker and Settings default model list with Gemini 3.5 Flash, Gemini 3.1 Pro, Claude Sonnet 4.6, and Claude Opus 4.7, while making Gemini 2.5 Pro the default every fresh session. Updated `/api/chat` so Gemini models use the Google Vertex `generateContent` route and Claude models use the Anthropic partner `rawPredict` route.

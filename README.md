@@ -16,7 +16,7 @@ ARIA targets three primary personas:
 - **Host / property manager** — am I priced correctly, is my listing declining, what should I improve
 - **Real estate developer / PE fund** — where is the supply shock opportunity, what is the entry price
 
-The system combines validated machine learning outputs, a Vercel React chat interface, and a server-side Vertex AI backend. Scripted prompts stay available for polished demos, while custom prompts use live GitHub CSV outputs, deterministic analytics, one consumer-friendly visualization, and an expandable methodology/source panel. It covers **135,051 listings** across Paris and Athens.
+The system combines validated machine learning outputs, a Vercel React chat interface, and a server-side Vertex AI backend. Scripted prompts stay available for polished demos, while custom prompts use live GitHub CSV outputs, deterministic analytics, one consumer-friendly visualization, and an expandable methodology/source panel. Gemini 2.5 Pro is the default narrative model in the UI, with additional Gemini and Claude-on-Vertex options available from the model picker. It covers **135,051 listings** across Paris and Athens.
 
 ---
 
@@ -263,7 +263,7 @@ Output files: `lgb_athens_risk_v1.txt` · `athens_risk_scores_v1.csv`
 ### Phase 7 — Streamlit MVP (Member 5)
 **Location:** `app/` (3-tab persona MVP) · `Stage 7 - UI Interface/` (agent-chat UI)
 
-> **Built — Vercel agent-chat UI (`Stage 7 - UI Interface/`):** a ChatGPT-style multi-agent interface implemented from the Claude Design handoff. It surfaces 5 KPMG agents (Host Revenue, Gentrification Early Warning, STR Financial Crime, Tourism Demand, Market Entry), 8 scripted demo prompts with a show-more control, KPI cards from recent analyses, image upload previews, theme switching, a settings modal, persistent browser conversations, LangGraph-style folded reasoning traces, adaptive charts, real Leaflet map overlays for supported geographic prompts, enhanced PDF brief export, and server-side Vertex AI custom-prompt support through `/api/chat`. The legacy Streamlit host remains available as an optional wrapper for the original prototype.
+> **Built — Vercel agent-chat UI (`Stage 7 - UI Interface/`):** a ChatGPT-style multi-agent interface implemented from the Claude Design handoff. It surfaces 5 KPMG agents (Host Revenue, Gentrification Early Warning, STR Financial Crime, Tourism Demand, Market Entry), 8 scripted demo prompts with a show-more control, KPI cards from recent analyses, image upload previews, theme switching, a settings modal, persistent browser conversations, LangGraph-style folded reasoning traces, adaptive charts, real Leaflet map overlays for supported geographic prompts, enhanced PDF brief export, and server-side Vertex AI custom-prompt support through `/api/chat`. Gemini 2.5 Pro is the default model, with Gemini Flash/preview and Claude partner-model options also selectable. The legacy Streamlit host remains available as an optional wrapper for the original prototype.
 
 **What to build:** A 3-tab Streamlit application that serves the three personas. This tab **can be started now** using the existing CSV outputs from Phases 2 and 3 — it does not require Phase 4, 5, or 6 to be complete.
 

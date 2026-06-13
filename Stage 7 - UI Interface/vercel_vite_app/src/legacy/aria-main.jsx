@@ -306,7 +306,7 @@ function App() {
   const [modelId, setModelId] = useState("gemini-2.5-pro");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settings, setSettings] = useState({
-    apiKey: "", project: "capstoneprojectkpmg", projectNumber: "52102703097", region: "europe-west1", defaultModel: "gemini-2.5-flash", demoMode: true,
+    apiKey: "", project: "capstoneprojectkpmg", projectNumber: "52102703097", region: "europe-west1", defaultModel: "gemini-2.5-pro", demoMode: true,
   });
   const [live, setLive] = useState(null); // { convId, msg }
   const cancelRef = useRef(false);

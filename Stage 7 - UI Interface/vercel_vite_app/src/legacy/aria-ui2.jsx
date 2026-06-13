@@ -467,8 +467,12 @@ function SettingsModal({ open, onClose, settings, setSettings }) {
                 <div>
                   <label style={labelS}>Default model</label>
                   <select value={settings.defaultModel} onChange={(e) => { set("defaultModel", e.target.value); setTestState("idle"); }} className="aria-focus" style={{ ...field, appearance: "none" }}>
-                    <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
                     <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
+                    <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+                    <option value="gemini-3.5-flash">Gemini 3.5 Flash</option>
+                    <option value="gemini-3.1-pro-preview">Gemini 3.1 Pro</option>
+                    <option value="claude-sonnet-4-6">Claude Sonnet 4.6</option>
+                    <option value="claude-opus-4-7">Claude Opus 4.7</option>
                   </select>
                 </div>
               </div>
