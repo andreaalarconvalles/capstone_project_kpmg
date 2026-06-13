@@ -281,6 +281,7 @@ function regionColor(t, tone) {
 const MAP_W = 720;
 const MAP_H = 382;
 const TILE = 256;
+const CARTO_LIGHT_TILE_BASE = "https://a.basemaps.cartocdn.com/light_all";
 
 const CITY_OUTLINES = {
   Paris: [
@@ -310,7 +311,7 @@ function projectLatLon(lat, lon, zoom) {
 function tileUrl(x, y, z) {
   const n = Math.pow(2, z);
   const wrappedX = ((x % n) + n) % n;
-  return `https://tile.openstreetmap.org/${z}/${wrappedX}/${y}.png`;
+  return `${CARTO_LIGHT_TILE_BASE}/${z}/${wrappedX}/${y}.png`;
 }
 
 function mapState(chart) {
@@ -480,7 +481,7 @@ function RegionMapCard({ chart }) {
           border: `1px solid ${CC.hair}`, borderRadius: 999, padding: "6px 10px",
           color: CC.muted, fontSize: 11.5, boxShadow: "0 8px 22px rgba(0,0,0,0.22)",
         }}>
-          Map data © OpenStreetMap · ARIA overlays
+          Basemap © CARTO · © OpenStreetMap · ARIA overlays
         </div>
       </div>
       <div style={{

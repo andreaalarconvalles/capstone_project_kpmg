@@ -16,6 +16,8 @@ const DEFAULT_COLORS = {
 
 const DEFAULT_REGION_ID_PROPERTY = "regionId";
 const DEFAULT_REGION_NAME_PROPERTY = "regionName";
+const CARTO_LIGHT_TILE_URL = "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
+const CARTO_LIGHT_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>';
 
 function themeColor(name, fallback) {
   if (typeof window === "undefined") return fallback;
@@ -445,7 +447,7 @@ function AttributionNote({ theme }) {
         boxShadow: "0 8px 22px rgba(0,0,0,0.14)",
       }}
     >
-      Map data (c) OpenStreetMap - ARIA geographic overlays
+      Basemap (c) CARTO + OpenStreetMap - ARIA geographic overlays
     </div>
   );
 }
@@ -566,8 +568,8 @@ function AriaGeoMap({
             attributionControl
           >
             <TileLayer
-              url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              url={CARTO_LIGHT_TILE_URL}
+              attribution={CARTO_LIGHT_ATTRIBUTION}
             />
             {pointMetrics.map((point) => (
               <CircleMarker
@@ -686,8 +688,8 @@ function AriaGeoMap({
           attributionControl
         >
           <TileLayer
-            url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            url={CARTO_LIGHT_TILE_URL}
+            attribution={CARTO_LIGHT_ATTRIBUTION}
           />
           <GeoJSON
             key={layerKey}
