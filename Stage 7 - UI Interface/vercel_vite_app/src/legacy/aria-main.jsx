@@ -514,11 +514,6 @@ function App() {
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
         {/* top bar */}
         <div className="no-print" style={{ height: 52, flexShrink: 0, display: "flex", alignItems: "center", gap: 10, padding: "0 18px", borderBottom: `1px solid ${CA.hairSoft}` }}>
-          <AgentTile accent={agent.accent} icon={agent.icon} size={26} radius={8} iconSize={14} />
-          <div style={{ display: "flex", alignItems: "baseline", gap: 7, minWidth: 0, flexShrink: 1, overflow: "hidden" }}>
-            <span style={{ fontSize: 14.5, fontWeight: 500, whiteSpace: "nowrap" }}>{agent.name}</span>
-            <span style={{ fontSize: 12.5, color: CA.muted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>· {agent.tagline}</span>
-          </div>
           <div ref={themeMenuRef} style={{ marginLeft: "auto", flexShrink: 0, position: "relative" }}>
             <button className="aria-focus" onClick={() => setThemeMenuOpen((v) => !v)}
               title="Change theme"

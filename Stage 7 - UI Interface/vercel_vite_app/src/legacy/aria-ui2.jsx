@@ -478,6 +478,9 @@ function SettingsModal({ open, onClose, settings, setSettings }) {
               <p style={{ marginTop: 0 }}>
                 <strong>ARIA</strong> (Airbnb Revenue Intelligence &amp; Analytics) is a multi-agent platform that unifies five proposed KPMG AI systems — host revenue, gentrification early-warning, STR financial-crime detection, tourism demand forecasting, and market-entry advisory — over one master dataset of <strong>135,051 listings × 96 columns</strong> (Paris 120,809 · Athens 14,242), with XGBoost pricing, LightGBM risk, and SHAP explainability.
               </p>
+              <p>
+                The website interface was designed with guidance from the project group members and built with support from Codex and Claude Code.
+              </p>
               <p style={{ color: C2.muted, marginBottom: 0 }}>IE Business School × KPMG Spain — Capstone 2026.</p>
             </div>
           )}
