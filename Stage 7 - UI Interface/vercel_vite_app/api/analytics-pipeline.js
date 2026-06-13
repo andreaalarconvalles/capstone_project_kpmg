@@ -400,6 +400,54 @@ function normaliseCityName(city) {
   return city || "";
 }
 
+function promptTokens(text) {
+  return String(text || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .match(/[a-z]+/g) || [];
+}
+
+function editDistance(a, b) {
+  const left = String(a || "");
+  const right = String(b || "");
+  const dp = Array.from({ length: left.length + 1 }, () => Array(right.length + 1).fill(0));
+  for (let i = 0; i <= left.length; i += 1) dp[i][0] = i;
+  for (let j = 0; j <= right.length; j += 1) dp[0][j] = j;
+  for (let i = 1; i <= left.length; i += 1) {
+    for (let j = 1; j <= right.length; j += 1) {
+      const cost = left[i - 1] === right[j - 1] ? 0 : 1;
+      dp[i][j] = Math.min(
+        dp[i - 1][j] + 1,
+        dp[i][j - 1] + 1,
+        dp[i - 1][j - 1] + cost
+      );
+    }
+  }
+  return dp[left.length][right.length];
+}
+
+const CITY_ALIASES = {
+  Paris: new Set(["paris", "pari", "pariss"]),
+  Athens: new Set(["athens", "athen", "athns", "athnes", "athans", "athina", "athenas"]),
+};
+
+function cityMentionsFromPrompt(prompt) {
+  const tokens = promptTokens(prompt);
+  const mentions = new Set();
+  for (const token of tokens) {
+    if (CITY_ALIASES.Paris.has(token)) mentions.add("Paris");
+    if (CITY_ALIASES.Athens.has(token)) mentions.add("Athens");
+  }
+  if (mentions.size) return mentions;
+
+  for (const token of tokens) {
+    if (token.length >= 4 && editDistance(token, "paris") <= 1) mentions.add("Paris");
+    if (token.length >= 5 && editDistance(token, "athens") <= 2) mentions.add("Athens");
+  }
+  return mentions;
+}
+
 function topN(items, scoreKey, n = 6, desc = true) {
   return [...items]
     .filter((d) => Number.isFinite(num(d[scoreKey], NaN)))
@@ -450,7 +498,8 @@ function weightedAverage(sum, weight) {
 
 function classifyIntent(prompt, agentId) {
   const p = `${prompt} ${agentId}`.toLowerCase();
-  if (/(portfolio|paris.*athens|athens.*paris|50-unit|fifty-unit)/.test(p)) return "portfolio-comparison";
+  const cityMentions = cityMentionsFromPrompt(prompt);
+  if (/(portfolio|50-unit|fifty-unit)/.test(p) || cityMentions.has("Paris") && cityMentions.has("Athens")) return "portfolio-comparison";
   if (/(family|safe|safest|live|living|cheap|cheapest|affordable|budget|rent|rental)/.test(p)) return "market-entry";
   if (/(risk|high-risk|declin|vulnerab|priority|churn|warning)/.test(p)) return "risk";
   if (/(map|region|regions|area comparison|compare areas|compare regions|neighbourhoods|neighborhoods|arrondissements|districts|where in|which areas|which regions)/.test(p)) return "market-entry";
@@ -465,9 +514,9 @@ function classifyIntent(prompt, agentId) {
 }
 
 function cityFromPrompt(prompt) {
-  const p = prompt.toLowerCase();
-  if (p.includes("paris")) return "Paris";
-  if (p.includes("athens")) return "Athens";
+  const mentions = cityMentionsFromPrompt(prompt);
+  if (mentions.has("Paris") && !mentions.has("Athens")) return "Paris";
+  if (mentions.has("Athens") && !mentions.has("Paris")) return "Athens";
   return "";
 }
 
