@@ -116,8 +116,63 @@ function fmtScore(value, digits = 2) {
   return num(value).toFixed(digits);
 }
 
+const GREEK_PLACE_LABELS = new Map([
+  ["ΖΑΠΠΕΙΟ", "Zappeio"],
+  ["ΑΚΡΟΠΟΛΗ", "Akropoli"],
+  ["ΚΟΥΚΑΚΙ-ΜΑΚΡΥΓΙΑΝΝΗ", "Koukaki-Makrygianni"],
+  ["ΑΓΙΟΣ ΕΛΕΥΘΕΡΙΟΣ", "Agios Eleftherios"],
+  ["ΑΓΙΟΣ ΚΩΝΣΤΑΝΤΙΝΟΣ-ΠΛΑΤΕΙΑ ΒΑΘΗΣ", "Agios Konstantinos-Plateia Vathis"],
+  ["ΑΓΙΟΣ ΝΙΚΟΛΑΟΣ", "Agios Nikolaos"],
+]);
+
+const GREEK_CHARS = /[\u0370-\u03ff]/;
+
+function hasGreek(text) {
+  return GREEK_CHARS.test(String(text || ""));
+}
+
+function transliterateGreek(text) {
+  const map = {
+    Α: "A", Β: "V", Γ: "G", Δ: "D", Ε: "E", Ζ: "Z", Η: "I", Θ: "Th", Ι: "I", Κ: "K", Λ: "L", Μ: "M",
+    Ν: "N", Ξ: "X", Ο: "O", Π: "P", Ρ: "R", Σ: "S", Τ: "T", Υ: "Y", Φ: "F", Χ: "Ch", Ψ: "Ps", Ω: "O",
+    Ά: "A", Έ: "E", Ή: "I", Ί: "I", Ό: "O", Ύ: "Y", Ώ: "O", Ϊ: "I", Ϋ: "Y",
+    α: "a", β: "v", γ: "g", δ: "d", ε: "e", ζ: "z", η: "i", θ: "th", ι: "i", κ: "k", λ: "l", μ: "m",
+    ν: "n", ξ: "x", ο: "o", π: "p", ρ: "r", σ: "s", ς: "s", τ: "t", υ: "y", φ: "f", χ: "ch", ψ: "ps", ω: "o",
+    ά: "a", έ: "e", ή: "i", ί: "i", ό: "o", ύ: "y", ώ: "o", ϊ: "i", ϋ: "y", ΐ: "i", ΰ: "y",
+  };
+  return String(text || "").split("").map((ch) => map[ch] || ch).join("");
+}
+
+function titleCaseArea(text) {
+  return String(text || "")
+    .toLowerCase()
+    .split(/([ -])/)
+    .map((part) => /^[a-z]/.test(part) ? part.charAt(0).toUpperCase() + part.slice(1) : part)
+    .join("");
+}
+
+function displayArea(name) {
+  const cleaned = String(name || "Unknown").replace(/ Arrondissement$/i, "").trim();
+  if (!hasGreek(cleaned)) return cleaned;
+  const upper = cleaned.toUpperCase();
+  const english = GREEK_PLACE_LABELS.get(upper) || titleCaseArea(transliterateGreek(cleaned));
+  return `${english} (${cleaned})`;
+}
+
 function shortArea(name) {
-  return String(name || "Unknown").replace(/ Arrondissement$/i, "").trim();
+  return displayArea(name);
+}
+
+export function localizePlaceNames(text) {
+  let out = String(text || "");
+  for (const [original, english] of GREEK_PLACE_LABELS.entries()) {
+    const replacement = `${english} (${original})`;
+    const bare = new RegExp(original, "g");
+    out = out.replace(bare, replacement);
+    out = out.replace(new RegExp(`${english} \\(${english} \\(${original}\\)\\)`, "g"), replacement);
+    out = out.replace(new RegExp(`${english} \\(${original}\\) \\(${original}\\)`, "g"), replacement);
+  }
+  return out;
 }
 
 function normaliseCityName(city) {
@@ -357,12 +412,12 @@ async function marketAnalysis(prompt) {
     intent: "market-entry",
     title: `${city} market-entry recommendation`,
     recommendation: saturated
-      ? `Avoid starting with ${best.area}; it has the strongest saturation signal among the ${city} areas in the project data.`
-      : `Start with ${best.area}; it has the strongest opportunity signal among the ${city} areas in the project data.`,
+      ? `Avoid starting with ${shortArea(best.area)}; it has the strongest saturation signal among the ${city} areas in the project data.`
+      : `Start with ${shortArea(best.area)}; it has the strongest opportunity signal among the ${city} areas in the project data.`,
     facts: [
       `${city} has ${fmtInt(totalListings)} listings represented in neighbourhood summary data.`,
-      `${best.area} has an opportunity score of ${fmtScore(best.opportunity)} and saturation score of ${fmtScore(best.saturation)}.`,
-      `Median nightly price in ${best.area} is ${fmtEuro(best.medianPrice)} with average annual revenue around ${fmtEuro(best.revenue)}.`,
+      `${shortArea(best.area)} has an opportunity score of ${fmtScore(best.opportunity)} and saturation score of ${fmtScore(best.saturation)}.`,
+      `Median nightly price in ${shortArea(best.area)} is ${fmtEuro(best.medianPrice)} with average annual revenue around ${fmtEuro(best.revenue)}.`,
     ],
     kpis: [
       { label: saturated ? "Highest saturation" : "Best opportunity", value: shortArea(best.area) },
@@ -379,7 +434,7 @@ async function marketAnalysis(prompt) {
       [FILES.neighbourhoodStats],
       "Rank neighbourhoods using the prepared neighbourhood summary table, prioritising opportunity score unless the user asks about saturation or areas to avoid.",
       ["This is short-term-rental market intelligence, not a complete home-purchase or mortgage dataset."],
-      ranked.map((r) => `${r.area}: opportunity ${fmtScore(r.opportunity)}, saturation ${fmtScore(r.saturation)}, median price ${fmtEuro(r.medianPrice)}`)
+      ranked.map((r) => `${shortArea(r.area)}: opportunity ${fmtScore(r.opportunity)}, saturation ${fmtScore(r.saturation)}, median price ${fmtEuro(r.medianPrice)}`)
     ),
   };
 }
@@ -402,7 +457,7 @@ async function pricingAnalysis(prompt) {
       isParis
         ? `${fmtInt(pricing.positive)} of ${fmtInt(pricing.total)} Paris listings have a positive predicted price gap.`
         : `${fmtInt(pricing.total)} Athens listings are flagged as underpriced in the project output.`,
-      `The strongest area-level average gap is ${fmtEuro(best.avgGap)} in ${best.area}.`,
+      `The strongest area-level average gap is ${fmtEuro(best.avgGap)} in ${shortArea(best.area)}.`,
       `The most important model drivers include ${shap.slice(0, 3).map((s) => s.feature).join(", ")}.`,
     ],
     kpis: [
@@ -438,7 +493,7 @@ async function riskAnalysis(prompt) {
     facts: [
       `${fmtInt(risk.high)} of ${fmtInt(risk.total)} Athens listings are above the high-risk threshold.`,
       `${fmtInt(priorityOverlap)} listings are both underpriced and high risk, making them strong coaching or intervention candidates.`,
-      `${best.area} has ${fmtPct(best.highShare)} high-risk share in the grouped risk output.`,
+      `${shortArea(best.area)} has ${fmtPct(best.highShare)} high-risk share in the grouped risk output.`,
     ],
     kpis: [
       { label: "High-risk listings", value: fmtInt(risk.high) },
@@ -455,7 +510,7 @@ async function riskAnalysis(prompt) {
       [FILES.athensRisk, FILES.athensUnderpricing],
       "Aggregate LightGBM risk probabilities by neighbourhood and combine them with the underpricing output to identify high-risk listings with revenue upside.",
       ["Risk is a prioritisation signal for analyst review, not a final decision about a host."],
-      ranked.map((r) => `${r.area}: ${fmtPct(r.highShare)} high-risk share, ${fmtInt(r.high)} high-risk listings`)
+      ranked.map((r) => `${shortArea(r.area)}: ${fmtPct(r.highShare)} high-risk share, ${fmtInt(r.high)} high-risk listings`)
     ),
   };
 }
@@ -471,8 +526,8 @@ async function demandAnalysis(prompt) {
     title: `${city} occupancy signal`,
     recommendation: `${shortArea(best.area)} has the strongest occupancy signal in the current prepared neighbourhood data.`,
     facts: [
-      `${best.area} has average occupancy of ${fmtPct(best.occupancy)} in the neighbourhood summary output.`,
-      `Average annual revenue in ${best.area} is around ${fmtEuro(best.revenue)}.`,
+      `${shortArea(best.area)} has average occupancy of ${fmtPct(best.occupancy)} in the neighbourhood summary output.`,
+      `Average annual revenue in ${shortArea(best.area)} is around ${fmtEuro(best.revenue)}.`,
       "The current deployed data supports demand ranking; full Prophet time-series forecasting remains a next-stage model layer.",
     ],
     kpis: [
@@ -490,7 +545,7 @@ async function demandAnalysis(prompt) {
       [FILES.neighbourhoodStats],
       "Use prepared neighbourhood-level occupancy and revenue fields as a demand proxy for direct consumer-facing ranking.",
       ["This is not yet a live Prophet forecast; it is a grounded demand proxy from the prepared project dataset."],
-      ranked.map((r) => `${r.area}: occupancy ${fmtPct(r.occupancy)}, average revenue ${fmtEuro(r.revenue)}`)
+      ranked.map((r) => `${shortArea(r.area)}: occupancy ${fmtPct(r.occupancy)}, average revenue ${fmtEuro(r.revenue)}`)
     ),
   };
 }
@@ -511,7 +566,7 @@ async function portfolioAnalysis() {
     intent: "portfolio-comparison",
     title: "Paris vs Athens portfolio comparison",
     recommendation: `${winner.city} has the stronger average opportunity signal for a small short-term-rental portfolio in the current project data.`,
-    facts: cities.map((c) => `${c.city}: ${fmtInt(c.listings)} listings, opportunity ${fmtScore(c.opportunity)}, average revenue ${fmtEuro(c.revenue)}, best area ${c.bestArea}.`),
+    facts: cities.map((c) => `${c.city}: ${fmtInt(c.listings)} listings, opportunity ${fmtScore(c.opportunity)}, average revenue ${fmtEuro(c.revenue)}, best area ${shortArea(c.bestArea)}.`),
     kpis: [
       { label: "Recommended city", value: winner.city },
       { label: "Paris listings", value: fmtInt(cities.find((c) => c.city === "Paris")?.listings) },
@@ -527,7 +582,7 @@ async function portfolioAnalysis() {
       [FILES.neighbourhoodStats],
       "Compare city-level weighted averages from neighbourhood summaries, using listing counts as weights and opportunity score as the main portfolio entry signal.",
       ["The comparison is strategic market intelligence; final investment decisions still require property cost, financing, and regulation checks."],
-      cities.map((c) => `${c.city}: saturation ${fmtScore(c.saturation)}, average revenue ${fmtEuro(c.revenue)}, best area ${c.bestArea}`)
+      cities.map((c) => `${c.city}: saturation ${fmtScore(c.saturation)}, average revenue ${fmtEuro(c.revenue)}, best area ${shortArea(c.bestArea)}`)
     ),
   };
 }
@@ -565,7 +620,11 @@ async function complianceAnalysis() {
 
 function deterministicAnswer(analysis) {
   const facts = analysis.facts.slice(0, 3).join(" ");
-  return `${analysis.recommendation} ${facts}`;
+  return localizePlaceNames(
+    `Based on our short-term rental market analysis, ${analysis.recommendation} ` +
+    `This recommendation is grounded in the project dataset rather than a generic travel ranking. ${facts} ` +
+    `For a first investment, use this as a shortlist direction: compare actual purchase prices, local licensing rules, and property condition before committing.`
+  );
 }
 
 function qualityCheck(answer, analysis) {

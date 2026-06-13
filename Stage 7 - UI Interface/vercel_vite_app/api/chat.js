@@ -1,5 +1,5 @@
 import { GoogleAuth } from "google-auth-library";
-import { buildGroundedAnalysis } from "./analytics-pipeline.js";
+import { buildGroundedAnalysis, localizePlaceNames } from "./analytics-pipeline.js";
 
 const CLOUD_PLATFORM_SCOPE = "https://www.googleapis.com/auth/cloud-platform";
 const DEFAULT_LOCATION = "europe-west1";
@@ -59,9 +59,11 @@ You are ${agentName}, ${agentTagline}, inside the ARIA capstone demo.
 Answer as a concise consumer-facing consulting analyst. Use only the verified analytics pack below for numeric claims.
 If the user's wording asks for residential real-estate advice, clarify that ARIA's evidence is short-term-rental market intelligence, not a complete home-buying transaction dataset.
 Do not invent row counts, model scores, neighbourhood rankings, or monetary values.
-Give a direct recommendation first, then only the most important evidence, then one limitation.
-Keep the answer between 90 and 150 words.
+Give a direct recommendation first, then explain why it matters in practical consumer language, then add one next-step caveat.
+Write 140 to 210 words in two or three short paragraphs. The first sentence should be complete and useful by itself, not just a headline.
 Avoid dense tables and avoid listing more than four numbers. The UI will show KPIs, charts, sources, and methodology separately.
+If a place name appears in Greek or any other non-English language, write the English transliteration first and the original name in parentheses, for example: Zappeio (ΖΑΠΠΕΙΟ).
+Never output internal quality scores such as "Quality 100/100".
 
 Verified analytics pack:
 ${analysis.contextText}
@@ -157,15 +159,15 @@ export default async function handler(req, res) {
       ?.map((part) => part.text || "")
       .join("")
       .trim();
+    const polishedAnswer = localizePlaceNames(answer || analysis.fallbackAnswer);
 
     return json(res, 200, {
-      answer: answer || analysis.fallbackAnswer,
+      answer: polishedAnswer,
       intent: analysis.intent,
       sources: analysis.sources,
       kpis: analysis.kpis,
       visualizations: analysis.visualizations,
       details: analysis.details,
-      quality: analysis.quality,
       projectId,
       location,
       model,

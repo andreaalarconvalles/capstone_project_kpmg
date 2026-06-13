@@ -286,7 +286,7 @@ function RichText({ text, cursor }) {
 
 /* ---------- Reasoning trace ---------- */
 function ReasoningTrace({ steps, doneCount, running, elapsed }) {
-  const [open, setOpen] = React.useState(true);
+  const [open, setOpen] = React.useState(false);
   const finished = !running && doneCount >= steps.length;
   React.useEffect(() => {if (finished && ARIA.ui && ARIA.ui.traceCollapse) {const t = setTimeout(() => setOpen(false), 700);return () => clearTimeout(t);}}, [finished]);
 

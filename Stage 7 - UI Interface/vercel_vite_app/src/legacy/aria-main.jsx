@@ -34,7 +34,7 @@ function AnswerView({ m, live, onCopy, onRegen, onExport }) {
     } else if (block.type === "kpis") {
       blocks.push(<LiveKpiGrid key={bi} kpis={block.kpis} />);
     } else if (block.type === "details") {
-      blocks.push(<AnalysisDetails key={bi} details={block.details} quality={block.quality} />);
+      blocks.push(<AnalysisDetails key={bi} details={block.details} />);
     }
   }
   return (
@@ -75,7 +75,7 @@ function LiveKpiGrid({ kpis = [] }) {
     </div>
   );
 }
-function AnalysisDetails({ details = {}, quality }) {
+function AnalysisDetails({ details = {} }) {
   const [open, setOpen] = useState(false);
   const sources = details.sourceFiles || [];
   const limits = details.limitations || [];
@@ -87,11 +87,6 @@ function AnalysisDetails({ details = {}, quality }) {
         <Icon name="ChevronDown" size={16} color={CA.muted}
           style={{ transform: open ? "none" : "rotate(-90deg)", transition: "transform 0.18s" }} />
         <span style={{ fontSize: 13.5, fontWeight: 600 }}>View details</span>
-        {quality?.score != null && (
-          <span style={{ marginLeft: "auto", fontSize: 12, color: quality.passed ? CA.success : CA.muted }}>
-            Quality {quality.score}/100
-          </span>
-        )}
       </button>
       {open && (
         <div style={{ borderTop: `1px solid ${CA.hairSoft}`, padding: "12px 14px 14px", fontSize: 13, lineHeight: 1.55, color: CA.inkSoft }}>
@@ -336,7 +331,7 @@ function App() {
       blocks = [{ type: "text", text }];
       if (Array.isArray(j.kpis) && j.kpis.length) blocks.push({ type: "kpis", kpis: j.kpis.slice(0, 4) });
       if (Array.isArray(j.visualizations) && j.visualizations.length) blocks.push({ type: "chart", chart: j.visualizations[0] });
-      if (j.details) blocks.push({ type: "details", details: j.details, quality: j.quality });
+      if (j.details) blocks.push({ type: "details", details: j.details });
       brief = {
         title: `${ag.name} — Vertex Analysis`,
         kpis: Array.isArray(j.kpis) && j.kpis.length ? j.kpis.slice(0, 4) : brief.kpis,
