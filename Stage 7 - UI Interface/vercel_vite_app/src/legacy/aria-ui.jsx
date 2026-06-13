@@ -273,9 +273,9 @@ function renderInline(text) {
 function RichText({ text, cursor }) {
   const paras = text.split("\n\n");
   return (
-    <div className="aria-prose" style={{ fontSize: ARIA.ui && ARIA.ui.fontSize || 15, lineHeight: 1.62, letterSpacing: -0.15, color: C.inkSoft }}>
+    <div className="aria-prose" style={{ fontSize: ARIA.ui && ARIA.ui.fontSize || 15, lineHeight: 1.62, letterSpacing: 0, color: C.inkSoft }}>
       {paras.map((p, i) =>
-      <p key={i} style={{ margin: i ? "0 0 12px" : "0 0 12px", textWrap: "pretty" }}>
+      <p key={i} style={{ margin: i ? "0 0 12px" : "0 0 12px", textAlign: "justify", textAlignLast: "left", textWrap: "pretty", hyphens: "auto", overflowWrap: "break-word" }}>
           {renderInline(p)}
           {cursor && i === paras.length - 1 && <span className="aria-cursor" />}
         </p>
