@@ -178,7 +178,7 @@ function Sidebar({
 
       <div style={{ overflowY: "auto", flex: 1, padding: "0 8px 10px" }}>
         {/* Vertex project */}
-        <div style={{ fontSize: 12, color: C.muted, fontWeight: 500, letterSpacing: -0.13, padding: "8px 8px 6px" }}>VERTEX AI</div>
+        <div style={{ fontSize: 12, color: C.muted, fontWeight: 500, letterSpacing: -0.13, padding: "8px 8px 6px" }}>Access Key</div>
         <div style={{ padding: "0 8px 4px" }}>
           <button className="aria-focus" onClick={onOpenSettings}
             style={{ width: "100%", display: "flex", alignItems: "center", gap: 9, background: C.canvas, border: `1px solid ${project && projectNumber ? C.success + "55" : C.hair}`, color: C.ink, borderRadius: 10, padding: "9px 10px", fontSize: 13, outline: "none", textAlign: "left" }}>
