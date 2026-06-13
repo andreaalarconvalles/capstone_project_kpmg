@@ -19,6 +19,11 @@ export type MapRegionMetric = {
   regionId: string;
   regionName: string;
   value?: number;
+  lat?: number;
+  lon?: number;
+  latitude?: number;
+  longitude?: number;
+  coordinateSource?: "known" | "fallback" | string;
   metadata?: Record<string, unknown>;
 };
 
@@ -32,7 +37,7 @@ export type ChatMapSelection = {
 };
 
 export type AriaGeoMapProps = {
-  geoJson: GeoJsonFeatureCollection;
+  geoJson?: GeoJsonFeatureCollection | null;
   metrics?: MapRegionMetric[];
   chatbotSelection?: ChatMapSelection;
   regionIdProperty?: string;

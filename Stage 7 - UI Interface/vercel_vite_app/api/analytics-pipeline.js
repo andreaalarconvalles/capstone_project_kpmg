@@ -430,7 +430,7 @@ function weightedAverage(sum, weight) {
 function classifyIntent(prompt, agentId) {
   const p = `${prompt} ${agentId}`.toLowerCase();
   if (/(portfolio|paris.*athens|athens.*paris|50-unit|fifty-unit)/.test(p)) return "portfolio-comparison";
-  if (/(family|safe|safest|live|living|cheap|cheapest|affordable|budget|rent)/.test(p)) return "market-entry";
+  if (/(family|safe|safest|live|living|cheap|cheapest|affordable|budget|rent|rental)/.test(p)) return "market-entry";
   if (/(risk|high-risk|declin|vulnerab|priority|churn|warning)/.test(p)) return "risk";
   if (/(map|region|regions|area comparison|compare areas|compare regions|neighbourhoods|neighborhoods|arrondissements|districts|where in|which areas|which regions)/.test(p)) return "market-entry";
   if (/(underprice|price|pricing|revenue|nightly|gap|earning|income|adr)/.test(p)) return "pricing";
@@ -576,7 +576,9 @@ function fallbackRegionCoord(city, area) {
 
 function regionCoord(city, area) {
   const key = `${city}|${normaliseAreaKey(area)}`;
-  return REGION_COORDS.get(key) || fallbackRegionCoord(city, area);
+  const coord = REGION_COORDS.get(key);
+  if (coord) return { ...coord, coordinateSource: "known" };
+  return { ...fallbackRegionCoord(city, area), coordinateSource: "fallback" };
 }
 
 function groupMetric(map, key, patch) {
@@ -847,7 +849,7 @@ async function marketAnalysis(prompt) {
   const rows = await loadNeighbourhoodStats();
   const city = cityFromPrompt(prompt) || "Paris";
   const cityRows = rows.filter((r) => r.city === city);
-  const cheap = /(cheap|cheapest|affordable|budget|low price|lowest|nightly price|median price|rent)/i.test(prompt);
+  const cheap = /(cheap|cheapest|affordable|budget|low price|lowest|nightly price|median price|rent price|rental price|monthly rent)/i.test(prompt);
   const revenue = /(revenue|income|earning|yield)/i.test(prompt);
   const demand = /(occupancy|demand|booked|tourist)/i.test(prompt);
   const family = /(family|safe|safest|live|living)/i.test(prompt);

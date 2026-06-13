@@ -1,6 +1,6 @@
 import React from "react";
 import L from "leaflet";
-import { GeoJSON, MapContainer, TileLayer, useMap } from "react-leaflet";
+import { CircleMarker, GeoJSON, MapContainer, Popup, TileLayer, Tooltip, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 
 const DEFAULT_COLORS = {
@@ -166,7 +166,10 @@ function buildMetricMap(metrics) {
 function collectMetadataRows(metadata) {
   if (!metadata || typeof metadata !== "object") return [];
   return Object.entries(metadata)
-    .filter(([, value]) => value != null && typeof value !== "object")
+    .filter(([key, value]) => {
+      if (value == null || typeof value === "object") return false;
+      return !["lat", "latitude", "lon", "lng", "longitude", "coordinateSource"].includes(key);
+    })
     .slice(0, 5)
     .map(([key, value]) => [humanizeLabel(key), value]);
 }
@@ -214,6 +217,49 @@ function getMetricRange(features) {
   };
 }
 
+function getPointCoordinate(metric) {
+  const metadata = metric?.metadata && typeof metric.metadata === "object" ? metric.metadata : {};
+  const source = metric?.coordinateSource ?? metadata.coordinateSource;
+  if (source === "fallback") return null;
+  const lat = asNumber(metric?.lat ?? metric?.latitude ?? metadata.lat ?? metadata.latitude);
+  const lon = asNumber(metric?.lon ?? metric?.lng ?? metric?.longitude ?? metadata.lon ?? metadata.lng ?? metadata.longitude);
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+  return { lat, lon };
+}
+
+function enrichPointMetrics(metrics, chatbotSelection) {
+  const highlighted = new Set((chatbotSelection?.highlightedRegions || []).map(normalizeId).filter(Boolean));
+  return (metrics || [])
+    .map((metric) => {
+      const coordinate = getPointCoordinate(metric);
+      if (!coordinate) return null;
+      const regionId = normalizeId(metric.regionId || metric.regionName);
+      const regionName = String(metric.regionName || metric.regionId || "Region");
+      const value = asNumber(metric.value);
+      const metadata = metric.metadata && typeof metric.metadata === "object" ? metric.metadata : {};
+      return {
+        ...metric,
+        ...coordinate,
+        regionId,
+        regionName,
+        value,
+        display: metadata.display || formatMetricValue(value, chatbotSelection?.metric),
+        metadata,
+        highlighted: selectionIncludes(highlighted, regionId, regionName),
+      };
+    })
+    .filter(Boolean);
+}
+
+function getPointRange(points) {
+  const values = points.map((point) => point.value).filter((value) => Number.isFinite(value));
+  if (!values.length) return null;
+  return {
+    min: Math.min(...values),
+    max: Math.max(...values),
+  };
+}
+
 function valueTone(value, range) {
   if (!range || !Number.isFinite(value)) return undefined;
   if (range.max === range.min) return 0.72;
@@ -236,6 +282,25 @@ function featureStyle(feature, range, theme, activeId) {
     fillOpacity: highlighted || active ? 0.74 : tone == null ? 0.26 : 0.56,
     dashArray: highlighted || active ? "" : "1",
   };
+}
+
+function pointStyle(point, range, theme, activeId) {
+  const active = activeId && activeId === point.regionId;
+  const tone = valueTone(point.value, range);
+  const highlighted = Boolean(point.highlighted);
+  return {
+    color: highlighted || active ? theme.ink : theme.canvas,
+    weight: highlighted || active ? 2.2 : 1.4,
+    opacity: highlighted || active ? 0.95 : 0.8,
+    fillColor: tone == null ? mixColors(theme.surface2, theme.muted, 0.18) : mixColors(theme.surface2, theme.accent, tone),
+    fillOpacity: highlighted || active ? 0.88 : 0.68,
+  };
+}
+
+function pointRadius(point) {
+  const listings = Number(String(point.metadata?.listings || "").replace(/,/g, ""));
+  if (!Number.isFinite(listings) || listings <= 0) return point.highlighted ? 10 : 8;
+  return Math.max(point.highlighted ? 10 : 8, Math.min(18, 7 + Math.log(listings + 1) * 1.2));
 }
 
 function createTooltipContent(feature, metricLabel, selection) {
@@ -272,6 +337,20 @@ function FitGeoJsonBounds({ geoJson }) {
       map.fitBounds(bounds, { padding: [26, 26], maxZoom: 12 });
     }
   }, [geoJson, map]);
+
+  return null;
+}
+
+function FitPointBounds({ points }) {
+  const map = useMap();
+
+  React.useEffect(() => {
+    if (!points || !points.length) return;
+    const bounds = L.latLngBounds(points.map((point) => [point.lat, point.lon]));
+    if (bounds.isValid()) {
+      map.fitBounds(bounds.pad(0.24), { padding: [34, 34], maxZoom: 13 });
+    }
+  }, [points, map]);
 
   return null;
 }
@@ -330,6 +409,25 @@ function Legend({ range, metricLabel, theme }) {
   );
 }
 
+function PointPopupContent({ point, metricLabel, selection }) {
+  const metadataRows = collectMetadataRows(point.metadata)
+    .filter(([label]) => !["Display", "Explanation", "Description", "Context", "Note"].includes(label));
+  const explanation = point.metadata?.explanation || point.metadata?.description || point.metadata?.context || point.metadata?.note;
+  return (
+    <div className="aria-map-popup">
+      <div className="aria-map-popup-title">{point.regionName}</div>
+      <div className="aria-map-popup-row"><span>{metricLabel}</span><strong>{point.display}</strong></div>
+      {selection?.aggregation && (
+        <div className="aria-map-popup-row"><span>Aggregation</span><strong>{humanizeLabel(selection.aggregation)}</strong></div>
+      )}
+      {explanation && <div className="aria-map-popup-note">{explanation}</div>}
+      {metadataRows.map(([label, value]) => (
+        <div className="aria-map-popup-row" key={label}><span>{label}</span><strong>{String(value)}</strong></div>
+      ))}
+    </div>
+  );
+}
+
 function AttributionNote({ theme }) {
   return (
     <div
@@ -347,7 +445,7 @@ function AttributionNote({ theme }) {
         boxShadow: "0 8px 22px rgba(0,0,0,0.14)",
       }}
     >
-      Map data (c) OpenStreetMap - ARIA GeoJSON overlays
+      Map data (c) OpenStreetMap - ARIA geographic overlays
     </div>
   );
 }
@@ -388,6 +486,7 @@ function AriaGeoMap({
   const theme = getTheme();
   const metricLabel = humanizeLabel(chatbotSelection?.metric, "Selected metric");
   const mapHeight = typeof height === "number" ? `${height}px` : height;
+  const pointMetrics = React.useMemo(() => enrichPointMetrics(metrics, chatbotSelection), [metrics, chatbotSelection]);
 
   const validGeoJson = isValidFeatureCollection(geoJson);
   const enrichedGeoJson = React.useMemo(() => {
@@ -396,25 +495,27 @@ function AriaGeoMap({
   }, [validGeoJson, geoJson, metrics, chatbotSelection, regionIdProperty, regionNameProperty]);
 
   const polygonCount = enrichedGeoJson?.features?.length || 0;
+  const pointCount = pointMetrics.length;
   const range = React.useMemo(() => enrichedGeoJson ? getMetricRange(enrichedGeoJson.features) : null, [enrichedGeoJson]);
+  const pointRange = React.useMemo(() => getPointRange(pointMetrics), [pointMetrics]);
   const layerKey = React.useMemo(() => {
     const highlighted = (chatbotSelection?.highlightedRegions || []).join("|");
     const metricSignature = (metrics || []).map((metric) => `${metric.regionId}:${metric.value}`).join("|");
     return `${polygonCount}:${regionIdProperty}:${regionNameProperty}:${highlighted}:${metricSignature}`;
   }, [chatbotSelection, metrics, polygonCount, regionIdProperty, regionNameProperty]);
 
-  if (!validGeoJson) {
+  if (!validGeoJson && !pointCount) {
     return (
       <MapStateCard
         title={title || "Geographic map"}
-        message="No valid GeoJSON FeatureCollection was provided."
+        message="No valid GeoJSON FeatureCollection or mapped region coordinates were provided."
         height={mapHeight}
         className={className}
       />
     );
   }
 
-  if (!polygonCount) {
+  if (validGeoJson && !polygonCount && !pointCount) {
     return (
       <MapStateCard
         title={title || "Geographic map"}
@@ -422,6 +523,87 @@ function AriaGeoMap({
         height={mapHeight}
         className={className}
       />
+    );
+  }
+
+  if (!validGeoJson || !polygonCount) {
+    return (
+      <div
+        className={`aria-fadein ${className || ""}`}
+        style={{
+          background: theme.surface,
+          border: `1px solid ${theme.hairline}`,
+          borderRadius: 16,
+          padding: 14,
+          color: theme.ink,
+          ...style,
+        }}
+      >
+        {title && (
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12, marginBottom: 10 }}>
+            <div style={{ fontSize: 13, fontWeight: 650, color: theme.ink }}>{title}</div>
+            <div style={{ fontSize: 11.5, color: theme.muted }}>{pointCount.toLocaleString()} regions</div>
+          </div>
+        )}
+        <div
+          style={{
+            position: "relative",
+            height: mapHeight,
+            minHeight: 260,
+            borderRadius: 14,
+            overflow: "hidden",
+            border: `1px solid ${theme.hairline}`,
+            background: theme.surface2,
+          }}
+        >
+          <MapContainer
+            center={pointCount ? [pointMetrics[0].lat, pointMetrics[0].lon] : [20, 0]}
+            zoom={12}
+            minZoom={1}
+            zoomControl={showControls}
+            scrollWheelZoom={Boolean(showControls)}
+            style={{ height: "100%", width: "100%", background: theme.surface2 }}
+            attributionControl
+          >
+            <TileLayer
+              url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            />
+            {pointMetrics.map((point) => (
+              <CircleMarker
+                key={point.regionId}
+                center={[point.lat, point.lon]}
+                radius={pointRadius(point)}
+                pathOptions={pointStyle(point, pointRange, theme, activeRegionId)}
+                eventHandlers={{
+                  mouseover: () => {
+                    setActiveRegionId(point.regionId);
+                    if (typeof onRegionHover === "function") onRegionHover(point);
+                  },
+                  mouseout: () => {
+                    setActiveRegionId(null);
+                    if (typeof onRegionHover === "function") onRegionHover(null);
+                  },
+                  click: () => {
+                    if (typeof onRegionClick === "function") onRegionClick(point);
+                  },
+                }}
+              >
+                <Tooltip sticky direction="top" opacity={1} className="aria-geo-map-tooltip">
+                  <PointPopupContent point={point} metricLabel={metricLabel} selection={chatbotSelection} />
+                </Tooltip>
+                <Popup closeButton className="aria-geo-map-popup" maxWidth={280}>
+                  <PointPopupContent point={point} metricLabel={metricLabel} selection={chatbotSelection} />
+                </Popup>
+              </CircleMarker>
+            ))}
+            <FitPointBounds points={pointMetrics} />
+          </MapContainer>
+          {showLegend && <Legend range={pointRange} metricLabel={metricLabel} theme={theme} />}
+          <AttributionNote theme={theme} />
+        </div>
+        <MapStyles theme={theme} />
+      </div>
     );
   }
 
@@ -520,7 +702,14 @@ function AriaGeoMap({
         {showLegend && <Legend range={range} metricLabel={metricLabel} theme={theme} />}
         <AttributionNote theme={theme} />
       </div>
-      <style>{`
+      <MapStyles theme={theme} />
+    </div>
+  );
+}
+
+function MapStyles({ theme }) {
+  return (
+    <style>{`
         .aria-geo-map-tooltip,
         .aria-geo-map-popup .leaflet-popup-content-wrapper {
           background: ${theme.surface};
@@ -579,10 +768,11 @@ function AriaGeoMap({
           font-family: Inter, system-ui, -apple-system, sans-serif;
         }
       `}</style>
-    </div>
   );
 }
 
-Object.assign(window, { AriaGeoMap });
+if (typeof window !== "undefined") {
+  Object.assign(window, { AriaGeoMap });
+}
 
 export default AriaGeoMap;

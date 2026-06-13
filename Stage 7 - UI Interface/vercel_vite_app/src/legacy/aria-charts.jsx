@@ -513,8 +513,15 @@ function RegionMapStateCard({ title, message }) {
 }
 
 function GeoRegionMapCard({ chart }) {
+  const hasPointCoordinates = React.useMemo(() => (
+    (chart.data || []).some((row) => (
+      Number.isFinite(Number(row.lat))
+      && Number.isFinite(Number(row.lon))
+      && row.coordinateSource !== "fallback"
+    ))
+  ), [chart.data]);
   const [geoJson, setGeoJson] = React.useState(chart.geoJson || null);
-  const [status, setStatus] = React.useState(chart.geoJson ? "ready" : chart.geoJsonUrl ? "loading" : "missing");
+  const [status, setStatus] = React.useState(chart.geoJson ? "ready" : chart.geoJsonUrl ? "loading" : hasPointCoordinates ? "ready" : "missing");
   const [error, setError] = React.useState("");
 
   React.useEffect(() => {
@@ -526,7 +533,7 @@ function GeoRegionMapCard({ chart }) {
     }
     if (!chart.geoJsonUrl) {
       setGeoJson(null);
-      setStatus("missing");
+      setStatus(hasPointCoordinates ? "ready" : "missing");
       setError("");
       return undefined;
     }
@@ -551,7 +558,7 @@ function GeoRegionMapCard({ chart }) {
       });
 
     return () => controller.abort();
-  }, [chart.geoJson, chart.geoJsonUrl]);
+  }, [chart.geoJson, chart.geoJsonUrl, hasPointCoordinates]);
 
   if (status === "loading") {
     return <RegionMapStateCard title={chart.title || "Regional map"} message="Loading real geographic boundaries..." />;
@@ -579,9 +586,15 @@ function GeoRegionMapCard({ chart }) {
     regionId: String(row.regionId || row.code || row.label || ""),
     regionName: row.regionName || row.label || "Region",
     value: Number(row.value),
+    lat: Number(row.lat),
+    lon: Number(row.lon),
+    coordinateSource: row.coordinateSource,
     metadata: {
       display: row.display,
       explanation: row.explanation,
+      lat: row.lat,
+      lon: row.lon,
+      coordinateSource: row.coordinateSource,
       listings: row.listingsDisplay,
       medianNightlyPrice: row.priceDisplay,
       averageRevenue: row.revenueDisplay,
