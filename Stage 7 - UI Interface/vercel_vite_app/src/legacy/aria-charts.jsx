@@ -610,6 +610,13 @@ function GeoRegionMapCard({ chart }) {
 
   return (
     <AriaGeoMap
+      key={[
+        chart.city,
+        chart.title,
+        chart.metricLabel || chart.yLabel,
+        chart.geoJsonUrl || "point-map",
+        highlightedRegions.join("|"),
+      ].filter(Boolean).join("::")}
       title={chart.title || `${chart.city || "City"} regional map`}
       geoJson={geoJson}
       metrics={metrics}

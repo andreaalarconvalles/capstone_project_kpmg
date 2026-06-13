@@ -69,6 +69,19 @@ function builtMessage(agentId, prompt) {
 }
 
 /* ---------- answer renderer ---------- */
+function chartBlockKey(chart, index) {
+  const first = chart?.data?.[0] || {};
+  return [
+    index,
+    chart?.kind,
+    chart?.city,
+    chart?.title,
+    chart?.metricLabel || chart?.yLabel,
+    chart?.geoJsonUrl || "point-map",
+    first.regionId || first.label,
+  ].filter(Boolean).join("::");
+}
+
 function AnswerView({ m, live, onCopy, onRegen, onExport }) {
   const prog = m.progress || { block: m.blocks.length, text: "" };
   const blocks = [];
@@ -81,7 +94,7 @@ function AnswerView({ m, live, onCopy, onRegen, onExport }) {
       if (!text) continue;
       blocks.push(<RichText key={bi} text={text} cursor={!full && live} />);
     } else if (block.type === "chart") {
-      blocks.push(<ChartBlock key={bi} chart={block.chart} />);
+      blocks.push(<ChartBlock key={chartBlockKey(block.chart, bi)} chart={block.chart} />);
     } else if (block.type === "map") {
       blocks.push(<NeighbourhoodMap key={bi} {...block.map} />);
     } else if (block.type === "kpis") {
@@ -297,6 +310,7 @@ function App() {
   });
   const [live, setLive] = useState(null); // { convId, msg }
   const cancelRef = useRef(false);
+  const runIdRef = useRef(0);
   const scrollRef = useRef(null);
   const taRef = useRef(null);
   const themeMenuRef = useRef(null);
@@ -324,6 +338,7 @@ function App() {
 
   const stopStream = useCallback(() => {
     cancelRef.current = true;
+    runIdRef.current += 1;
     setLive((l) => {
       if (!l) return null;
       const finalMsg = { ...l.msg, done: true, traceRunning: false, traceDone: l.msg.trace.length };
@@ -336,16 +351,18 @@ function App() {
 
   /* core streaming runner */
   const runStream = useCallback((convId, aId, prompt, staticMsg) => {
+    const runId = ++runIdRef.current;
     cancelRef.current = false;
     const SP = ({ slow: { trace: 760, word: 44, block: 680 }, fast: { trace: 320, word: 6, block: 320 } }[(ARIA.ui && ARIA.ui.streamSpeed)] || { trace: 540, word: 22, block: 540 });
     const steps = staticMsg.trace, blocks = staticMsg.blocks;
     const base = { ...staticMsg, traceDone: 0, traceRunning: true, progress: { block: -1, text: "" }, done: false };
-    setLive({ convId, msg: base });
-    const upd = (patch) => setLive((l) => l ? { ...l, msg: { ...l.msg, ...(typeof patch === "function" ? patch(l.msg) : patch) } } : l);
+    setLive({ convId, runId, msg: base });
+    const isCurrentRun = () => runIdRef.current === runId;
+    const upd = (patch) => setLive((l) => (l && l.runId === runId) ? { ...l, msg: { ...l.msg, ...(typeof patch === "function" ? patch(l.msg) : patch) } } : l);
 
     const finish = () => {
       setLive((l) => {
-        if (!l) return null;
+        if (!l || l.runId !== runId) return l;
         const fin = { ...l.msg, done: true, traceRunning: false, traceDone: steps.length, progress: { block: blocks.length, text: "" } };
         setConversations((cs) => cs.map((c) => c.id === convId
           ? touchConversation(c, { messages: [...(c.messages || []), fin] })
@@ -355,7 +372,7 @@ function App() {
     };
 
     const revealBlock = (bi) => {
-      if (cancelRef.current) return;
+      if (cancelRef.current || !isCurrentRun()) return;
       if (bi >= blocks.length) { setTimeout(finish, 150); return; }
       const block = blocks[bi];
       if (block.type === "text") {
@@ -363,7 +380,7 @@ function App() {
         let w = 0;
         upd({ progress: { block: bi, text: "" } });
         const step = () => {
-          if (cancelRef.current) return;
+          if (cancelRef.current || !isCurrentRun()) return;
           w++;
           upd({ progress: { block: bi, text: words.slice(0, w).join(" ") } });
           if (w < words.length) setTimeout(step, SP.word + Math.random() * (SP.word * 0.9));
@@ -378,7 +395,7 @@ function App() {
 
     let si = 0;
     const tickTrace = () => {
-      if (cancelRef.current) return;
+      if (cancelRef.current || !isCurrentRun()) return;
       si++;
       upd({ traceDone: si });
       if (si < steps.length) setTimeout(tickTrace, SP.trace + Math.random() * 160);
@@ -389,6 +406,7 @@ function App() {
 
   /* live Vertex AI path for custom prompts */
   const runLive = useCallback(async (convId, aId, prompt) => {
+    const runId = ++runIdRef.current;
     cancelRef.current = false;
     const ag = AGENT_BY_ID[aId];
     let model = modelId;
@@ -406,8 +424,9 @@ function App() {
       brief: genericScript(ag, prompt).brief, traceDone: 0, traceRunning: true,
       progress: { block: -1, text: "" }, done: false, elapsed: elapsedFor(steps),
     };
-    setLive({ convId, msg: base });
-    const upd = (patch) => setLive((l) => l ? { ...l, msg: { ...l.msg, ...patch } } : l);
+    setLive({ convId, runId, msg: base });
+    const isCurrentRun = () => runIdRef.current === runId;
+    const upd = (patch) => setLive((l) => (l && l.runId === runId) ? { ...l, msg: { ...l.msg, ...patch } } : l);
 
     upd({ traceDone: 1 });
     let text = "";
@@ -443,19 +462,19 @@ function App() {
       text = `Live analysis needs attention: ${e.message}\n\nThe UI is correctly routing custom prompts to the backend. Check Vercel Vertex authentication and GitHub data access, and keep using the suggested prompts for scripted demo responses while the live path is being configured.`;
       blocks = [{ type: "text", text }];
     }
-    if (cancelRef.current) return;
+    if (cancelRef.current || !isCurrentRun()) return;
     upd({ traceDone: steps.length, traceRunning: false, blocks, brief });
 
     // stream the text
     const words = text.split(" ");
     let w = 0;
     const step = () => {
-      if (cancelRef.current) return;
+      if (cancelRef.current || !isCurrentRun()) return;
       w++;
-      setLive((l) => l ? { ...l, msg: { ...l.msg, progress: { block: 0, text: words.slice(0, w).join(" ") } } } : l);
+      setLive((l) => (l && l.runId === runId) ? { ...l, msg: { ...l.msg, progress: { block: 0, text: words.slice(0, w).join(" ") } } } : l);
       if (w < words.length) setTimeout(step, 14 + Math.random() * 20);
       else setLive((l) => {
-        if (!l) return null;
+        if (!l || l.runId !== runId) return l;
         const fin = { ...l.msg, brief, done: true, progress: { block: blocks.length, text: "" } };
         setConversations((cs) => cs.map((c) => c.id === convId
           ? touchConversation(c, { messages: [...(c.messages || []), fin] })
