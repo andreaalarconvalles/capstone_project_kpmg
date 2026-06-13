@@ -117,7 +117,7 @@ function LandingDashboard({ onSignal }) {
   return (
     <div className="aria-fadein" style={{ display: "flex", flexDirection: "column", gap: 10, width: "100%" }}>
       <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: CD.ink }}>Dataset insight cards</div>
+        <div style={{ fontSize: 13, fontWeight: 600, color: CD.ink }}>KPI cards from recent analyses</div>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gridAutoRows: 128, alignItems: "stretch", gap: 10 }}>
         <button className="aria-focus" onClick={() => onSignal("market", "Which Athens neighbourhoods offer the strongest short-term rental yield?")}
