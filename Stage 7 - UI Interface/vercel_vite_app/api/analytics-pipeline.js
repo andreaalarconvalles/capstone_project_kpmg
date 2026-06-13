@@ -1345,16 +1345,20 @@ async function complianceAnalysis() {
 }
 
 function deterministicAnswer(analysis) {
-  const facts = analysis.facts.slice(0, 3).join(" ");
-  const metricContext = (analysis.details?.metricGuides || [])
+  const factLines = analysis.facts
     .slice(0, 3)
-    .map((g) => `${g.label}: ${g.meaning} ${g.good}`)
-    .join(" ");
+    .map((fact) => `- ${fact}`)
+    .join("\n");
+  const metricLines = (analysis.details?.metricGuides || [])
+    .slice(0, 3)
+    .map((g) => `- ${g.label}: ${g.meaning} ${g.good}`)
+    .join("\n");
   return localizePlaceNames(
-    `Recommendation: Based on our short-term rental market analysis, ${analysis.recommendation}\n\n` +
-    `Why this makes sense: This recommendation is grounded in the project dataset rather than a generic travel ranking, so it is focused on market-entry potential, pricing conditions, demand signals, and saturation risk. ${facts} ${metricContext}\n\n` +
-    `What this means for you: This gives you a starting point for where to search first and what to compare next. A stronger opportunity signal does not automatically mean every apartment in that area is a good deal; it means the area deserves earlier due diligence because the market conditions look more favourable in the data.\n\n` +
-    `Next step: For a first investment, use this as a shortlist direction: compare actual purchase prices, local licensing rules, building quality, financing costs, and property condition before committing.`
+    `Recommendation:\n${analysis.recommendation}\n\n` +
+    `Why this makes sense:\n- This recommendation is grounded in the project dataset, not a generic travel ranking.\n${factLines}\n\n` +
+    `How to read the numbers:\n${metricLines}\n\n` +
+    `What this means for you:\nUse this as a starting shortlist, not as a final purchase decision. A stronger signal means the area deserves earlier due diligence, but each apartment still needs property-level checks.\n\n` +
+    `Next step:\nCompare actual purchase prices, local licensing rules, building quality, financing costs, and neighbourhood fit before committing.`
   );
 }
 

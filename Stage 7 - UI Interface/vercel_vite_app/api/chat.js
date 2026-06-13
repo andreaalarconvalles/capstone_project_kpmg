@@ -60,11 +60,14 @@ You are ${agentName}, ${agentTagline}, inside the ARIA capstone demo.
 Answer as a concise consumer-facing consulting analyst. Use only the verified analytics pack below for numeric claims.
 If the user's wording asks for residential real-estate advice, clarify that ARIA's evidence is short-term-rental market intelligence, not a complete home-buying transaction dataset.
 Do not invent row counts, model scores, neighbourhood rankings, or monetary values.
-Structure the answer with short, human-readable sections separated by blank lines:
-Recommendation: one clear recommendation in 1-2 sentences.
-Why this makes sense: explain the key evidence in plain language.
-What this means for you: translate the result into a practical buyer or small-investor takeaway.
-Next step: one caution or due-diligence action.
+Structure the answer with short, human-readable sections separated by blank lines.
+Put each section label on its own line, then use 1 to 3 short dash lines underneath.
+Use these sections in this order:
+Recommendation:
+Why this makes sense:
+How to read the numbers:
+What this means for you:
+Next step:
 Write 190 to 260 words total. Each section should be short, but do not collapse everything into one paragraph.
 Do not answer with only one or two short sentences. The user should understand the reasoning without opening the details panel.
 Avoid dense tables and avoid listing more than four numbers. The UI will show KPIs, charts, sources, and methodology separately.
@@ -74,6 +77,7 @@ Use the "Metric explanations" section in the analytics pack to interpret numbers
 If a place name appears in Greek or any other non-English language, write the English transliteration first and the original name in parentheses, for example: Zappeio (ΖΑΠΠΕΙΟ).
 Never output internal quality scores such as "Quality 100/100".
 Do not use Markdown bold markers or asterisks around section labels.
+Do not write the entire explanation as one dense paragraph.
 
 Verified analytics pack:
 ${analysis.contextText}
@@ -160,23 +164,30 @@ function completeAnswerSections(text, fallbackText) {
 
 function addContextIfShort(answer, analysis) {
   if (wordCount(answer) >= 120) return answer;
-  const facts = (analysis.facts || []).slice(0, 2).join(" ");
+  const facts = (analysis.facts || [])
+    .slice(0, 2)
+    .map((fact) => `- ${fact}`)
+    .join("\n");
   const metricContext = (analysis.details?.metricGuides || [])
     .slice(0, 3)
-    .map((g) => `${g.label} means ${g.meaning} ${g.good}`)
-    .join(" ");
+    .map((g) => `- ${g.label}: ${g.meaning} ${g.good}`)
+    .join("\n");
   const sections = [String(answer || "").trim()];
 
   if (!/\bWhy this makes sense:/i.test(answer)) {
-    sections.push(`Why this makes sense: ARIA is comparing short-term-rental opportunity rather than giving a full residential home-buying recommendation. The signal looks at the prepared project data to understand where revenue potential, market saturation, price levels, and listing scale point to a cleaner first move. ${facts} ${metricContext}`);
+    sections.push(`Why this makes sense:\n- ARIA is comparing short-term-rental opportunity rather than giving a full residential home-buying recommendation.\n- The signal looks at prepared project data: revenue potential, market saturation, price levels, and listing scale.\n${facts}`);
+  }
+
+  if (!/\bHow to read the numbers:/i.test(answer)) {
+    sections.push(`How to read the numbers:\n${metricContext}`);
   }
 
   if (!/\bWhat this means for you:/i.test(answer)) {
-    sections.push("What this means for you: Use the result as a starting shortlist, not as a final purchase decision. A stronger opportunity signal means the area deserves earlier research because the rental-market conditions look more favourable in the project data.");
+    sections.push("What this means for you:\nUse the result as a starting shortlist, not as a final purchase decision. A stronger signal means the area deserves earlier research because the rental-market conditions look more favourable in the project data.");
   }
 
   if (!/\bNext step:/i.test(answer)) {
-    sections.push("Next step: Review actual purchase prices, local licensing limits, building condition, financing costs, and neighbourhood fit before making the final investment decision.");
+    sections.push("Next step:\nReview actual purchase prices, local licensing limits, building condition, financing costs, and neighbourhood fit before making the final investment decision.");
   }
 
   return sections.filter(Boolean).join("\n\n");
