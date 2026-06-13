@@ -4,6 +4,59 @@ const CA = ARIA.c;
 const { useState, useRef, useEffect, useCallback } = React;
 
 const elapsedFor = (steps) => (steps.length * 0.74 + 0.4).toFixed(1);
+const CONVERSATION_STORAGE_KEY = "aria.conversations.v1";
+
+function seedConversations() {
+  return SEED_CONVERSATIONS.map((c) => ({ ...c, messages: null }));
+}
+
+function nowIso() {
+  return new Date().toISOString();
+}
+
+function touchConversation(conv, patch = {}) {
+  return { ...conv, ...patch, updatedAt: nowIso() };
+}
+
+function normaliseConversationStore(raw) {
+  if (!raw || !Array.isArray(raw.conversations)) return null;
+  const conversations = raw.conversations
+    .filter((c) => c && c.id && c.agentId)
+    .map((c) => ({
+      id: String(c.id),
+      agentId: AGENT_BY_ID[c.agentId] ? c.agentId : "host-revenue",
+      title: String(c.title || "Untitled chat"),
+      group: c.group || "Today",
+      prompt: c.prompt || "",
+      messages: Array.isArray(c.messages) ? c.messages : null,
+      updatedAt: c.updatedAt || null,
+    }));
+  const activeConvId = conversations.some((c) => c.id === raw.activeConvId) ? raw.activeConvId : null;
+  const agentId = AGENT_BY_ID[raw.agentId] ? raw.agentId : "host-revenue";
+  return { conversations, activeConvId, agentId };
+}
+
+function loadConversationStore() {
+  try {
+    const rawText = window.localStorage.getItem(CONVERSATION_STORAGE_KEY);
+    if (!rawText) return { conversations: seedConversations(), activeConvId: null, agentId: "host-revenue" };
+    return normaliseConversationStore(JSON.parse(rawText)) || { conversations: seedConversations(), activeConvId: null, agentId: "host-revenue" };
+  } catch {
+    return { conversations: seedConversations(), activeConvId: null, agentId: "host-revenue" };
+  }
+}
+
+function saveConversationStore(payload) {
+  try {
+    window.localStorage.setItem(CONVERSATION_STORAGE_KEY, JSON.stringify({
+      version: 1,
+      savedAt: new Date().toISOString(),
+      ...payload,
+    }));
+  } catch {
+    // Storage can fail in private browsing or if quota is full. The chat still works in memory.
+  }
+}
 
 /* build a fully-rendered (done) assistant message from a script */
 function builtMessage(agentId, prompt) {
@@ -76,12 +129,21 @@ function LiveKpiGrid({ kpis = [] }) {
       {kpis.slice(0, 4).map((kpi, i) => (
         <div key={`${kpi.label}-${i}`} style={{
           background: CA.s1, border: `1px solid ${CA.hair}`, borderRadius: 12,
-          padding: "12px 13px", minHeight: 88, height: "100%", boxSizing: "border-box",
+          padding: "12px 13px", minHeight: 116, height: "100%", boxSizing: "border-box",
           display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center",
           textAlign: "center", overflow: "hidden",
         }}>
           <div style={{ fontSize: 11.5, color: CA.muted, fontWeight: 500, lineHeight: 1.25, marginBottom: 6, maxWidth: "100%" }}>{cleanKpiText(kpi.label)}</div>
           <div style={{ fontSize: 19, color: CA.ink, fontWeight: 650, lineHeight: 1.12, letterSpacing: -0.35, overflowWrap: "anywhere", maxWidth: "100%" }}>{cleanKpiText(kpi.value)}</div>
+          {kpi.help && (
+            <div style={{
+              marginTop: 7, color: CA.muted, fontSize: 10.8, lineHeight: 1.25,
+              maxWidth: "100%", display: "-webkit-box", WebkitLineClamp: 3,
+              WebkitBoxOrient: "vertical", overflow: "hidden",
+            }}>
+              {cleanKpiText(kpi.help)}
+            </div>
+          )}
         </div>
       ))}
     </div>
@@ -92,6 +154,7 @@ function AnalysisDetails({ details = {} }) {
   const sources = details.sourceFiles || [];
   const limits = details.limitations || [];
   const extra = details.extra || [];
+  const metricGuides = details.metricGuides || [];
   return (
     <div className="aria-fadein" style={{ marginTop: 10, border: `1px solid ${CA.hair}`, borderRadius: 12, background: CA.s1, overflow: "hidden" }}>
       <button onClick={() => setOpen((v) => !v)} className="aria-focus"
@@ -121,9 +184,28 @@ function AnalysisDetails({ details = {} }) {
             </div>
           )}
           {!!limits.length && (
-            <div style={{ marginBottom: extra.length ? 10 : 0 }}>
+            <div style={{ marginBottom: metricGuides.length || extra.length ? 10 : 0 }}>
               <div style={{ fontSize: 11.5, color: CA.muted, fontWeight: 600, marginBottom: 4 }}>Limitations</div>
               {limits.map((l) => <div key={l}>- {l}</div>)}
+            </div>
+          )}
+          {!!metricGuides.length && (
+            <div style={{ marginBottom: extra.length ? 10 : 0 }}>
+              <div style={{ fontSize: 11.5, color: CA.muted, fontWeight: 600, marginBottom: 6 }}>Metric guide</div>
+              <div style={{ display: "grid", gap: 8 }}>
+                {metricGuides.map((guide) => (
+                  <div key={guide.label} style={{
+                    border: `1px solid ${CA.hair}`, borderRadius: 10, background: CA.canvas,
+                    padding: "9px 10px",
+                  }}>
+                    <div style={{ color: CA.ink, fontWeight: 650, marginBottom: 3 }}>{guide.label}</div>
+                    <div>{guide.meaning}</div>
+                    <div style={{ color: CA.muted, marginTop: 4 }}>{guide.range}</div>
+                    <div style={{ marginTop: 4 }}>{guide.good}</div>
+                    <div style={{ color: CA.muted, marginTop: 4 }}>{guide.optimal}</div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
           {!!extra.length && (
@@ -191,6 +273,8 @@ const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
 
 function App() {
   const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  const initialConversationStore = useRef(null);
+  if (!initialConversationStore.current) initialConversationStore.current = loadConversationStore();
   const [theme, setTheme] = useState("airbnb");
   const [themeMenuOpen, setThemeMenuOpen] = useState(false);
   // apply theme palette (airbnb = default) + push tweak values into the live globals
@@ -201,11 +285,9 @@ function App() {
 
   const [collapsed, setCollapsed] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [agentId, setAgentId] = useState("host-revenue");
-  const [conversations, setConversations] = useState(
-    SEED_CONVERSATIONS.map((c) => ({ ...c, messages: null })) // lazy
-  );
-  const [activeConvId, setActiveConvId] = useState(null);
+  const [agentId, setAgentId] = useState(initialConversationStore.current.agentId);
+  const [conversations, setConversations] = useState(() => initialConversationStore.current.conversations);
+  const [activeConvId, setActiveConvId] = useState(initialConversationStore.current.activeConvId);
   const [search, setSearch] = useState("");
   const [input, setInput] = useState("");
   const [modelId, setModelId] = useState("gemini-2.5-pro");
@@ -224,12 +306,17 @@ function App() {
   const activeTheme = PALETTES[theme] || PALETTES.airbnb;
   const themeModes = ["airbnb", "kpmgLight", "dark"];
 
+  useEffect(() => {
+    saveConversationStore({ conversations, activeConvId, agentId });
+  }, [conversations, activeConvId, agentId]);
+
   /* lazily materialize a seeded conversation's thread */
   const ensureThread = useCallback((conv) => {
     if (conv.messages) return conv;
     const built = {
       ...conv,
       messages: [{ role: "user", text: conv.prompt }, builtMessage(conv.agentId, conv.prompt)],
+      updatedAt: nowIso(),
     };
     setConversations((cs) => cs.map((c) => (c.id === conv.id ? built : c)));
     return built;
@@ -240,7 +327,9 @@ function App() {
     setLive((l) => {
       if (!l) return null;
       const finalMsg = { ...l.msg, done: true, traceRunning: false, traceDone: l.msg.trace.length };
-      setConversations((cs) => cs.map((c) => c.id === l.convId ? { ...c, messages: [...(c.messages || []), finalMsg] } : c));
+      setConversations((cs) => cs.map((c) => c.id === l.convId
+        ? touchConversation(c, { messages: [...(c.messages || []), finalMsg] })
+        : c));
       return null;
     });
   }, []);
@@ -258,7 +347,9 @@ function App() {
       setLive((l) => {
         if (!l) return null;
         const fin = { ...l.msg, done: true, traceRunning: false, traceDone: steps.length, progress: { block: blocks.length, text: "" } };
-        setConversations((cs) => cs.map((c) => c.id === convId ? { ...c, messages: [...(c.messages || []), fin] } : c));
+        setConversations((cs) => cs.map((c) => c.id === convId
+          ? touchConversation(c, { messages: [...(c.messages || []), fin] })
+          : c));
         return null;
       });
     };
@@ -366,7 +457,9 @@ function App() {
       else setLive((l) => {
         if (!l) return null;
         const fin = { ...l.msg, brief, done: true, progress: { block: blocks.length, text: "" } };
-        setConversations((cs) => cs.map((c) => c.id === convId ? { ...c, messages: [...(c.messages || []), fin] } : c));
+        setConversations((cs) => cs.map((c) => c.id === convId
+          ? touchConversation(c, { messages: [...(c.messages || []), fin] })
+          : c));
         return null;
       });
     };
@@ -392,10 +485,10 @@ function App() {
     setConversations((cs) => {
       if (isNew) {
         const title = prompt.length > 38 ? prompt.slice(0, 36) + "…" : prompt;
-        return [{ id: convId, agentId: aid, title, group: "Today", messages: [{ role: "user", text: prompt }] }, ...cs];
+        return [touchConversation({ id: convId, agentId: aid, title, group: "Today", messages: [{ role: "user", text: prompt }] }), ...cs];
       }
       return cs.map((c) => c.id === convId
-        ? { ...c, messages: [...(c.messages || []), { role: "user", text: prompt }] }
+        ? touchConversation(c, { messages: [...(c.messages || []), { role: "user", text: prompt }] })
         : c);
     });
     setActiveConvId(convId);
@@ -420,7 +513,7 @@ function App() {
     const conv = conversations.find((c) => c.id === id);
     if (conv) { ensureThread(conv); setAgentId(conv.agentId); setActiveConvId(id); }
   }, [conversations, ensureThread, stopStream]);
-  const renameConv = useCallback((id, t) => setConversations((cs) => cs.map((c) => c.id === id ? { ...c, title: t } : c)), []);
+  const renameConv = useCallback((id, t) => setConversations((cs) => cs.map((c) => c.id === id ? touchConversation(c, { title: t || "Untitled chat" }) : c)), []);
   const deleteConv = useCallback((id) => {
     setConversations((cs) => cs.filter((c) => c.id !== id));
     setActiveConvId((a) => a === id ? null : a);
@@ -444,7 +537,7 @@ function App() {
     setConversations((cs) => cs.map((c) => {
       if (c.id !== activeConvId) return c;
       const idx = c.messages.lastIndexOf(m);
-      return { ...c, messages: c.messages.slice(0, idx) };
+      return touchConversation(c, { messages: c.messages.slice(0, idx) });
     }));
     setTimeout(() => {
       const s = getScript(m.agentId, m.prompt);

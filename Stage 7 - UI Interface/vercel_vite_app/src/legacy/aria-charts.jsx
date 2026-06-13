@@ -1,4 +1,6 @@
-/* ARIA — charts: recharts dark-themed visualizations + SVG pseudo-choropleth map */
+/* ARIA — charts: recharts dark-themed visualizations + map visualizations */
+
+import AriaGeoMap from "./AriaGeoMap.jsx";
 
 const {
   ResponsiveContainer, BarChart, Bar, LineChart, Line, AreaChart, Area, ComposedChart,
@@ -78,13 +80,14 @@ function ScatterTip({ active, payload, xKey, yKey, xLabel, yLabel }) {
   );
 }
 
-function ChartCard({ title, height = 248, children }) {
+function ChartCard({ title, note, height = 248, children }) {
   return (
     <div className="aria-fadein" style={{
       background: CC.s1, border: `1px solid ${CC.hair}`, borderRadius: 16,
       padding: "16px 16px 8px", margin: "4px 0 2px",
     }}>
       {title && <div style={{ fontSize: 12.5, color: CC.muted, fontWeight: 500, marginBottom: 12, letterSpacing: -0.13 }}>{title}</div>}
+      {note && <div style={{ fontSize: 11.5, color: CC.muted, lineHeight: 1.35, margin: "-6px 0 10px" }}>{note}</div>}
       <div style={{ width: "100%", height }}>
         <ResponsiveContainer width="100%" height="100%">{children}</ResponsiveContainer>
       </div>
@@ -243,41 +246,12 @@ function NeighbourhoodMap({ city = "Athens", title, metric = "risk" }) {
   );
 }
 
-const PARIS_REGION_LAYOUT = [
-  { x: 3, y: 2 }, { x: 2, y: 2 }, { x: 2, y: 3 }, { x: 3, y: 3 }, { x: 4, y: 3 },
-  { x: 4, y: 2 }, { x: 4, y: 1 }, { x: 3, y: 1 }, { x: 2, y: 1 }, { x: 1, y: 1 },
-  { x: 1, y: 2 }, { x: 1, y: 3 }, { x: 2, y: 4 }, { x: 3, y: 4 }, { x: 4, y: 4 },
-  { x: 5, y: 3 }, { x: 5, y: 2 }, { x: 5, y: 1 }, { x: 4, y: 0 }, { x: 3, y: 0 },
-];
-
-const ATHENS_REGION_LAYOUT = [
-  { x: 1, y: 0 }, { x: 2, y: 0 }, { x: 3, y: 0 }, { x: 0, y: 1 },
-  { x: 1, y: 1 }, { x: 2, y: 1 }, { x: 3, y: 1 }, { x: 4, y: 1 },
-  { x: 0, y: 2 }, { x: 1, y: 2 }, { x: 2, y: 2 }, { x: 3, y: 2 },
-];
-
-function regionLayout(city, count) {
-  const base = city === "Paris" ? PARIS_REGION_LAYOUT : ATHENS_REGION_LAYOUT;
-  return Array.from({ length: count }, (_, i) => base[i] || { x: i % 6, y: Math.floor(i / 6) + 4 });
-}
-
-function regionPath(x, y, w, h, i) {
-  const s = ((i % 3) - 1) * 3;
-  return [
-    `M ${x + 9} ${y + 2}`,
-    `L ${x + w - 7 + s} ${y}`,
-    `L ${x + w} ${y + h - 10}`,
-    `L ${x + w - 10} ${y + h}`,
-    `L ${x + 6 - s} ${y + h - 2}`,
-    `L ${x} ${y + 10}`,
-    "Z",
-  ].join(" ");
-}
-
 function regionColor(t, tone) {
   t = Math.max(0, Math.min(1, t));
   const toneColor = tone === "risk"
     ? (CC.coral || "#ff5577")
+    : tone === "livability"
+      ? (CC.success || CC.teal || "#16a34a")
     : tone === "price"
       ? (CC.teal || CC.success || "#22c55e")
       : (CC.violet || "#6a4cf5");
@@ -287,21 +261,107 @@ function regionColor(t, tone) {
   return `rgb(${c[0]},${c[1]},${c[2]})`;
 }
 
+const MAP_W = 720;
+const MAP_H = 382;
+const TILE = 256;
+
+const CITY_OUTLINES = {
+  Paris: [
+    [48.901, 2.292], [48.900, 2.410], [48.873, 2.421], [48.834, 2.417],
+    [48.815, 2.365], [48.826, 2.272], [48.858, 2.250],
+  ],
+  Athens: [
+    [38.034, 23.706], [38.025, 23.782], [37.984, 23.792], [37.949, 23.758],
+    [37.948, 23.702], [37.982, 23.682],
+  ],
+};
+
+const PARIS_SEINE = [
+  [48.822, 2.252], [48.837, 2.285], [48.849, 2.314], [48.858, 2.346],
+  [48.852, 2.371], [48.841, 2.393], [48.827, 2.414],
+];
+
+function projectLatLon(lat, lon, zoom) {
+  const sin = Math.sin((Number(lat) * Math.PI) / 180);
+  const n = TILE * Math.pow(2, zoom);
+  return {
+    x: ((Number(lon) + 180) / 360) * n,
+    y: (0.5 - Math.log((1 + sin) / (1 - sin)) / (4 * Math.PI)) * n,
+  };
+}
+
+function tileUrl(x, y, z) {
+  const n = Math.pow(2, z);
+  const wrappedX = ((x % n) + n) % n;
+  return `https://tile.openstreetmap.org/${z}/${wrappedX}/${y}.png`;
+}
+
+function mapState(chart) {
+  const fallback = chart.city === "Athens"
+    ? { lat: 37.9838, lon: 23.7275 }
+    : { lat: 48.8566, lon: 2.3522 };
+  const center = chart.center || fallback;
+  const zoom = Number(chart.zoom || 12);
+  const centerPx = projectLatLon(center.lat, center.lon, zoom);
+  const left = centerPx.x - MAP_W / 2;
+  const top = centerPx.y - MAP_H / 2;
+  return { center, zoom, left, top };
+}
+
+function pointOnMap(lat, lon, state) {
+  const p = projectLatLon(lat, lon, state.zoom);
+  return { x: p.x - state.left, y: p.y - state.top };
+}
+
+function visibleTiles(state) {
+  const n = Math.pow(2, state.zoom);
+  const startX = Math.floor(state.left / TILE);
+  const endX = Math.floor((state.left + MAP_W) / TILE);
+  const startY = Math.floor(state.top / TILE);
+  const endY = Math.floor((state.top + MAP_H) / TILE);
+  const tiles = [];
+  for (let x = startX; x <= endX; x++) {
+    for (let y = startY; y <= endY; y++) {
+      if (y < 0 || y >= n) continue;
+      tiles.push({
+        key: `${state.zoom}-${x}-${y}`,
+        href: tileUrl(x, y, state.zoom),
+        x: x * TILE - state.left,
+        y: y * TILE - state.top,
+      });
+    }
+  }
+  return tiles;
+}
+
+function pathFromCoords(coords, state) {
+  return coords.map(([lat, lon], i) => {
+    const p = pointOnMap(lat, lon, state);
+    return `${i ? "L" : "M"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`;
+  }).join(" ") + " Z";
+}
+
+function lineFromCoords(coords, state) {
+  return coords.map(([lat, lon], i) => {
+    const p = pointOnMap(lat, lon, state);
+    return `${i ? "L" : "M"} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`;
+  }).join(" ");
+}
+
 function RegionMapCard({ chart }) {
   const [hover, setHover] = React.useState(null);
-  const data = (chart.data || []).slice(0, chart.city === "Paris" ? 20 : 12);
-  const layout = regionLayout(chart.city, data.length);
-  const cell = chart.city === "Paris" ? 58 : 72;
-  const gap = 7;
-  const maxX = Math.max(...layout.map((p) => p.x), 0);
-  const maxY = Math.max(...layout.map((p) => p.y), 0);
-  const W = (maxX + 1) * cell + maxX * gap;
-  const H = (maxY + 1) * cell + maxY * gap;
+  const state = mapState(chart);
+  const data = (chart.data || [])
+    .filter((d) => Number.isFinite(Number(d.lat)) && Number.isFinite(Number(d.lon)))
+    .slice(0, chart.city === "Paris" ? 20 : 14);
   const values = data.map((d) => Number(d.value)).filter(Number.isFinite);
   const min = Math.min(...values);
   const max = Math.max(...values);
   const range = Math.max(max - min, 0.0001);
-  const invert = chart.tone === "price";
+  const lowerIsBetter = Boolean(chart.lowerIsBetter);
+  const tiles = visibleTiles(state);
+  const outline = CITY_OUTLINES[chart.city] || CITY_OUTLINES.Paris;
+  const topRegions = data.slice(0, 4);
   const tooltipRows = hover ? [
     [chart.metricLabel || "Metric", hover.display],
     ["Listings", hover.listingsDisplay],
@@ -317,47 +377,65 @@ function RegionMapCard({ chart }) {
       padding: "16px 16px 12px", margin: "4px 0 2px",
     }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12, marginBottom: 12 }}>
-        <div style={{ fontSize: 12.5, color: CC.muted, fontWeight: 500, letterSpacing: 0 }}>{chart.title || `${chart.city} regional map`}</div>
+        <div>
+          <div style={{ fontSize: 12.5, color: CC.ink, fontWeight: 650, letterSpacing: 0 }}>{chart.title || `${chart.city} regional map`}</div>
+          <div style={{ color: CC.muted, fontSize: 11.5, marginTop: 2 }}>
+            Detected city: {chart.mapLabel || chart.city} · zoomed to city view
+          </div>
+          {chart.metricNote && (
+            <div style={{ color: CC.muted, fontSize: 11.5, lineHeight: 1.35, marginTop: 4, maxWidth: 540 }}>
+              {chart.metricNote}
+            </div>
+          )}
+        </div>
         <div style={{ display: "flex", alignItems: "center", gap: 7, color: CC.muted, fontSize: 11.5, whiteSpace: "nowrap" }}>
-          lower
-          <span style={{ width: 72, height: 7, borderRadius: 999, background: invert
-            ? `linear-gradient(90deg, ${regionColor(1, chart.tone)}, ${regionColor(0.1, chart.tone)})`
-            : `linear-gradient(90deg, ${regionColor(0.1, chart.tone)}, ${regionColor(1, chart.tone)})` }} />
-          higher
+          {chart.legendLow || "lower"}
+          <span style={{ width: 76, height: 7, borderRadius: 999, background: `linear-gradient(90deg, ${regionColor(lowerIsBetter ? 1 : 0.1, chart.tone)}, ${regionColor(lowerIsBetter ? 0.1 : 1, chart.tone)})` }} />
+          {chart.legendHigh || "higher"}
         </div>
       </div>
-      <div style={{ position: "relative", width: "100%", minHeight: 304, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <svg viewBox={`-10 -10 ${W + 20} ${H + 20}`} width="100%" height="304" style={{ maxWidth: Math.max(W + 20, 460), overflow: "visible" }}>
-          <path d={`M 4 6 L ${W - 8} 0 L ${W + 4} ${H - 12} L ${W - 22} ${H + 4} L 12 ${H} L -4 ${H / 2} Z`}
-            fill="none" stroke={CC.hair} strokeWidth="1.2" strokeDasharray="5 5" opacity="0.9" />
+      <div style={{
+        position: "relative", width: "100%", borderRadius: 14, overflow: "hidden",
+        border: `1px solid ${CC.hair}`, background: CC.s2,
+      }}>
+        <svg viewBox={`0 0 ${MAP_W} ${MAP_H}`} width="100%" height="382" preserveAspectRatio="xMidYMid meet" role="img"
+          aria-label={`${chart.city} map visualization with region overlays`}>
+          <rect x="0" y="0" width={MAP_W} height={MAP_H} fill={CC.s2} />
+          {tiles.map((tile) => (
+            <image key={tile.key} href={tile.href} x={tile.x} y={tile.y} width={TILE} height={TILE} opacity="0.74" />
+          ))}
+          <rect x="0" y="0" width={MAP_W} height={MAP_H} fill={CC.s1} opacity="0.17" />
+          <path d={pathFromCoords(outline, state)} fill={`${CC.s1}44`} stroke={CC.ink} strokeOpacity="0.24"
+            strokeWidth="2.2" strokeDasharray="7 5" />
+          {chart.city === "Paris" && (
+            <path d={lineFromCoords(PARIS_SEINE, state)} fill="none" stroke={CC.teal || "#15b8a6"} strokeOpacity="0.55"
+              strokeWidth="5" strokeLinecap="round" />
+          )}
           {data.map((region, i) => {
-            const p = layout[i];
-            const x = p.x * (cell + gap);
-            const y = p.y * (cell + gap);
+            const p = pointOnMap(region.lat, region.lon, state);
             const rawT = (Number(region.value) - min) / range;
-            const t = invert ? 1 - rawT : rawT;
+            const t = lowerIsBetter ? 1 - rawT : rawT;
             const active = hover && hover.label === region.label;
             const fill = regionColor(0.18 + t * 0.82, chart.tone);
+            const radius = Math.max(15, Math.min(31, 14 + Math.log((Number(region.listings) || 1) + 1) * 2.1));
             return (
               <g key={`${region.label}-${i}`} onMouseEnter={() => setHover(region)} onMouseLeave={() => setHover(null)} style={{ cursor: "default" }}>
-                <path d={regionPath(x, y, cell, cell, i)}
-                  fill={fill}
-                  stroke={active ? CC.ink : CC.hair}
-                  strokeWidth={active ? 2 : 1}
+                <circle cx={p.x} cy={p.y} r={radius + 6} fill={fill} opacity="0.20" />
+                <circle cx={p.x} cy={p.y} r={radius}
+                  fill={fill} fillOpacity="0.88"
+                  stroke={active || i === 0 ? CC.ink : "#fff"}
+                  strokeOpacity={active || i === 0 ? 0.82 : 0.74}
+                  strokeWidth={active || i === 0 ? 2.5 : 1.4}
                   style={{
-                    transition: "stroke 0.15s, filter 0.15s, transform 0.15s",
+                    transition: "stroke 0.15s, filter 0.15s, transform 0.15s, opacity 0.15s",
                     filter: active ? "brightness(1.13)" : "none",
-                    transform: active ? "translateY(-2px)" : "none",
+                    transformOrigin: `${p.x}px ${p.y}px`,
+                    transform: active ? "scale(1.08)" : "none",
                   }} />
-                <text x={x + cell / 2} y={y + cell / 2 - 3} textAnchor="middle"
-                  fontSize={chart.city === "Paris" ? "9.5" : "10.5"} fontWeight="600" fill={t > 0.45 ? "#fff" : CC.ink}
+                <text x={p.x} y={p.y + 4} textAnchor="middle"
+                  fontSize="11" fontWeight="750" fill={t > 0.42 ? "#fff" : CC.ink}
                   style={{ pointerEvents: "none", letterSpacing: 0 }}>
-                  {compactAxisLabel(region.label, chart.city === "Paris" ? 9 : 12)}
-                </text>
-                <text x={x + cell / 2} y={y + cell / 2 + 13} textAnchor="middle"
-                  fontSize="10.5" fontWeight="500" fill={t > 0.45 ? "rgba(255,255,255,0.78)" : CC.muted}
-                  style={{ pointerEvents: "none", letterSpacing: 0 }}>
-                  {region.display}
+                  {i + 1}
                 </text>
               </g>
             );
@@ -365,7 +443,7 @@ function RegionMapCard({ chart }) {
         </svg>
         {hover && (
           <div style={{
-            position: "absolute", top: 4, right: 4, minWidth: 220,
+            position: "absolute", top: 12, right: 12, minWidth: 230,
             background: CC.s2, border: `1px solid ${CC.hair}`, borderRadius: 12,
             padding: "10px 12px", fontSize: 12.5, color: CC.ink,
             boxShadow: "0 12px 30px rgba(0,0,0,0.45)", pointerEvents: "none",
@@ -380,11 +458,161 @@ function RegionMapCard({ chart }) {
             </div>
           </div>
         )}
+        <div style={{
+          position: "absolute", left: 12, bottom: 12, background: CC.s2,
+          border: `1px solid ${CC.hair}`, borderRadius: 999, padding: "6px 10px",
+          color: CC.muted, fontSize: 11.5, boxShadow: "0 8px 22px rgba(0,0,0,0.22)",
+        }}>
+          Map data © OpenStreetMap · ARIA overlays
+        </div>
+      </div>
+      <div style={{
+        display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(132px, 1fr))", gap: 8, marginTop: 10,
+      }}>
+        {topRegions.map((region, i) => (
+          <div key={region.label} style={{
+            border: `1px solid ${CC.hair}`, borderRadius: 10, padding: "8px 9px",
+            background: CC.s2, minWidth: 0,
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+              <span style={{
+                width: 20, height: 20, borderRadius: 999, display: "inline-flex", alignItems: "center",
+                justifyContent: "center", background: regionColor(0.86 - i * 0.12, chart.tone),
+                color: "#fff", fontSize: 10.5, fontWeight: 750, flex: "0 0 auto",
+              }}>{i + 1}</span>
+              <strong style={{
+                fontSize: 12.5, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+              }}>{region.label}</strong>
+            </div>
+            <div style={{ marginTop: 5, color: CC.muted, fontSize: 11.5 }}>
+              {chart.metricLabel}: <span style={{ color: CC.ink, fontWeight: 650 }}>{region.display}</span>
+            </div>
+          </div>
+        ))}
       </div>
       <div style={{ marginTop: 8, color: CC.muted, fontSize: 11.5, lineHeight: 1.4 }}>
-        Hover a region to inspect the local market signals. Layout is an analytical region map for comparison, not an official boundary file.
+        Hover a numbered region to inspect the local market signals. Region bubbles are approximate neighbourhood centroids from ARIA project data, shown on a real city map.
       </div>
     </div>
+  );
+}
+
+function RegionMapStateCard({ title, message }) {
+  return (
+    <div className="aria-fadein" style={{
+      background: CC.s1, border: `1px solid ${CC.hair}`, borderRadius: 16,
+      padding: "18px 16px", margin: "4px 0 2px", minHeight: 260,
+      display: "flex", alignItems: "center", justifyContent: "center", textAlign: "center",
+    }}>
+      <div style={{ maxWidth: 420 }}>
+        {title && <div style={{ fontSize: 13, fontWeight: 650, color: CC.ink, marginBottom: 6 }}>{title}</div>}
+        <div style={{ fontSize: 12.5, lineHeight: 1.45, color: CC.muted }}>{message}</div>
+      </div>
+    </div>
+  );
+}
+
+function GeoRegionMapCard({ chart }) {
+  const [geoJson, setGeoJson] = React.useState(chart.geoJson || null);
+  const [status, setStatus] = React.useState(chart.geoJson ? "ready" : chart.geoJsonUrl ? "loading" : "missing");
+  const [error, setError] = React.useState("");
+
+  React.useEffect(() => {
+    if (chart.geoJson) {
+      setGeoJson(chart.geoJson);
+      setStatus("ready");
+      setError("");
+      return undefined;
+    }
+    if (!chart.geoJsonUrl) {
+      setGeoJson(null);
+      setStatus("missing");
+      setError("");
+      return undefined;
+    }
+
+    const controller = new AbortController();
+    setStatus("loading");
+    setError("");
+    fetch(chart.geoJsonUrl, { signal: controller.signal, headers: { Accept: "application/geo+json, application/json" } })
+      .then((res) => {
+        if (!res.ok) throw new Error(`Boundary source returned ${res.status}`);
+        return res.json();
+      })
+      .then((data) => {
+        setGeoJson(data);
+        setStatus("ready");
+      })
+      .catch((err) => {
+        if (err.name === "AbortError") return;
+        setGeoJson(null);
+        setStatus("error");
+        setError(err.message || "Could not load geographic boundaries.");
+      });
+
+    return () => controller.abort();
+  }, [chart.geoJson, chart.geoJsonUrl]);
+
+  if (status === "loading") {
+    return <RegionMapStateCard title={chart.title || "Regional map"} message="Loading real geographic boundaries..." />;
+  }
+
+  if (status === "missing") {
+    return (
+      <RegionMapStateCard
+        title={chart.title || "Regional map"}
+        message="A real GeoJSON boundary source is required for this map. ARIA will not render fake region tiles for geographic questions."
+      />
+    );
+  }
+
+  if (status === "error") {
+    return (
+      <RegionMapStateCard
+        title={chart.title || "Regional map"}
+        message={`Could not load the real boundary file. ${error}`}
+      />
+    );
+  }
+
+  const metrics = (chart.data || []).map((row) => ({
+    regionId: String(row.regionId || row.code || row.label || ""),
+    regionName: row.regionName || row.label || "Region",
+    value: Number(row.value),
+    metadata: {
+      display: row.display,
+      explanation: row.explanation,
+      listings: row.listingsDisplay,
+      medianNightlyPrice: row.priceDisplay,
+      averageRevenue: row.revenueDisplay,
+      opportunity: row.opportunityDisplay,
+      saturation: row.saturationDisplay,
+      occupancy: row.occupancyDisplay,
+    },
+  })).filter((row) => row.regionId);
+
+  const highlightedRegions = chart.highlightedRegions && chart.highlightedRegions.length
+    ? chart.highlightedRegions
+    : metrics.slice(0, 4).map((row) => row.regionId);
+
+  return (
+    <AriaGeoMap
+      title={chart.title || `${chart.city || "City"} regional map`}
+      geoJson={geoJson}
+      metrics={metrics}
+      chatbotSelection={{
+        location: chart.city,
+        geographyLevel: chart.geographyLevel || "city_district",
+        metric: chart.metricLabel || chart.yLabel || "Selected metric",
+        highlightedRegions,
+        aggregation: chart.aggregation || "area average",
+      }}
+      regionIdProperty={chart.regionIdProperty || "regionId"}
+      regionNameProperty={chart.regionNameProperty || "regionName"}
+      height={chart.height || 420}
+      showLegend={chart.showLegend !== false}
+      showControls={chart.showControls !== false}
+    />
   );
 }
 
@@ -392,7 +620,7 @@ function RegionMapCard({ chart }) {
 function ChartBlock({ chart }) {
   const { kind, title } = chart;
   if (kind === "region-map" && Array.isArray(chart.data) && chart.data.length) {
-    return <RegionMapCard chart={chart} />;
+    return <GeoRegionMapCard chart={chart} />;
   }
 
   if (Array.isArray(chart.data) && chart.data.length) {
@@ -404,7 +632,7 @@ function ChartBlock({ chart }) {
     if (kind === "scatter") {
       const scatterData = chartDataWithLabels(chart.data, xKey, 8, "label");
       return (
-        <ChartCard title={title || "Live analysis"} height={252}>
+        <ChartCard title={title || "Live analysis"} note={chart.metricNote} height={252}>
           <ScatterChart data={scatterData} margin={{ left: 4, right: 18, top: 8, bottom: 10 }}>
             <CartesianGrid stroke={CC.s2} />
             <XAxis type="number" dataKey={xKey} name={xLabel} tick={axisTick()} axisLine={false} tickLine={false} width={42} />
@@ -417,7 +645,7 @@ function ChartBlock({ chart }) {
     }
     if (kind === "horizontal-bar") {
       return (
-        <ChartCard title={title || "Live analysis"} height={252}>
+        <ChartCard title={title || "Live analysis"} note={chart.metricNote} height={252}>
           <BarChart layout="vertical" data={data} margin={{ left: 8, right: 22, top: 8, bottom: 8 }} barCategoryGap="28%">
             <CartesianGrid horizontal={false} stroke={CC.s2} />
             <XAxis type="number" tick={axisTick()} axisLine={false} tickLine={false} />
@@ -434,7 +662,7 @@ function ChartBlock({ chart }) {
       const series = chart.series && chart.series.length ? chart.series : [{ key: yKey, name: yLabel }];
       const colors = [CC.violet, CC.teal || CC.success, CC.magenta || CC.coral, CC.muted];
       return (
-        <ChartCard title={title || "Live analysis"} height={252}>
+        <ChartCard title={title || "Live analysis"} note={chart.metricNote} height={252}>
           <BarChart data={data} margin={{ left: 4, right: 16, top: 8, bottom: 14 }} barCategoryGap="28%">
             <CartesianGrid vertical={false} stroke={CC.s2} />
             <XAxis dataKey="__axisLabel" tick={axisTick()} axisLine={false} tickLine={false} interval={0} tickMargin={8} height={36} />
@@ -449,7 +677,7 @@ function ChartBlock({ chart }) {
     }
     if (kind === "line") {
       return (
-        <ChartCard title={title || "Live analysis"}>
+        <ChartCard title={title || "Live analysis"} note={chart.metricNote}>
           <LineChart data={data} margin={{ left: 4, right: 16, top: 6, bottom: 2 }}>
             <CartesianGrid vertical={false} stroke={CC.s2} />
             <XAxis dataKey="__axisLabel" tick={axisTick()} axisLine={false} tickLine={false} interval={0} tickMargin={8} height={34} />
@@ -461,7 +689,7 @@ function ChartBlock({ chart }) {
       );
     }
     return (
-      <ChartCard title={title || "Live analysis"} height={252}>
+      <ChartCard title={title || "Live analysis"} note={chart.metricNote} height={252}>
         <BarChart data={data} margin={{ left: 4, right: 16, top: 8, bottom: 14 }} barCategoryGap="32%">
           <CartesianGrid vertical={false} stroke={CC.s2} />
           <XAxis dataKey="__axisLabel" tick={axisTick()} axisLine={false} tickLine={false} interval={0} tickMargin={8} height={36} />
@@ -594,4 +822,4 @@ function ChartBlock({ chart }) {
   return null;
 }
 
-Object.assign(window, { ChartBlock, NeighbourhoodMap, RegionMapCard });
+Object.assign(window, { ChartBlock, NeighbourhoodMap, RegionMapCard: GeoRegionMapCard, GeoRegionMapCard });

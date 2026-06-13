@@ -116,6 +116,156 @@ function fmtScore(value, digits = 2) {
   return num(value).toFixed(digits);
 }
 
+const METRIC_GUIDES = {
+  opportunity: {
+    label: "Opportunity score",
+    meaning: "A 0 to 1 shortlist score that combines rental-market upside with pressure signals.",
+    range: "Lowest is 0.00, highest is 1.00.",
+    good: "Higher is better for investment screening; above 0.70 is a strong shortlist signal, while below 0.30 is weak.",
+    optimal: "A good choice has a high opportunity score without extreme saturation or unusually thin listing evidence.",
+  },
+  saturation: {
+    label: "Saturation score",
+    meaning: "A 0 to 1 signal for how crowded or competitive the short-term-rental area looks.",
+    range: "Lowest is 0.00, highest is 1.00.",
+    good: "Lower is better for a calmer place to live or a less crowded entry point; below 0.30 is calmer, above 0.60 is crowded.",
+    optimal: "The optimal range depends on the goal: investors can accept moderate saturation if revenue is strong, but family/living prompts prefer lower saturation.",
+  },
+  medianNightlyPrice: {
+    label: "Median nightly price",
+    meaning: "The middle nightly rental price in the area, in euros, not the home purchase price.",
+    range: "There is no fixed universal maximum; compare it against nearby areas in the same city.",
+    good: "Lower is better for affordability; higher can be good for revenue only if demand stays strong.",
+    optimal: "The best choice balances a fair price with enough occupancy and revenue potential.",
+  },
+  averageRevenue: {
+    label: "Average revenue",
+    meaning: "The average rental revenue signal in the prepared project data.",
+    range: "Higher values generally indicate stronger short-term-rental earning potential.",
+    good: "Higher is better for hosts and investors, but it should be checked against saturation, risk, and local rules.",
+    optimal: "A good choice has strong revenue together with sustainable demand and manageable competition.",
+  },
+  occupancy: {
+    label: "Occupancy",
+    meaning: "The share of available nights that appear booked or used in the rental data.",
+    range: "Lowest is 0%, highest is 100%.",
+    good: "Higher usually means stronger demand; very low occupancy suggests weak demand, while extremely high occupancy can also mean constrained supply.",
+    optimal: "For screening, roughly 60% to 80% is usually a healthy demand signal before checking price and seasonality.",
+  },
+  listings: {
+    label: "Listings reviewed",
+    meaning: "The number of listings included in the calculation.",
+    range: "Higher counts provide a more stable market signal; very small counts are less reliable.",
+    good: "More observations are generally better for confidence, but many listings can also mean more competition.",
+    optimal: "Use high-count areas for reliable benchmarking, then compare competition and revenue before deciding.",
+  },
+  underpricingGap: {
+    label: "Underpricing gap",
+    meaning: "The estimated euro-per-night difference between the model's fair price and the current listed price.",
+    range: "Positive means the listing may be underpriced; negative means it may already be high versus the model.",
+    good: "A larger positive gap is useful for host revenue action, but very large gaps should be checked manually.",
+    optimal: "A good action is a positive gap that is large enough to matter and still reasonable for the neighbourhood.",
+  },
+  predictedPrice: {
+    label: "Predicted fair price",
+    meaning: "The model's estimated fair nightly price for a listing or area.",
+    range: "It is an estimate, not a guaranteed achievable price.",
+    good: "It is useful when compared with the current price; the difference matters more than the estimate alone.",
+    optimal: "Use it as a pricing benchmark, then check demand, reviews, amenities, and seasonality.",
+  },
+  shapImpact: {
+    label: "Model driver impact",
+    meaning: "A SHAP-based explanation of which variables moved the pricing model most.",
+    range: "Higher impact means the feature mattered more to the model's price estimate.",
+    good: "Good drivers are interpretable and business-relevant, such as neighbourhood price level or distance zone.",
+    optimal: "Use driver impact to explain why the model made a recommendation, not as a standalone decision score.",
+  },
+  highRiskShare: {
+    label: "High-risk share",
+    meaning: "The percentage of listings in an area above the model's high-risk threshold.",
+    range: "Lowest is 0%, highest is 100%.",
+    good: "Lower is safer; higher means the area needs closer review before action.",
+    optimal: "For risk avoidance, lower is better. For intervention planning, higher helps identify where to act first.",
+  },
+  riskProbability: {
+    label: "Risk probability",
+    meaning: "The model probability that a listing belongs to the high-risk group.",
+    range: "Lowest is 0.00, highest is 1.00; the current high-risk cutoff is 0.70.",
+    good: "Lower is better for safety; above 0.70 should be treated as a review flag.",
+    optimal: "Use it to prioritize analyst review, not as a final judgement about a host or neighbourhood.",
+  },
+  priorityOverlap: {
+    label: "Priority overlap",
+    meaning: "Listings that are both high-risk and underpriced.",
+    range: "Higher counts mean more listings need attention in that action queue.",
+    good: "For operations, higher is more urgent; for an individual investor, lower risk exposure is better.",
+    optimal: "Use this to decide where host coaching or manual review should start.",
+  },
+  threshold: {
+    label: "Threshold",
+    meaning: "The cutoff used to convert a model probability into a high-risk flag.",
+    range: "In this project, 0.70 means a listing is flagged high risk.",
+    good: "Higher probabilities above the threshold need more attention.",
+    optimal: "The threshold is a triage setting: strict enough to focus review, but not a final decision by itself.",
+  },
+  readiness: {
+    label: "Readiness score",
+    meaning: "A demo-readiness percentage for whether a workflow layer is usable now.",
+    range: "Lowest is 0%, highest is 100%.",
+    good: "Higher means more ready; lower means planned or incomplete.",
+    optimal: "Use high-readiness layers for demo decisions and treat low-readiness layers as roadmap items.",
+  },
+};
+
+function metricGuides(keys) {
+  return [...new Set(keys)].map((key) => METRIC_GUIDES[key]).filter(Boolean);
+}
+
+function kpiHelpFor(label) {
+  const l = String(label || "").toLowerCase();
+  if (l.includes("opportunity")) return "0-1 score. Higher is better; above 0.70 is a strong shortlist signal.";
+  if (l.includes("saturation")) return "0-1 crowding score. Lower is calmer; above 0.60 means a more crowded market.";
+  if (l.includes("median nightly") || l.includes("price")) return "Euro nightly rental price, not purchase price. Lower helps affordability; higher needs strong demand.";
+  if (l.includes("revenue")) return "Rental revenue signal. Higher is better only if demand, risk, and saturation are acceptable.";
+  if (l.includes("occupancy") || l.includes("demand")) return "Booked-night share. Higher usually means stronger demand; around 60-80% is a healthy screen.";
+  if (l.includes("listing")) return "Number of listings behind the calculation. More data improves confidence but can also mean more competition.";
+  if (l.includes("gap") || l.includes("underpricing")) return "Euro-per-night pricing upside. Positive means the model thinks the current price may be low.";
+  if (l.includes("risk")) return "Risk signal. Lower is safer; above 0.70 probability is treated as high-risk.";
+  if (l.includes("priority overlap")) return "Listings that are both high-risk and underpriced. Higher means more urgent review.";
+  if (l.includes("threshold")) return "Model cutoff. In this project, 0.70 or above is flagged for high-risk review.";
+  if (l.includes("status") || l.includes("readiness")) return "Readiness indicator. Higher means the workflow is more usable in the current demo.";
+  return "";
+}
+
+function attachKpiHelp(kpis = []) {
+  return kpis.map((item) => ({
+    ...item,
+    help: item.help || kpiHelpFor(item.label),
+  }));
+}
+
+function metricNoteForKey(key, fallbackLabel = "") {
+  const guideKey = {
+    opportunity: "opportunity",
+    score: "opportunity",
+    saturation: "saturation",
+    price: "medianNightlyPrice",
+    medianPrice: "medianNightlyPrice",
+    revenue: "averageRevenue",
+    occupancy: "occupancy",
+    share: "highRiskShare",
+    count: "listings",
+    listings: "listings",
+    gap: "underpricingGap",
+    predicted: "predictedPrice",
+    impact: "shapImpact",
+  }[key] || "";
+  const byLabel = kpiHelpFor(fallbackLabel);
+  const guide = METRIC_GUIDES[guideKey];
+  if (guide) return `${guide.label}: ${guide.meaning} ${guide.good}`;
+  return byLabel || "";
+}
+
 const FEATURE_LABELS = new Map([
   ["neighbourhood_median_price", "Neighbourhood median price"],
   ["neighborhood_median_price", "Neighbourhood median price"],
@@ -261,6 +411,135 @@ function cityFromPrompt(prompt) {
   if (p.includes("paris")) return "Paris";
   if (p.includes("athens")) return "Athens";
   return "";
+}
+
+function normaliseAreaKey(area) {
+  return String(area || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toUpperCase();
+}
+
+const CITY_MAP_META = {
+  Paris: {
+    center: { lat: 48.8566, lon: 2.3522 },
+    zoom: 12,
+    label: "Paris, France",
+    geoJsonUrl: "/api/chat?geo=paris-arrondissements",
+    regionIdProperty: "code",
+    regionNameProperty: "nom",
+  },
+  Athens: {
+    center: { lat: 37.9838, lon: 23.7275 },
+    zoom: 12,
+    label: "Athens, Greece",
+  },
+};
+
+const REGION_COORDS = new Map([
+  ["Paris|HOTEL-DE-VILLE", { lat: 48.8566, lon: 2.3522 }],
+  ["Paris|ELYSEE", { lat: 48.8698, lon: 2.3078 }],
+  ["Paris|PANTHEON", { lat: 48.8462, lon: 2.3455 }],
+  ["Paris|LOUVRE", { lat: 48.8606, lon: 2.3376 }],
+  ["Paris|BOURSE", { lat: 48.8686, lon: 2.3431 }],
+  ["Paris|OPERA", { lat: 48.8720, lon: 2.3320 }],
+  ["Paris|TEMPLE", { lat: 48.8647, lon: 2.3600 }],
+  ["Paris|ENTREPOT", { lat: 48.8763, lon: 2.3593 }],
+  ["Paris|PALAIS-BOURBON", { lat: 48.8616, lon: 2.3186 }],
+  ["Paris|LUXEMBOURG", { lat: 48.8469, lon: 2.3370 }],
+  ["Paris|MENILMONTANT", { lat: 48.8687, lon: 2.3980 }],
+  ["Paris|GOBELINS", { lat: 48.8326, lon: 2.3554 }],
+  ["Paris|REUILLY", { lat: 48.8412, lon: 2.3887 }],
+  ["Paris|OBSERVATOIRE", { lat: 48.8295, lon: 2.3265 }],
+  ["Paris|VAUGIRARD", { lat: 48.8410, lon: 2.2990 }],
+  ["Paris|POPINCOURT", { lat: 48.8590, lon: 2.3820 }],
+  ["Paris|PASSY", { lat: 48.8576, lon: 2.2712 }],
+  ["Paris|BATIGNOLLES-MONCEAU", { lat: 48.8874, lon: 2.3095 }],
+  ["Paris|ENCLOS-ST-LAURENT", { lat: 48.8757, lon: 2.3605 }],
+  ["Paris|BUTTES-MONTMARTRE", { lat: 48.8925, lon: 2.3444 }],
+  ["Paris|BUTTES-CHAUMONT", { lat: 48.8805, lon: 2.3822 }],
+  ["Athens|ΖΑΠΠΕΙΟ", { lat: 37.9699, lon: 23.7330 }],
+  ["Athens|1Ο ΝΕΚΡΟΤΑΦΕΙΟ", { lat: 37.9615, lon: 23.7360 }],
+  ["Athens|ΑΚΡΟΠΟΛΗ", { lat: 37.9680, lon: 23.7247 }],
+  ["Athens|ΣΤΑΔΙΟ", { lat: 37.9681, lon: 23.7415 }],
+  ["Athens|ΘΗΣΕΙΟ", { lat: 37.9760, lon: 23.7195 }],
+  ["Athens|ΚΟΛΩΝΟΣ", { lat: 38.0025, lon: 23.7150 }],
+  ["Athens|ΣΤΑΘΜΟΣ ΛΑΡΙΣΗΣ", { lat: 37.9920, lon: 23.7210 }],
+  ["Athens|ΓΚΑΖΙ", { lat: 37.9785, lon: 23.7138 }],
+  ["Athens|ΑΝΩ ΠΑΤΗΣΙΑ", { lat: 38.0235, lon: 23.7350 }],
+  ["Athens|ΓΟΥΒΑ", { lat: 37.9558, lon: 23.7430 }],
+  ["Athens|ΑΚΑΔΗΜΙΑ ΠΛΑΤΩΝΟΣ", { lat: 37.9925, lon: 23.7065 }],
+  ["Athens|ΑΓΙΟΣ ΕΛΕΥΘΕΡΙΟΣ", { lat: 38.0220, lon: 23.7310 }],
+  ["Athens|ΑΝΩ ΚΥΨΕΛΗ", { lat: 38.0050, lon: 23.7400 }],
+  ["Athens|ΝΕΑ ΚΥΨΕΛΗ", { lat: 38.0070, lon: 23.7440 }],
+  ["Athens|ΝΙΡΒΑΝΑ", { lat: 38.0180, lon: 23.7330 }],
+  ["Athens|ΠΕΝΤΑΓΩΝΟ", { lat: 38.0000, lon: 23.7770 }],
+  ["Athens|ΡΗΓΙΛΛΗΣ", { lat: 37.9755, lon: 23.7440 }],
+  ["Athens|ΒΟΤΑΝΙΚΟΣ", { lat: 37.9810, lon: 23.7050 }],
+  ["Athens|ΚΕΡΑΜΕΙΚΟΣ", { lat: 37.9780, lon: 23.7160 }],
+  ["Athens|ΚΟΥΚΑΚΙ-ΜΑΚΡΥΓΙΑΝΝΗ", { lat: 37.9650, lon: 23.7240 }],
+  ["Athens|ΕΜΠΟΡΙΚΟ ΤΡΙΓΩΝΟ-ΠΛΑΚΑ", { lat: 37.9750, lon: 23.7290 }],
+  ["Athens|ΝΕΟΣ ΚΟΣΜΟΣ", { lat: 37.9580, lon: 23.7280 }],
+  ["Athens|ΚΟΛΩΝΑΚΙ", { lat: 37.9760, lon: 23.7420 }],
+  ["Athens|ΠΑΓΚΡΑΤΙ", { lat: 37.9680, lon: 23.7510 }],
+  ["Athens|ΠΕΤΡΑΛΩΝΑ", { lat: 37.9690, lon: 23.7100 }],
+  ["Athens|ΜΟΥΣΕΙΟ-ΕΞΑΡΧΕΙΑ-ΝΕΑΠΟΛΗ", { lat: 37.9870, lon: 23.7330 }],
+  ["Athens|ΚΥΨΕΛΗ", { lat: 38.0020, lon: 23.7390 }],
+  ["Athens|ΛΥΚΑΒΗΤΤΟΣ", { lat: 37.9820, lon: 23.7430 }],
+]);
+
+const PARIS_BOUNDARY_IDS = new Map([
+  ["LOUVRE", "75101"],
+  ["BOURSE", "75102"],
+  ["TEMPLE", "75103"],
+  ["HOTEL-DE-VILLE", "75104"],
+  ["HÔTEL-DE-VILLE", "75104"],
+  ["PANTHEON", "75105"],
+  ["PANTHÉON", "75105"],
+  ["LUXEMBOURG", "75106"],
+  ["PALAIS-BOURBON", "75107"],
+  ["ELYSEE", "75108"],
+  ["ÉLYSÉE", "75108"],
+  ["OPERA", "75109"],
+  ["OPÉRA", "75109"],
+  ["ENTREPOT", "75110"],
+  ["ENTREPÔT", "75110"],
+  ["ENCLOS-ST-LAURENT", "75110"],
+  ["POPINCOURT", "75111"],
+  ["REUILLY", "75112"],
+  ["GOBELINS", "75113"],
+  ["OBSERVATOIRE", "75114"],
+  ["VAUGIRARD", "75115"],
+  ["PASSY", "75116"],
+  ["BATIGNOLLES-MONCEAU", "75117"],
+  ["BUTTES-MONTMARTRE", "75118"],
+  ["BUTTES-CHAUMONT", "75119"],
+  ["MENILMONTANT", "75120"],
+  ["MÉNILMONTANT", "75120"],
+]);
+
+function boundaryRegionId(city, area) {
+  if (city !== "Paris") return normaliseAreaKey(area);
+  return PARIS_BOUNDARY_IDS.get(normaliseAreaKey(area)) || normaliseAreaKey(area);
+}
+
+function fallbackRegionCoord(city, area) {
+  const meta = CITY_MAP_META[city] || CITY_MAP_META.Paris;
+  const key = normaliseAreaKey(area);
+  let hash = 0;
+  for (let i = 0; i < key.length; i++) hash = (hash * 31 + key.charCodeAt(i)) >>> 0;
+  const angle = (hash % 360) * Math.PI / 180;
+  const ring = 0.012 + ((hash % 19) / 19) * 0.025;
+  return {
+    lat: Number((meta.center.lat + Math.sin(angle) * ring).toFixed(5)),
+    lon: Number((meta.center.lon + Math.cos(angle) * ring * 1.35).toFixed(5)),
+  };
+}
+
+function regionCoord(city, area) {
+  const key = `${city}|${normaliseAreaKey(area)}`;
+  return REGION_COORDS.get(key) || fallbackRegionCoord(city, area);
 }
 
 function groupMetric(map, key, patch) {
@@ -448,12 +727,13 @@ async function loadShap(path, cacheKey) {
   });
 }
 
-function sourceDetails(sourceFiles, methodology, limitations, extra = []) {
+function sourceDetails(sourceFiles, methodology, limitations, extra = [], metricGuides = []) {
   return {
     methodology,
     sourceFiles,
     limitations,
     extra,
+    metricGuides,
   };
 }
 
@@ -464,6 +744,7 @@ function makeViz(title, data, yLabel = "Score", yKey = "value", options = {}) {
     xKey: options.xKey || "label",
     yKey,
     yLabel,
+    metricNote: options.metricNote || metricNoteForKey(yKey, yLabel),
     series: options.series,
     xLabel: options.xLabel,
     data: data.map((d) => ({
@@ -482,17 +763,17 @@ function wantsRegionMap(prompt) {
 }
 
 function makeRegionMap(title, city, rows, metricKey, metricLabel, displayFormatter = fmtScore, options = {}) {
-  return [{
-    kind: "region-map",
-    city,
-    title,
-    metricKey: "value",
-    metricLabel,
-    tone: options.tone || "opportunity",
-    data: rows.slice(0, city === "Paris" ? 20 : 12).map((r) => ({
-      label: shortArea(r.area || r.label),
+  const meta = CITY_MAP_META[city] || CITY_MAP_META.Paris;
+  const mapRows = rows.slice(0, city === "Paris" ? 20 : 12).map((r) => {
+    const area = r.area || r.label;
+    const regionId = boundaryRegionId(city, area);
+    return {
+      regionId,
+      regionName: shortArea(area),
+      label: shortArea(area),
       value: Number(num(r[metricKey]).toFixed(2)),
       display: displayFormatter(r[metricKey]),
+      ...regionCoord(city, area),
       listings: Number(num(r.listings).toFixed(0)),
       listingsDisplay: fmtInt(r.listings),
       priceDisplay: fmtEuro(r.medianPrice),
@@ -500,7 +781,27 @@ function makeRegionMap(title, city, rows, metricKey, metricLabel, displayFormatt
       opportunityDisplay: fmtScore(r.opportunity),
       saturationDisplay: fmtScore(r.saturation),
       occupancyDisplay: fmtPct(r.occupancy),
-    })),
+    };
+  });
+  return [{
+    kind: "region-map",
+    city,
+    title,
+    mapLabel: meta.label,
+    center: meta.center,
+    zoom: options.zoom || meta.zoom,
+    geoJsonUrl: meta.geoJsonUrl,
+    regionIdProperty: meta.regionIdProperty,
+    regionNameProperty: meta.regionNameProperty,
+    highlightedRegions: mapRows.slice(0, 4).map((row) => row.regionId),
+    metricKey: "value",
+    metricLabel,
+    metricNote: options.metricNote || metricNoteForKey(metricKey, metricLabel),
+    tone: options.tone || "opportunity",
+    lowerIsBetter: Boolean(options.lowerIsBetter),
+    legendLow: options.legendLow || "lower",
+    legendHigh: options.legendHigh || "higher",
+    data: mapRows,
   }];
 }
 
@@ -534,15 +835,31 @@ async function marketAnalysis(prompt) {
   const mainScoreLabel = cheap ? "Median nightly price" : revenue ? "Average revenue" : demand ? "Average occupancy" : family || saturated ? "Saturation score" : "Opportunity score";
   const mainScoreValue = cheap ? fmtEuro(best.medianPrice) : revenue ? fmtEuro(best.revenue) : demand ? fmtPct(best.occupancy) : fmtScore(best[chartMetric]);
   const mapRequested = wantsRegionMap(prompt);
+  const mapTitle = cheap
+    ? `${city} map: lowest nightly prices`
+    : revenue
+      ? `${city} map: strongest revenue regions`
+      : demand
+        ? `${city} map: strongest occupancy regions`
+        : family
+          ? `${city} map: calmer regions to live`
+          : saturated
+            ? `${city} map: highest saturation pressure`
+            : `${city} map: best opportunity regions`;
   const visualizations = mapRequested
     ? makeRegionMap(
-      `${city} regional comparison map`,
+      mapTitle,
       city,
-      mapRanked,
-      chartMetric,
-      cheap ? "Median nightly price" : revenue ? "Average revenue" : demand ? "Average occupancy" : saturated || family ? "Saturation score" : "Opportunity score",
-      cheap || revenue ? fmtEuro : demand ? fmtPct : fmtScore,
-      { tone: cheap || revenue ? "price" : saturated || family ? "risk" : "opportunity" }
+        mapRanked,
+        chartMetric,
+        cheap ? "Median nightly price" : revenue ? "Average revenue" : demand ? "Average occupancy" : saturated || family ? "Saturation score" : "Opportunity score",
+        cheap || revenue ? fmtEuro : demand ? fmtPct : fmtScore,
+      {
+        tone: cheap ? "price" : family ? "livability" : saturated ? "risk" : revenue ? "price" : "opportunity",
+        lowerIsBetter: cheap || family,
+        legendLow: cheap ? "cheaper" : family ? "calmer" : "lower",
+        legendHigh: cheap ? "costlier" : family ? "more saturated" : "higher",
+      }
     )
     : makeViz(chartTitle, ranked.map((r) => ({
       label: r.area,
@@ -578,10 +895,11 @@ async function marketAnalysis(prompt) {
     details: sourceDetails(
       [FILES.neighbourhoodStats],
       mapRequested
-        ? "Rank neighbourhoods using the prepared neighbourhood summary table and render an interactive SVG region map for city/area comparison prompts. The map metric changes with the prompt: opportunity, saturation, median nightly price, average revenue, or occupancy. The map uses a city-shaped region layout, not official cadastral boundaries."
+        ? "Rank neighbourhoods using the prepared neighbourhood summary table and render a real city map with approximate ARIA neighbourhood overlays. The map zooms to the city detected in the prompt and colors regions by the selected metric: opportunity, saturation, median nightly price, average revenue, or occupancy."
         : "Rank neighbourhoods using the prepared neighbourhood summary table. The chart metric changes with the prompt: opportunity for investment, saturation for avoid/family-style shortlist prompts, median nightly price for affordability prompts, average revenue for revenue prompts, and occupancy for demand prompts.",
       ["This is short-term-rental market intelligence, not a complete home-purchase or mortgage dataset."],
-      ranked.map((r) => `${shortArea(r.area)}: opportunity ${fmtScore(r.opportunity)}, saturation ${fmtScore(r.saturation)}, median price ${fmtEuro(r.medianPrice)}`)
+      ranked.map((r) => `${shortArea(r.area)}: opportunity ${fmtScore(r.opportunity)}, saturation ${fmtScore(r.saturation)}, median price ${fmtEuro(r.medianPrice)}`),
+      metricGuides(["opportunity", "saturation", "medianNightlyPrice", "averageRevenue", "occupancy", "listings"])
     ),
   };
 }
@@ -644,7 +962,8 @@ async function pricingAnalysis(prompt) {
       sourceFiles,
       "Use XGBoost prediction outputs to compare model-predicted fair nightly price with observed nightly price, then select the visualization that matches the prompt: price-gap ranking, current-versus-predicted comparison, or SHAP driver importance.",
       ["Small nightly gaps should be interpreted cautiously because pricing models have forecast error.", "If the user has a specific listing ID, it should be supplied for listing-level analysis."],
-      shap.map((s) => `${s.displayFeature}: average absolute SHAP impact ${fmtScore(s.impact, 3)}`)
+      shap.map((s) => `${s.displayFeature}: average absolute SHAP impact ${fmtScore(s.impact, 3)}`),
+      metricGuides(["underpricingGap", "predictedPrice", "shapImpact", "medianNightlyPrice", "listings"])
     ),
   };
 }
@@ -665,13 +984,20 @@ async function riskAnalysis(prompt) {
       kind: "region-map",
       city: "Athens",
       title: "Athens high-risk regional map",
+      mapLabel: CITY_MAP_META.Athens.label,
+      center: CITY_MAP_META.Athens.center,
+      zoom: CITY_MAP_META.Athens.zoom,
       metricKey: "value",
       metricLabel: "High-risk share",
       tone: "risk",
+      lowerIsBetter: false,
+      legendLow: "lower risk",
+      legendHigh: "higher risk",
       data: ranked.slice(0, 12).map((r) => ({
         label: shortArea(r.area),
         value: Number(num(r.highShare).toFixed(2)),
         display: fmtPct(r.highShare),
+        ...regionCoord("Athens", r.area),
         listings: Number(num(r.count).toFixed(0)),
         listingsDisplay: fmtInt(r.count),
         priceDisplay: null,
@@ -720,10 +1046,11 @@ async function riskAnalysis(prompt) {
     details: sourceDetails(
       [FILES.athensRisk, FILES.athensUnderpricing],
       mapMode
-        ? "Aggregate LightGBM risk probabilities by neighbourhood and render an interactive SVG region map for risk-by-area comparison prompts. The map uses a city-shaped region layout, not official cadastral boundaries."
+        ? "Aggregate LightGBM risk probabilities by neighbourhood and render a real Athens map with approximate ARIA neighbourhood overlays for risk-by-area comparison prompts."
         : "Aggregate LightGBM risk probabilities by neighbourhood and combine them with the underpricing output. The visualization changes with the prompt: high-risk share, priority overlap count, or risk-score distribution.",
       ["Risk is a prioritisation signal for analyst review, not a final decision about a host."],
-      ranked.map((r) => `${shortArea(r.area)}: ${fmtPct(r.highShare)} high-risk share, ${fmtInt(r.high)} high-risk listings`)
+      ranked.map((r) => `${shortArea(r.area)}: ${fmtPct(r.highShare)} high-risk share, ${fmtInt(r.high)} high-risk listings`),
+      metricGuides(["highRiskShare", "riskProbability", "priorityOverlap", "threshold", "listings"])
     ),
   };
 }
@@ -776,7 +1103,8 @@ async function demandAnalysis(prompt) {
       [FILES.neighbourhoodStats],
       "Use prepared neighbourhood-level occupancy and revenue fields as a demand proxy. If the user asks for a forecast, the chart remains grounded in current prepared data because no committed Prophet forecast output is available in the deployed repository yet.",
       ["This is not yet a live Prophet forecast; it is a grounded demand proxy from the prepared project dataset."],
-      ranked.map((r) => `${shortArea(r.area)}: occupancy ${fmtPct(r.occupancy)}, average revenue ${fmtEuro(r.revenue)}`)
+      ranked.map((r) => `${shortArea(r.area)}: occupancy ${fmtPct(r.occupancy)}, average revenue ${fmtEuro(r.revenue)}`),
+      metricGuides(["occupancy", "averageRevenue", "medianNightlyPrice", "listings"])
     ),
   };
 }
@@ -839,7 +1167,8 @@ async function portfolioAnalysis(prompt = "") {
       [FILES.neighbourhoodStats],
       "Compare city-level weighted averages from neighbourhood summaries. The visualization changes with the prompt: opportunity versus saturation for strategic choice, average revenue for revenue questions, and listing count for scale/supply questions.",
       ["The comparison is strategic market intelligence; final investment decisions still require property cost, financing, and regulation checks."],
-      cities.map((c) => `${c.city}: saturation ${fmtScore(c.saturation)}, average revenue ${fmtEuro(c.revenue)}, best area ${shortArea(c.bestArea)}`)
+      cities.map((c) => `${c.city}: saturation ${fmtScore(c.saturation)}, average revenue ${fmtEuro(c.revenue)}, best area ${shortArea(c.bestArea)}`),
+      metricGuides(["opportunity", "saturation", "averageRevenue", "occupancy", "listings"])
     ),
   };
 }
@@ -870,16 +1199,21 @@ async function complianceAnalysis() {
       [FILES.neighbourhoodStats],
       "Frame compliance prompts as data triage using current market/risk features; avoid final legal advice until the regulation retrieval layer is connected.",
       ["Not legal advice.", "Live legal document retrieval is not included in the current deployed backend."],
-      []
+      [],
+      metricGuides(["readiness"])
     ),
   };
 }
 
 function deterministicAnswer(analysis) {
   const facts = analysis.facts.slice(0, 3).join(" ");
+  const metricContext = (analysis.details?.metricGuides || [])
+    .slice(0, 3)
+    .map((g) => `${g.label}: ${g.meaning} ${g.good}`)
+    .join(" ");
   return localizePlaceNames(
     `Recommendation: Based on our short-term rental market analysis, ${analysis.recommendation}\n\n` +
-    `Why this makes sense: This recommendation is grounded in the project dataset rather than a generic travel ranking, so it is focused on market-entry potential, pricing conditions, demand signals, and saturation risk. ${facts}\n\n` +
+    `Why this makes sense: This recommendation is grounded in the project dataset rather than a generic travel ranking, so it is focused on market-entry potential, pricing conditions, demand signals, and saturation risk. ${facts} ${metricContext}\n\n` +
     `What this means for you: This gives you a starting point for where to search first and what to compare next. A stronger opportunity signal does not automatically mean every apartment in that area is a good deal; it means the area deserves earlier due diligence because the market conditions look more favourable in the data.\n\n` +
     `Next step: For a first investment, use this as a shortlist direction: compare actual purchase prices, local licensing rules, building quality, financing costs, and property condition before committing.`
   );
@@ -905,6 +1239,7 @@ export async function buildGroundedAnalysis({ prompt, agentId }) {
   else if (intent === "compliance") analysis = await complianceAnalysis(prompt);
   else analysis = await marketAnalysis(prompt);
 
+  analysis.kpis = attachKpiHelp(analysis.kpis || []);
   const fallbackAnswer = deterministicAnswer(analysis);
   const quality = qualityCheck(fallbackAnswer, analysis);
   return {
@@ -919,6 +1254,7 @@ export async function buildGroundedAnalysis({ prompt, agentId }) {
       `KPIs: ${analysis.kpis.map((k) => `${k.label}: ${k.value}`).join("; ")}`,
       `Chart: ${analysis.visualizations?.[0]?.title || "none"}`,
       `Methodology: ${analysis.details.methodology}`,
+      `Metric explanations: ${(analysis.details.metricGuides || []).map((g) => `${g.label} means ${g.meaning} Range: ${g.range} Interpretation: ${g.good} Optimal use: ${g.optimal}`).join(" ")}`,
       `Limitations: ${analysis.details.limitations.join(" ")}`,
       `Sources: ${analysis.details.sourceFiles.join(", ")}`,
     ].join("\n"),

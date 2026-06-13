@@ -31,6 +31,7 @@ async function bootstrap() {
   enableEntranceAnimations();
   await import("./legacy/tweaks-panel.jsx");
   await import("./legacy/aria-data.jsx");
+  await import("./legacy/AriaGeoMap.jsx");
   await import("./legacy/aria-charts.jsx");
   await import("./legacy/aria-dashboard.jsx");
   await import("./legacy/aria-ui.jsx");
