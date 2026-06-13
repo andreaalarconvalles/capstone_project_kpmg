@@ -244,6 +244,27 @@ function attachKpiHelp(kpis = []) {
   }));
 }
 
+function normalizeKpiText(value) {
+  return String(value ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function uniqueKpis(kpis = [], fallbackKpis = []) {
+  const output = [];
+  const seenLabels = new Set();
+  const seenPairs = new Set();
+  for (const item of [...kpis, ...fallbackKpis]) {
+    if (!item?.label || item.value === undefined || item.value === null || item.value === "") continue;
+    const labelKey = normalizeKpiText(item.label);
+    const pairKey = `${labelKey}:${normalizeKpiText(item.value)}`;
+    if (seenLabels.has(labelKey) || seenPairs.has(pairKey)) continue;
+    seenLabels.add(labelKey);
+    seenPairs.add(pairKey);
+    output.push(item);
+    if (output.length === 4) break;
+  }
+  return output;
+}
+
 function metricNoteForKey(key, fallbackLabel = "") {
   const guideKey = {
     opportunity: "opportunity",
@@ -874,6 +895,36 @@ async function marketAnalysis(prompt) {
   const mainKpi = cheap ? "Cheapest area" : revenue ? "Top revenue area" : demand ? "Top demand area" : family ? "Lower-pressure area" : saturated ? "Highest saturation" : "Best opportunity";
   const mainScoreLabel = cheap ? "Median nightly price" : revenue ? "Average revenue" : demand ? "Average occupancy" : family || saturated ? "Saturation score" : "Opportunity score";
   const mainScoreValue = cheap ? fmtEuro(best.medianPrice) : revenue ? fmtEuro(best.revenue) : demand ? fmtPct(best.occupancy) : fmtScore(best[chartMetric]);
+  const supportingKpis = cheap
+    ? [
+      { label: "Opportunity score", value: fmtScore(best.opportunity) },
+      { label: "Listings reviewed", value: fmtInt(totalListings) },
+      { label: "Average revenue", value: fmtEuro(best.revenue) },
+      { label: "Saturation score", value: fmtScore(best.saturation) },
+    ]
+    : revenue
+      ? [
+        { label: "Median nightly price", value: fmtEuro(best.medianPrice) },
+        { label: "Average occupancy", value: fmtPct(best.occupancy) },
+        { label: "Listings reviewed", value: fmtInt(totalListings) },
+      ]
+      : demand
+        ? [
+          { label: "Average revenue", value: fmtEuro(best.revenue) },
+          { label: "Median nightly price", value: fmtEuro(best.medianPrice) },
+          { label: "Listings reviewed", value: fmtInt(totalListings) },
+        ]
+        : family || saturated
+          ? [
+            { label: "Opportunity score", value: fmtScore(best.opportunity) },
+            { label: "Median nightly price", value: fmtEuro(best.medianPrice) },
+            { label: "Listings reviewed", value: fmtInt(totalListings) },
+          ]
+          : [
+            { label: "Median nightly price", value: fmtEuro(best.medianPrice) },
+            { label: "Average revenue", value: fmtEuro(best.revenue) },
+            { label: "Listings reviewed", value: fmtInt(totalListings) },
+          ];
   const mapRequested = wantsRegionMap(prompt);
   const mapTitle = cheap
     ? `${city} map: lowest nightly prices`
@@ -925,12 +976,11 @@ async function marketAnalysis(prompt) {
       `${shortArea(best.area)} has an opportunity score of ${fmtScore(best.opportunity)} and saturation score of ${fmtScore(best.saturation)}.`,
       `Median nightly price in ${shortArea(best.area)} is ${fmtEuro(best.medianPrice)} with average annual revenue around ${fmtEuro(best.revenue)}.`,
     ],
-    kpis: [
+    kpis: uniqueKpis([
       { label: mainKpi, value: shortArea(best.area) },
       { label: mainScoreLabel, value: mainScoreValue },
-      { label: "Median nightly price", value: fmtEuro(best.medianPrice) },
-      { label: "Listings reviewed", value: fmtInt(totalListings) },
-    ],
+      ...supportingKpis,
+    ]),
     visualizations,
     details: sourceDetails(
       [FILES.neighbourhoodStats],
@@ -1279,7 +1329,7 @@ export async function buildGroundedAnalysis({ prompt, agentId }) {
   else if (intent === "compliance") analysis = await complianceAnalysis(prompt);
   else analysis = await marketAnalysis(prompt);
 
-  analysis.kpis = attachKpiHelp(analysis.kpis || []);
+  analysis.kpis = attachKpiHelp(uniqueKpis(analysis.kpis || []));
   const fallbackAnswer = deterministicAnswer(analysis);
   const quality = qualityCheck(fallbackAnswer, analysis);
   return {
