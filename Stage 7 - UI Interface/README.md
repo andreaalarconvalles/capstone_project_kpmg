@@ -28,7 +28,8 @@ custom prompts return up to 4 KPI cards, one chart or real map overlay when geog
 available, and an expandable details panel with methodology, source files, caveats, and
 extra numbers. Conversations persist in the browser with `localStorage`, so refreshing the
 site keeps the chat history and active thread. A conversation disappears only when the user
-deletes it from the sidebar.
+deletes it from the sidebar. Users can export either a single answer brief from each response
+or a full conversation brief from the composer control next to the model picker.
 
 ## Folder layout
 

@@ -114,6 +114,7 @@ function AgentPicker({ agentId, agents, onPick }) {
 /* ---------- Composer ---------- */
 const Composer = React.forwardRef(function Composer({
   agent, agents, onPickAgent, value, setValue, onSend, streaming, onStop, modelId, setModelId,
+  onExportConversation, canExportConversation = false,
   maxWidth = 768,
 }, ref) {
   const taRef = ref || React.useRef(null);
@@ -205,6 +206,21 @@ const Composer = React.forwardRef(function Composer({
           <AgentPicker agentId={agent.id} agents={agents} onPick={onPickAgent} />
           <span style={{ width: 1, height: 18, background: C2.hair }} />
           <ModelPicker modelId={modelId} onPick={setModelId} />
+          <button className="aria-focus" onClick={onExportConversation} disabled={!canExportConversation}
+            title={canExportConversation ? "Export full conversation brief" : "Run at least one analysis to export a conversation brief"}
+            style={{
+              display: "flex", alignItems: "center", gap: 6, padding: "6px 10px", borderRadius: 100,
+              background: canExportConversation ? C2.s2 : "transparent",
+              border: canExportConversation ? `1px solid ${C2.hair}` : `1px solid transparent`,
+              color: canExportConversation ? C2.ink : C2.muted,
+              fontSize: 12.5, fontWeight: 500, cursor: canExportConversation ? "pointer" : "default",
+              opacity: canExportConversation ? 1 : 0.48, transition: "background 0.12s, opacity 0.12s",
+            }}
+            onMouseEnter={(e) => { if (canExportConversation) e.currentTarget.style.background = C2.s1; }}
+            onMouseLeave={(e) => { if (canExportConversation) e.currentTarget.style.background = C2.s2; }}>
+            <Icon name="Download" size={14.5} color="currentColor" />
+            Chat brief
+          </button>
           {engine.ml && (
             <div className="aria-scalein" style={{
               display: "flex", alignItems: "center", gap: 6, padding: "4px 9px", borderRadius: 100,
@@ -538,7 +554,12 @@ function tableHtml(rows = []) {
 function collectVisualSnapshots(event) {
   const answerNode = event?.currentTarget?.closest?.("[data-aria-answer='true']");
   if (!answerNode) return [];
-  return Array.from(answerNode.querySelectorAll(".aria-export-visual")).map((node, index) => {
+  return collectVisualSnapshotsFromNode(answerNode);
+}
+
+function collectVisualSnapshotsFromNode(root, label = "Visual") {
+  if (!root) return [];
+  return Array.from(root.querySelectorAll(".aria-export-visual")).map((node, index) => {
     const clone = node.cloneNode(true);
     clone.querySelectorAll(".no-print, button").forEach((el) => el.remove());
     clone.querySelectorAll("[style]").forEach((el) => {
@@ -551,10 +572,31 @@ function collectVisualSnapshots(event) {
     });
     return `
       <section class="visual-snapshot">
-        <div class="section-eyebrow">Visual ${index + 1}</div>
+        <div class="section-eyebrow">${escapeBriefHtml(label)} ${index + 1}</div>
         ${clone.innerHTML}
       </section>`;
   });
+}
+
+function collectConversationVisualSnapshots() {
+  return Array.from(document.querySelectorAll("[data-aria-answer='true']"))
+    .map((node, index) => collectVisualSnapshotsFromNode(node, `Answer ${index + 1} visual`));
+}
+
+function buildConversationTurns(messages = []) {
+  const turns = [];
+  let pendingPrompt = "";
+  messages.forEach((message) => {
+    if (message.role === "user") {
+      pendingPrompt = message.text || "";
+      return;
+    }
+    if (message.role === "assistant" && message.done !== false) {
+      turns.push({ prompt: message.prompt || pendingPrompt || "User question", answer: message });
+      pendingPrompt = "";
+    }
+  });
+  return turns;
 }
 
 function exportBrief(agent, prompt, message, event) {
@@ -676,4 +718,134 @@ function exportBrief(agent, prompt, message, event) {
   win.document.close();
 }
 
-Object.assign(window, { ModelPicker, AgentPicker, Composer, EmptyState, SettingsModal, exportBrief });
+function exportConversationBrief(conversation) {
+  const turns = buildConversationTurns(conversation?.messages || []);
+  if (!turns.length) return;
+
+  const win = window.open("", "_blank", "width=980,height=1100");
+  if (!win) return;
+
+  const visualGroups = collectConversationVisualSnapshots();
+  const title = `ARIA conversation brief - ${conversation?.title || "Current chat"}`;
+  const generated = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+  const sourceFiles = new Set();
+  const limitations = new Set();
+
+  const turnHtml = turns.map((turn, index) => {
+    const answer = turn.answer || {};
+    const agent = AGENT_BY_ID[answer.agentId] || AGENTS[0];
+    const blocks = Array.isArray(answer.blocks) ? answer.blocks : [];
+    const textBlocks = blocks.filter((b) => b.type === "text").map((b) => b.text).filter(Boolean);
+    const kpis = (blocks.find((b) => b.type === "kpis")?.kpis || answer.brief?.kpis || []).slice(0, 4);
+    const chartBlocks = blocks.filter((b) => b.type === "chart" && b.chart);
+    const details = blocks.find((b) => b.type === "details")?.details || {};
+    (details.sourceFiles || []).forEach((item) => sourceFiles.add(item));
+    (details.limitations || []).forEach((item) => limitations.add(item));
+
+    const kpiHtml = kpis.map((k) => `
+      <div class="kpi">
+        <div class="kpi-label">${escapeBriefHtml(k.label)}</div>
+        <div class="kpi-value">${escapeBriefHtml(k.value)}</div>
+        ${k.help ? `<div class="kpi-help">${escapeBriefHtml(plainBriefText(k.help))}</div>` : ""}
+      </div>`).join("");
+    const chartDataHtml = chartBlocks.map((block, chartIndex) => `
+      <section class="section compact">
+        <div class="section-eyebrow">Chart data ${chartIndex + 1}</div>
+        <h3>${escapeBriefHtml(block.chart.title || "Analysis visual")}</h3>
+        ${block.chart.metricNote ? `<p class="muted">${escapeBriefHtml(block.chart.metricNote)}</p>` : ""}
+        ${tableHtml(block.chart.data || [])}
+      </section>`).join("");
+    const visualsHtml = (visualGroups[index] || []).join("");
+    return `
+      <section class="turn">
+        <div class="turn-head">
+          <span class="tag">${escapeBriefHtml(agent.name)}</span>
+          <span class="muted">Question ${index + 1}</span>
+        </div>
+        <div class="query"><strong>Query:</strong> ${escapeBriefHtml(turn.prompt)}</div>
+        ${kpiHtml ? `<div class="grid">${kpiHtml}</div>` : ""}
+        ${textBlocks.length ? `<div class="answer">${textBlocks.map(paragraphsHtml).join("")}</div>` : ""}
+        ${visualsHtml ? `<section class="section"><div class="section-eyebrow">Visual evidence</div>${visualsHtml}</section>` : ""}
+        ${chartDataHtml}
+      </section>`;
+  }).join("");
+
+  win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${escapeBriefHtml(title)}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <style>
+    *{box-sizing:border-box}
+    body{font-family:Inter,system-ui,sans-serif;color:#141414;background:#fff;margin:0;padding:46px 54px;letter-spacing:0}
+    .tag{display:inline-flex;align-items:center;gap:8px;font-size:12px;color:#555;border:1px solid #e2e2e2;border-radius:100px;padding:6px 12px}
+    h1{font-size:30px;font-weight:700;margin:18px 0 7px;line-height:1.15;letter-spacing:0}
+    h2{font-size:17px;font-weight:650;margin:0 0 8px;letter-spacing:0}
+    h3{font-size:13px;margin:0 0 5px}
+    p{font-size:13.5px;line-height:1.6;color:#333;margin:0 0 10px}
+    ul{margin:0;padding-left:18px;color:#333;font-size:13px;line-height:1.55}
+    li{margin:3px 0}
+    table{width:100%;border-collapse:collapse;font-size:11.5px;margin-top:10px}
+    th,td{border-bottom:1px solid #e8e8e8;text-align:left;padding:7px 8px;vertical-align:top}
+    th{color:#666;font-weight:650;background:#f8f8f8;text-transform:capitalize}
+    .meta{color:#777;font-size:13px;margin-bottom:24px}
+    .query{font-size:14px;color:#333;background:#f6f6f6;border:1px solid #e6e6e6;border-radius:12px;padding:14px 16px;margin:14px 0 16px;line-height:1.5}
+    .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:14px 0 18px}
+    .kpi{border:1px solid #e2e2e2;border-radius:12px;padding:13px 14px;min-height:92px;page-break-inside:avoid}
+    .kpi-label{font-size:11px;color:#777;margin-bottom:6px}
+    .kpi-value{font-size:20px;font-weight:700;line-height:1.15}
+    .kpi-help{font-size:10.5px;line-height:1.3;color:#777;margin-top:7px}
+    .section{margin-top:20px;page-break-inside:avoid}
+    .compact{margin-top:14px}
+    .section-eyebrow{font-size:10.5px;color:#777;text-transform:uppercase;letter-spacing:.05em;font-weight:650;margin-bottom:8px}
+    .answer{border-top:1px solid #e6e6e6;border-bottom:1px solid #e6e6e6;padding:16px 0;margin-bottom:18px}
+    .turn{margin-top:30px;padding-top:26px;border-top:1px solid #e5e5e5;page-break-inside:avoid}
+    .turn-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:4px}
+    .visual-snapshot{margin:14px 0 22px;page-break-inside:avoid}
+    .visual-snapshot>.aria-fadein,.visual-snapshot .aria-fadein{max-width:100%!important;margin:0!important;box-shadow:none!important}
+    .visual-snapshot svg{max-width:100%;height:auto}
+    .visual-snapshot img{max-width:100%}
+    .visual-snapshot .leaflet-container{font-family:Inter,system-ui,sans-serif}
+    .muted{color:#747474}
+    .checklist{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+    .check{border:1px solid #e5e5e5;border-radius:10px;padding:10px 12px;font-size:12.5px;line-height:1.45;color:#333;background:#fafafa}
+    .foot{margin-top:38px;padding-top:16px;border-top:1px solid #e3e3e3;color:#888;font-size:11.5px;display:flex;justify-content:space-between;gap:16px}
+    @media print{
+      body{padding:28px 34px}
+      .grid{grid-template-columns:repeat(2,1fr)}
+      .turn,.visual-snapshot{break-inside:avoid}
+      a{color:inherit;text-decoration:none}
+    }
+  </style></head><body>
+    <span class="tag">ARIA Agent · Full conversation</span>
+    <h1>${escapeBriefHtml(title)}</h1>
+    <div class="meta">Generated ${generated} · ${turns.length} answered ${turns.length === 1 ? "question" : "questions"}</div>
+    ${turnHtml}
+    ${(sourceFiles.size || limitations.size) ? `<section class="section">
+      <div class="section-eyebrow">Conversation-level sources and caveats</div>
+      ${sourceFiles.size ? `<h3>Source files</h3>${listHtml(Array.from(sourceFiles))}` : ""}
+      ${limitations.size ? `<h3 style="margin-top:12px">Limitations</h3>${listHtml(Array.from(limitations))}` : ""}
+    </section>` : ""}
+    <section class="section">
+      <div class="section-eyebrow">Decision checklist</div>
+      <div class="checklist">
+        <div class="check">Use this conversation as a shortlist of signals, not as a final investment decision.</div>
+        <div class="check">Check purchase prices, licensing, taxes, financing, and building rules before committing.</div>
+        <div class="check">Review each chart/map together with its KPI cards and source files.</div>
+        <div class="check">Ask ARIA follow-up questions when one metric needs deeper explanation.</div>
+      </div>
+    </section>
+    <div class="foot"><span>IE Business School x KPMG Spain - Capstone 2026</span><span>ARIA Platform · Conversation brief</span></div>
+    <script>
+      const finish = () => setTimeout(() => window.print(), 500);
+      const imgs = Array.from(document.images || []);
+      if (!imgs.length) finish();
+      else Promise.allSettled(imgs.map((img) => img.complete ? Promise.resolve() : new Promise((resolve) => {
+        img.addEventListener('load', resolve, { once: true });
+        img.addEventListener('error', resolve, { once: true });
+        setTimeout(resolve, 1500);
+      }))).then(finish);
+    <\/script>
+  </body></html>`);
+  win.document.close();
+}
+
+Object.assign(window, { ModelPicker, AgentPicker, Composer, EmptyState, SettingsModal, exportBrief, exportConversationBrief });

@@ -568,6 +568,11 @@ function App() {
     }, 40);
   }, [live, activeConvId, runStream, runLive]);
   const exportMsg = useCallback((m, event) => exportBrief(AGENT_BY_ID[m.agentId], m.prompt, m, event), []);
+  const canExportConversation = !!activeConv?.messages?.some((m) => m.role === "assistant" && m.done !== false);
+  const exportConversation = useCallback(() => {
+    if (!activeConv || !canExportConversation) return;
+    exportConversationBrief(activeConv);
+  }, [activeConv, canExportConversation]);
 
   /* autoscroll while streaming */
   useEffect(() => {
@@ -607,12 +612,15 @@ function App() {
   const composerEl = (
     <Composer ref={taRef} agent={agent} agents={AGENTS} onPickAgent={pickAgent} value={input} setValue={setInput}
       onSend={() => send()} streaming={!!live} onStop={stopStream}
-      modelId={modelId} setModelId={setModelId} />
+      modelId={modelId} setModelId={setModelId}
+      onExportConversation={exportConversation} canExportConversation={canExportConversation && !live} />
   );
   const landingComposerEl = (
     <Composer ref={taRef} agent={agent} agents={AGENTS} onPickAgent={pickAgent} value={input} setValue={setInput}
       onSend={() => send()} streaming={!!live} onStop={stopStream}
-      modelId={modelId} setModelId={setModelId} maxWidth={1022} />
+      modelId={modelId} setModelId={setModelId}
+      onExportConversation={exportConversation} canExportConversation={canExportConversation && !live}
+      maxWidth={1022} />
   );
 
   const showThread = activeConv && (activeConv.messages || (live && live.convId === activeConvId));

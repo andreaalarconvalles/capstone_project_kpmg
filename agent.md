@@ -419,3 +419,4 @@ Remaining roadmap: finalize Phase 4 Prophet forecasting, implement the Phase 5 R
 - [2026-06-13] Session 48: Expanded the visualization layer so the analytics path can choose the best chart type for the user's question, including real map overlays, comparison charts, distributions, heatmaps, donut views, and bubble/scatter views.
 - [2026-06-13] Session 49: Upgraded PDF brief export to capture generated visual context, then switched the map basemap to a CARTO light OpenStreetMap-derived layer for a cleaner, more English-friendly demo view.
 - [2026-06-13] Session 50: Renamed the canonical project operating manual from `CLAUDE.md` to `agent.md`, updated documentation references, and added a current handoff section for future LLM/agent sessions.
+- [2026-06-13] Session 51: Added a composer-level `Chat brief` export beside the model picker so users can generate a PDF-ready brief for the full active conversation while keeping the existing per-answer export buttons.
