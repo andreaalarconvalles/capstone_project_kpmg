@@ -58,6 +58,16 @@ function AnswerView({ m, live, onCopy, onRegen, onExport }) {
 }
 function LiveKpiGrid({ kpis = [] }) {
   if (!kpis.length) return null;
+  const cleanKpiText = (value) => String(value ?? "")
+    .replace(/\b[a-z]+(?:_[a-z0-9]+)+\b/g, (match) => {
+      const label = match
+        .replace(/_/g, " ")
+        .replace(/\beur\b/gi, "")
+        .replace(/\bkm\b/gi, "km")
+        .replace(/\s+/g, " ")
+        .trim();
+      return label.charAt(0).toUpperCase() + label.slice(1);
+    });
   return (
     <div className="aria-fadein" style={{
       display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
@@ -70,8 +80,8 @@ function LiveKpiGrid({ kpis = [] }) {
           display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center",
           textAlign: "center", overflow: "hidden",
         }}>
-          <div style={{ fontSize: 11.5, color: CA.muted, fontWeight: 500, lineHeight: 1.25, marginBottom: 6, maxWidth: "100%" }}>{kpi.label}</div>
-          <div style={{ fontSize: 19, color: CA.ink, fontWeight: 650, lineHeight: 1.12, letterSpacing: -0.35, overflowWrap: "anywhere", maxWidth: "100%" }}>{kpi.value}</div>
+          <div style={{ fontSize: 11.5, color: CA.muted, fontWeight: 500, lineHeight: 1.25, marginBottom: 6, maxWidth: "100%" }}>{cleanKpiText(kpi.label)}</div>
+          <div style={{ fontSize: 19, color: CA.ink, fontWeight: 650, lineHeight: 1.12, letterSpacing: -0.35, overflowWrap: "anywhere", maxWidth: "100%" }}>{cleanKpiText(kpi.value)}</div>
         </div>
       ))}
     </div>

@@ -83,7 +83,16 @@ function wordCount(text) {
 function sanitizeAnswer(text) {
   return String(text || "")
     .replace(/\*\*([^*]+)\*\*/g, "$1")
-    .replace(/\*\*/g, "");
+    .replace(/\*\*/g, "")
+    .replace(/\b[a-z]+(?:_[a-z0-9]+)+\b/g, (match) => {
+      const label = match
+        .replace(/_/g, " ")
+        .replace(/\beur\b/gi, "")
+        .replace(/\bkm\b/gi, "km")
+        .replace(/\s+/g, " ")
+        .trim();
+      return label.charAt(0).toUpperCase() + label.slice(1);
+    });
 }
 
 function addContextIfShort(answer, analysis) {

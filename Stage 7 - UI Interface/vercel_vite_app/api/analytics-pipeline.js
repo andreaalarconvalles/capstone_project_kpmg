@@ -116,6 +116,53 @@ function fmtScore(value, digits = 2) {
   return num(value).toFixed(digits);
 }
 
+const FEATURE_LABELS = new Map([
+  ["neighbourhood_median_price", "Neighbourhood median price"],
+  ["neighborhood_median_price", "Neighbourhood median price"],
+  ["median_price_eur", "Median nightly price"],
+  ["mean_price_eur", "Average nightly price"],
+  ["price_eur", "Nightly price"],
+  ["actual_price_eur", "Current nightly price"],
+  ["predicted_price_eur", "Predicted fair price"],
+  ["prediction_gap_eur", "Predicted price gap"],
+  ["underpricing_gap_eur", "Underpricing gap"],
+  ["review_scores_rating", "Guest rating"],
+  ["host_tenure_days", "Host tenure"],
+  ["calculated_host_listings_count", "Host listing count"],
+  ["availability_365", "Annual availability"],
+  ["minimum_nights", "Minimum nights"],
+  ["number_of_reviews", "Review count"],
+  ["accommodates", "Guest capacity"],
+  ["bedrooms", "Bedrooms"],
+  ["dist_zone", "Distance zone"],
+  ["mean_dist_km", "Distance from centre"],
+  ["mean_occupancy", "Average occupancy"],
+  ["mean_revenue_eur", "Average revenue"],
+  ["opportunity_score", "Opportunity score"],
+  ["competitive_saturation_score", "Saturation score"],
+  ["supply_demand_imbalance", "Supply-demand balance"],
+  ["risk_probability", "Risk probability"],
+  ["host_risk_score", "Host risk score"],
+]);
+
+function humanizeFeatureName(feature) {
+  const raw = String(feature || "").trim();
+  if (!raw) return "Model feature";
+  if (FEATURE_LABELS.has(raw)) return FEATURE_LABELS.get(raw);
+
+  const [base, category] = raw.split(/[=:]/);
+  const baseLabel = FEATURE_LABELS.get(base) || base
+    .replace(/_/g, " ")
+    .replace(/\beur\b/gi, "")
+    .replace(/\bkm\b/gi, "km")
+    .replace(/\s+/g, " ")
+    .trim();
+  const readableBase = baseLabel.charAt(0).toUpperCase() + baseLabel.slice(1);
+  if (!category) return readableBase;
+  const readableCategory = String(category).replace(/_/g, " ").trim();
+  return `${readableBase}: ${readableCategory}`;
+}
+
 const GREEK_PLACE_LABELS = new Map([
   ["ΖΑΠΠΕΙΟ", "Zappeio"],
   ["ΑΚΡΟΠΟΛΗ", "Akropoli"],
@@ -368,7 +415,11 @@ async function loadShap(path, cacheKey) {
       });
     });
     return [...sums.entries()]
-      .map(([feature, sum]) => ({ feature, impact: weightedAverage(sum, rows) }))
+      .map(([feature, sum]) => ({
+        feature,
+        displayFeature: humanizeFeatureName(feature),
+        impact: weightedAverage(sum, rows),
+      }))
       .sort((a, b) => b.impact - a.impact)
       .slice(0, 6);
   });
@@ -458,13 +509,13 @@ async function pricingAnalysis(prompt) {
         ? `${fmtInt(pricing.positive)} of ${fmtInt(pricing.total)} Paris listings have a positive predicted price gap.`
         : `${fmtInt(pricing.total)} Athens listings are flagged as underpriced in the project output.`,
       `The strongest area-level average gap is ${fmtEuro(best.avgGap)} in ${shortArea(best.area)}.`,
-      `The most important model drivers include ${shap.slice(0, 3).map((s) => s.feature).join(", ")}.`,
+      `The most important model drivers include ${shap.slice(0, 3).map((s) => s.displayFeature).join(", ")}.`,
     ],
     kpis: [
       { label: "Top pricing area", value: shortArea(best.area) },
       { label: "Avg gap", value: fmtEuro(best.avgGap) },
       { label: isParis ? "Positive-gap listings" : "Underpriced listings", value: fmtInt(isParis ? pricing.positive : pricing.total) },
-      { label: "Main driver", value: shap[0]?.feature || "Model features" },
+      { label: "Main driver", value: shap[0]?.displayFeature || "Model features" },
     ],
     visualizations: makeViz(`${isParis ? "Paris" : "Athens"} average underpricing gap by area`, ranked.map((r) => ({
       label: r.area,
@@ -475,7 +526,7 @@ async function pricingAnalysis(prompt) {
       sourceFiles,
       "Use XGBoost prediction outputs to compare model-predicted fair nightly price with observed nightly price, then aggregate the gap by area.",
       ["Small nightly gaps should be interpreted cautiously because pricing models have forecast error.", "If the user has a specific listing ID, it should be supplied for listing-level analysis."],
-      shap.map((s) => `${s.feature}: average absolute SHAP impact ${fmtScore(s.impact, 3)}`)
+      shap.map((s) => `${s.displayFeature}: average absolute SHAP impact ${fmtScore(s.impact, 3)}`)
     ),
   };
 }
