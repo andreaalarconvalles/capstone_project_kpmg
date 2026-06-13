@@ -61,15 +61,17 @@ function LiveKpiGrid({ kpis = [] }) {
   return (
     <div className="aria-fadein" style={{
       display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
-      gap: 10, margin: "6px 0 12px",
+      gap: 10, margin: "6px 0 12px", alignItems: "stretch",
     }}>
       {kpis.slice(0, 4).map((kpi, i) => (
         <div key={`${kpi.label}-${i}`} style={{
           background: CA.s1, border: `1px solid ${CA.hair}`, borderRadius: 12,
-          padding: "12px 13px", minHeight: 76,
+          padding: "12px 13px", minHeight: 88, height: "100%", boxSizing: "border-box",
+          display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center",
+          textAlign: "center", overflow: "hidden",
         }}>
-          <div style={{ fontSize: 11.5, color: CA.muted, fontWeight: 500, lineHeight: 1.25, marginBottom: 6 }}>{kpi.label}</div>
-          <div style={{ fontSize: 19, color: CA.ink, fontWeight: 650, lineHeight: 1.12, letterSpacing: -0.35, overflowWrap: "anywhere" }}>{kpi.value}</div>
+          <div style={{ fontSize: 11.5, color: CA.muted, fontWeight: 500, lineHeight: 1.25, marginBottom: 6, maxWidth: "100%" }}>{kpi.label}</div>
+          <div style={{ fontSize: 19, color: CA.ink, fontWeight: 650, lineHeight: 1.12, letterSpacing: -0.35, overflowWrap: "anywhere", maxWidth: "100%" }}>{kpi.value}</div>
         </div>
       ))}
     </div>
