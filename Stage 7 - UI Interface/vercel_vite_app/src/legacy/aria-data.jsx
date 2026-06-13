@@ -16,6 +16,18 @@ const ARIA = {
 
 const AGENTS = [
   {
+    id: "auto", name: "Auto Agent",
+    tagline: "ARIA chooses the specialist", icon: "Sparkles",
+    accent: "#ff385c", emoji: "✨",
+    auto: true,
+    chips: [
+      "Which Paris arrondissement is best for a new short-term rental investment?",
+      "What price change could improve my Athens listing revenue?",
+      "Where is host risk highest in Athens?",
+      "Compare Paris vs Athens for a small short-term rental portfolio.",
+    ],
+  },
+  {
     id: "host-revenue", name: "Host Revenue Intelligence",
     tagline: "Your personal revenue manager", icon: "Coins",
     accent: "#ff385c", emoji: "💶",
@@ -66,6 +78,77 @@ const AGENTS = [
 
 const AGENT_BY_ID = Object.fromEntries(AGENTS.map((a) => [a.id, a]));
 const DEFAULT_AGENT_ACCENTS = Object.fromEntries(AGENTS.map((a) => [a.id, a.accent]));
+
+const AGENT_ROUTER_RULES = [
+  {
+    id: "host-revenue",
+    supporting: ["demand", "market"],
+    patterns: [
+      "price", "pricing", "priced", "underpriced", "overpriced", "revenue", "nightly", "rate",
+      "rent out", "host", "listing", "occupancy", "income", "profit", "yield", "description",
+    ],
+  },
+  {
+    id: "gentrification",
+    supporting: ["market", "crime"],
+    patterns: [
+      "gentrification", "displacement", "family", "live", "safe", "safest", "neighbourhood pressure",
+      "neighborhood pressure", "resident", "community", "risk highest", "host risk", "attention first",
+    ],
+  },
+  {
+    id: "crime",
+    supporting: ["gentrification", "host-revenue"],
+    patterns: [
+      "aml", "money laundering", "financial crime", "sar", "suspicious", "anomaly", "compliance",
+      "flagged", "fraud", "regulator", "risk score", "high-risk",
+    ],
+  },
+  {
+    id: "demand",
+    supporting: ["host-revenue", "market"],
+    patterns: [
+      "forecast", "tourism", "demand", "season", "seasonality", "infrastructure", "metro", "airport",
+      "event", "peak", "30 days", "90 days", "occupancy forecast",
+    ],
+  },
+  {
+    id: "market",
+    supporting: ["host-revenue", "demand", "gentrification"],
+    patterns: [
+      "invest", "investment", "buy", "purchase", "best area", "best place", "where should",
+      "compare", "portfolio", "paris vs athens", "athens vs paris", "market entry", "opportunity",
+      "region", "map", "short-term rental", "airbnb", "arrondissement", "neighbourhood", "neighborhood",
+    ],
+  },
+];
+
+function resolveAgentRoute(selectedAgentId, prompt) {
+  if (selectedAgentId && selectedAgentId !== "auto") {
+    return { agentId: selectedAgentId, requestedAgentId: selectedAgentId, supportingAgentIds: [], auto: false };
+  }
+
+  const p = String(prompt || "").toLowerCase();
+  const scored = AGENT_ROUTER_RULES.map((rule, index) => {
+    const score = rule.patterns.reduce((sum, pattern) => (
+      p.includes(pattern) ? sum + (pattern.length > 8 ? 2 : 1) : sum
+    ), 0);
+    return { ...rule, score, index };
+  }).sort((a, b) => (b.score - a.score) || (a.index - b.index));
+
+  const selected = scored[0]?.score > 0 ? scored[0] : AGENT_ROUTER_RULES.find((rule) => rule.id === "market");
+  const support = [
+    ...(selected.supporting || []),
+    ...scored.filter((rule) => rule.id !== selected.id && rule.score > 0).map((rule) => rule.id),
+  ].filter((id, index, arr) => id !== selected.id && arr.indexOf(id) === index).slice(0, 3);
+
+  return {
+    agentId: selected.id,
+    requestedAgentId: "auto",
+    supportingAgentIds: support,
+    auto: true,
+  };
+}
 
 const MODELS = [
   { group: "AI Models", items: [
@@ -551,5 +634,5 @@ function applyTheme(mode) {
 
 Object.assign(window, {
   ARIA, AGENTS, AGENT_BY_ID, MODELS, MODEL_BY_ID,
-  SCRIPTS, getScript, genericScript, SEED_CONVERSATIONS, PALETTES, applyTheme,
+  SCRIPTS, getScript, genericScript, resolveAgentRoute, SEED_CONVERSATIONS, PALETTES, applyTheme,
 });

@@ -6,10 +6,82 @@ const DEFAULT_LOCATION = "europe-west1";
 const DEFAULT_MODEL = "gemini-2.5-pro";
 const PARIS_ARRONDISSEMENTS_GEOJSON_URL = "https://geo.api.gouv.fr/communes?codeDepartement=75&type=arrondissement-municipal&format=geojson&geometry=contour";
 const ANTHROPIC_VERTEX_VERSION = "vertex-2023-10-16";
+const AGENT_PROFILES = {
+  "host-revenue": { name: "Host Revenue Intelligence", tagline: "your personal revenue manager" },
+  gentrification: { name: "Gentrification Early Warning", tagline: "displacement risk 12-24 months ahead" },
+  crime: { name: "STR Financial Crime Detection", tagline: "AML anomaly and SAR intelligence" },
+  demand: { name: "Tourism Demand Forecast", tagline: "infrastructure load intelligence" },
+  market: { name: "Market Entry Advisor", tagline: "site selection and ROI intelligence" },
+};
+const AGENT_ROUTER_RULES = [
+  {
+    id: "host-revenue",
+    supporting: ["demand", "market"],
+    patterns: [
+      "price", "pricing", "priced", "underpriced", "overpriced", "revenue", "nightly", "rate",
+      "rent out", "host", "listing", "occupancy", "income", "profit", "yield", "description",
+    ],
+  },
+  {
+    id: "gentrification",
+    supporting: ["market", "crime"],
+    patterns: [
+      "gentrification", "displacement", "family", "live", "safe", "safest", "neighbourhood pressure",
+      "neighborhood pressure", "resident", "community", "risk highest", "host risk", "attention first",
+    ],
+  },
+  {
+    id: "crime",
+    supporting: ["gentrification", "host-revenue"],
+    patterns: [
+      "aml", "money laundering", "financial crime", "sar", "suspicious", "anomaly", "compliance",
+      "flagged", "fraud", "regulator", "risk score", "high-risk",
+    ],
+  },
+  {
+    id: "demand",
+    supporting: ["host-revenue", "market"],
+    patterns: [
+      "forecast", "tourism", "demand", "season", "seasonality", "infrastructure", "metro", "airport",
+      "event", "peak", "30 days", "90 days", "occupancy forecast",
+    ],
+  },
+  {
+    id: "market",
+    supporting: ["host-revenue", "demand", "gentrification"],
+    patterns: [
+      "invest", "investment", "buy", "purchase", "best area", "best place", "where should",
+      "compare", "portfolio", "paris vs athens", "athens vs paris", "market entry", "opportunity",
+      "region", "map", "short-term rental", "airbnb", "arrondissement", "neighbourhood", "neighborhood",
+    ],
+  },
+];
 
 function json(res, status, payload) {
   res.status(status).setHeader("Content-Type", "application/json");
   res.end(JSON.stringify(payload));
+}
+
+function routeAgentForPrompt({ requestedAgentId, prompt }) {
+  if (requestedAgentId && requestedAgentId !== "auto" && AGENT_PROFILES[requestedAgentId]) {
+    return { agentId: requestedAgentId, requestedAgentId, supportingAgentIds: [], auto: false };
+  }
+
+  const p = String(prompt || "").toLowerCase();
+  const scored = AGENT_ROUTER_RULES.map((rule, index) => {
+    const score = rule.patterns.reduce((sum, pattern) => (
+      p.includes(pattern) ? sum + (pattern.length > 8 ? 2 : 1) : sum
+    ), 0);
+    return { ...rule, score, index };
+  }).sort((a, b) => (b.score - a.score) || (a.index - b.index));
+
+  const selected = scored[0]?.score > 0 ? scored[0] : AGENT_ROUTER_RULES.find((rule) => rule.id === "market");
+  const supportingAgentIds = [
+    ...(selected.supporting || []),
+    ...scored.filter((rule) => rule.id !== selected.id && rule.score > 0).map((rule) => rule.id),
+  ].filter((id, index, arr) => id !== selected.id && arr.indexOf(id) === index).slice(0, 3);
+
+  return { agentId: selected.id, requestedAgentId: "auto", supportingAgentIds, auto: true };
 }
 
 function readCredentials() {
@@ -335,9 +407,12 @@ export default async function handler(req, res) {
   const projectNumber = String(body.projectNumber || process.env.GOOGLE_CLOUD_PROJECT_NUMBER || process.env.VERTEX_PROJECT_NUMBER || "").trim();
   const location = String(body.location || process.env.GOOGLE_CLOUD_LOCATION || process.env.VERTEX_LOCATION || DEFAULT_LOCATION).trim();
   const model = String(body.model || process.env.VERTEX_MODEL || DEFAULT_MODEL).trim();
-  const agentId = String(body.agentId || "market");
-  const agentName = String(body.agentName || "ARIA Market Entry Advisor");
-  const agentTagline = String(body.agentTagline || "short-term rental market intelligence");
+  const requestedAgentId = String(body.requestedAgentId || body.agentId || "auto");
+  const route = routeAgentForPrompt({ requestedAgentId, prompt });
+  const agentId = route.agentId;
+  const profile = AGENT_PROFILES[agentId] || AGENT_PROFILES.market;
+  const agentName = String(body.agentName || profile.name);
+  const agentTagline = String(body.agentTagline || profile.tagline);
 
   if (!prompt) return json(res, 400, { error: "Prompt is required." });
   if (!projectId) return json(res, 400, { error: "Vertex project ID is required." });
@@ -371,6 +446,10 @@ export default async function handler(req, res) {
       kpis: analysis.kpis,
       visualizations: analysis.visualizations,
       details: analysis.details,
+      agentId,
+      requestedAgentId: route.requestedAgentId,
+      supportingAgentIds: route.supportingAgentIds,
+      autoRouted: route.auto,
       projectId,
       location,
       model,

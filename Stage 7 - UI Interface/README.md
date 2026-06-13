@@ -12,7 +12,9 @@ experience in a Vite React build. Custom typed prompts route through the Vercel
 `/api/chat` function, which loads live GitHub project data, computes deterministic analytics,
 and uses Vertex AI models for the final consumer-friendly explanation.
 
-Five KPMG-proposed agents on one interface, each selectable like a custom GPT:
+ARIA defaults to **Auto Agent**, which reads the user's prompt and selects the best specialist
+before running the scripted or live analysis. The five KPMG-proposed agents remain available
+as manual overrides:
 
 | Agent | Focus |
 |---|---|
@@ -154,6 +156,12 @@ chart type based on the prompt, hides internal quality scores, avoids raw snake_
 transliterates Greek place names into English with the original in brackets, keeps the agent
 workflow folded unless the user opens it, and uses Leaflet/OpenStreetMap-derived maps for
 supported geographic prompts instead of fake region grids.
+
+The Auto Agent router uses the prompt to choose a primary specialist: pricing/revenue prompts
+route to Host Revenue Intelligence, displacement and living-risk prompts route to Gentrification
+Early Warning, compliance/anomaly prompts route to STR Financial Crime Detection, demand and
+seasonality prompts route to Tourism Demand Forecast, and investment/city-comparison/map prompts
+route to Market Entry Advisor. Supporting agents are recorded for the folded workflow context.
 
 ## Scripted prompts
 

@@ -25,6 +25,7 @@ function normaliseConversationStore(raw) {
     .map((c) => ({
       id: String(c.id),
       agentId: AGENT_BY_ID[c.agentId] ? c.agentId : "host-revenue",
+      requestedAgentId: AGENT_BY_ID[c.requestedAgentId] ? c.requestedAgentId : null,
       title: String(c.title || "Untitled chat"),
       group: c.group || "Today",
       prompt: c.prompt || "",
@@ -32,17 +33,17 @@ function normaliseConversationStore(raw) {
       updatedAt: c.updatedAt || null,
     }));
   const activeConvId = conversations.some((c) => c.id === raw.activeConvId) ? raw.activeConvId : null;
-  const agentId = AGENT_BY_ID[raw.agentId] ? raw.agentId : "host-revenue";
+  const agentId = AGENT_BY_ID[raw.agentId] ? raw.agentId : "auto";
   return { conversations, activeConvId, agentId };
 }
 
 function loadConversationStore() {
   try {
     const rawText = window.localStorage.getItem(CONVERSATION_STORAGE_KEY);
-    if (!rawText) return { conversations: seedConversations(), activeConvId: null, agentId: "host-revenue" };
-    return normaliseConversationStore(JSON.parse(rawText)) || { conversations: seedConversations(), activeConvId: null, agentId: "host-revenue" };
+    if (!rawText) return { conversations: seedConversations(), activeConvId: null, agentId: "auto" };
+    return normaliseConversationStore(JSON.parse(rawText)) || { conversations: seedConversations(), activeConvId: null, agentId: "auto" };
   } catch {
-    return { conversations: seedConversations(), activeConvId: null, agentId: "host-revenue" };
+    return { conversations: seedConversations(), activeConvId: null, agentId: "auto" };
   }
 }
 
@@ -405,22 +406,30 @@ function App() {
   }, []);
 
   /* live Vertex AI path for custom prompts */
-  const runLive = useCallback(async (convId, aId, prompt) => {
+  const runLive = useCallback(async (convId, aId, prompt, routeOverride) => {
     const runId = ++runIdRef.current;
     cancelRef.current = false;
-    const ag = AGENT_BY_ID[aId];
+    const route = routeOverride || resolveAgentRoute(aId, prompt);
+    const effectiveAgentId = route.agentId;
+    const ag = AGENT_BY_ID[effectiveAgentId] || AGENT_BY_ID.market;
     let model = modelId;
     if (MODEL_BY_ID[model].ml) model = settings.defaultModel;
+    const supportNames = (route.supportingAgentIds || []).map((id) => AGENT_BY_ID[id]?.name).filter(Boolean);
     const steps = [
+      route.auto ? {
+        node: "Auto Router",
+        detail: `selected ${ag.name}${supportNames.length ? ` with ${supportNames.length} supporting signals` : ""}`,
+      } : null,
       { node: "Orchestrator", detail: `routing to ${ag.name}` },
       { node: "GitHub Data Agent", detail: "fetching live ARIA CSV outputs" },
       { node: "Analytics Agent", detail: "computing verified metrics" },
       { node: "Visualization Agent", detail: "preparing chart payload" },
       { node: "Vertex AI", detail: `generating with ${model}` },
       { node: "Quality Agent", detail: "checking sources and answer shape" },
-    ];
+    ].filter(Boolean);
     const base = {
-      role: "assistant", agentId: aId, prompt, trace: steps, blocks: [],
+      role: "assistant", agentId: effectiveAgentId, requestedAgentId: route.requestedAgentId, supportingAgentIds: route.supportingAgentIds || [],
+      prompt, trace: steps, blocks: [],
       brief: genericScript(ag, prompt).brief, traceDone: 0, traceRunning: true,
       progress: { block: -1, text: "" }, done: false, elapsed: elapsedFor(steps),
     };
@@ -438,7 +447,9 @@ function App() {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           prompt,
-          agentId: aId,
+          agentId: effectiveAgentId,
+          requestedAgentId: route.requestedAgentId,
+          supportingAgentIds: route.supportingAgentIds || [],
           agentName: ag.name,
           agentTagline: ag.tagline,
           projectId: settings.project,
@@ -489,7 +500,9 @@ function App() {
   const send = useCallback((rawPrompt, forceAgentId) => {
     const prompt = (rawPrompt != null ? rawPrompt : input).trim();
     if (!prompt || live) return;
-    const aid = forceAgentId || agentId;
+    const requestedAid = forceAgentId || agentId;
+    const route = resolveAgentRoute(requestedAid, prompt);
+    const aid = route.agentId;
     const ag = AGENT_BY_ID[aid];
     if (forceAgentId && forceAgentId !== agentId) setAgentId(forceAgentId);
     setInput("");
@@ -504,7 +517,10 @@ function App() {
     setConversations((cs) => {
       if (isNew) {
         const title = prompt.length > 38 ? prompt.slice(0, 36) + "…" : prompt;
-        return [touchConversation({ id: convId, agentId: aid, title, group: "Today", messages: [{ role: "user", text: prompt }] }), ...cs];
+        return [touchConversation({
+          id: convId, agentId: aid, requestedAgentId: route.requestedAgentId,
+          title, group: "Today", messages: [{ role: "user", text: prompt }],
+        }), ...cs];
       }
       return cs.map((c) => c.id === convId
         ? touchConversation(c, { messages: [...(c.messages || []), { role: "user", text: prompt }] })
@@ -513,11 +529,19 @@ function App() {
     setActiveConvId(convId);
 
     setTimeout(() => {
-      if (useLive) runLive(convId, aid, prompt);
+      if (useLive) runLive(convId, requestedAid, prompt, route);
       else {
         const s = scripted;
+        const supportNames = (route.supportingAgentIds || []).map((id) => AGENT_BY_ID[id]?.name).filter(Boolean);
         const staticMsg = {
-          role: "assistant", agentId: aid, prompt, trace: s.trace, blocks: s.blocks, brief: s.brief, elapsed: elapsedFor(s.trace),
+          role: "assistant", agentId: aid, requestedAgentId: route.requestedAgentId, supportingAgentIds: route.supportingAgentIds || [],
+          prompt,
+          trace: route.auto ? [
+            { node: "Auto Router", detail: `selected ${ag.name}${supportNames.length ? ` with ${supportNames.length} supporting signals` : ""}` },
+            ...s.trace,
+          ] : s.trace,
+          blocks: s.blocks, brief: s.brief,
+          elapsed: elapsedFor(route.auto ? [{}, ...s.trace] : s.trace),
         };
         runStream(convId, aid, prompt, staticMsg);
       }
@@ -525,7 +549,7 @@ function App() {
   }, [input, activeConvId, agentId, agent, live, settings, runStream, runLive]);
 
   /* handlers */
-  const newChat = useCallback(() => { stopStream(); setActiveConvId(null); }, [stopStream]);
+  const newChat = useCallback(() => { stopStream(); setAgentId("auto"); setActiveConvId(null); }, [stopStream]);
   const pickAgent = useCallback((id) => { stopStream(); setAgentId(id); setActiveConvId(null); }, [stopStream]);
   const pickConv = useCallback((id) => {
     stopStream();
