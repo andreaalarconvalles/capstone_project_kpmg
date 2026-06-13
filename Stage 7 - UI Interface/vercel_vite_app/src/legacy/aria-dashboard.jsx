@@ -112,35 +112,62 @@ function SignalRow({ accent, icon, label, value, onClick }) {
 /* ---------- the dashboard ---------- */
 function LandingDashboard({ onSignal }) {
   const A = Object.fromEntries(AGENTS.map((a) => [a.id, a.accent]));
+  const cardButton = { width: "100%", display: "block", padding: 0, border: 0, background: "transparent", color: "inherit", font: "inherit", textAlign: "left" };
   return (
-    <div className="aria-fadein" style={{ display: "flex", flexDirection: "column", gap: 14, width: "100%" }}>
-      {/* KPI grid */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-        <KpiCard icon="Building" accent={A["market"]} label="Listings" value="135,051"
-          sub="Paris 120.8k · Athens 14.2k"
-          foot={<StackBar segments={[{ value: 120809, color: A["host-revenue"] }, { value: 14242, color: A["gentrification"] }]} />} />
-        <KpiCard icon="Wallet" accent={CD.success} label="Anticipated revenue" value="€42.8M"
-          viz={<Sparkline data={[22, 24, 23, 27, 30, 33, 37, 41, 40, 43]} color={CD.success} />}
-          foot={<Delta value="+20.9% vs current" positive />} />
-        <KpiCard icon="Tags" accent={A["host-revenue"]} label="Price change" value="+18.4%"
-          sub="avg recommended uplift"
-          viz={<MiniBars data={[8, 11, 9, 14, 17, 21]} color={A["host-revenue"]} />} />
-        <KpiCard icon="ShieldAlert" accent={A["crime"]} label="Flagged listings" value="47"
-          sub="AML score > 0.80"
-          foot={<StackBar segments={[{ value: 12, color: CD.coral }, { value: 23, color: A["crime"] }, { value: 12, color: CD.muted }]} />} />
+    <div className="aria-fadein" style={{ display: "flex", flexDirection: "column", gap: 10, width: "100%" }}>
+      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: CD.ink }}>Dataset insight cards</div>
+        <div style={{ fontSize: 12, color: CD.muted }}>Paris + Athens · 135,051 listings</div>
       </div>
-
-      {/* agent signals */}
-      <div className="aria-elev" style={{ background: CD.s1, border: `1px solid ${CD.hair}`, borderRadius: 16, padding: 6 }}>
-        <div style={{ fontSize: 11.5, color: CD.muted, fontWeight: 500, letterSpacing: -0.1, padding: "8px 9px 4px" }}>AGENT SIGNALS</div>
-        <SignalRow accent={A["gentrification"]} icon="Building2" label="Displacement risk · Koukaki 0.84" value="3 areas"
-          onClick={() => onSignal("gentrification", "Which Athens neighbourhoods show displacement risk in the next 12 months?")} />
-        <SignalRow accent={A["demand"]} icon="TrainFront" label="Infrastructure stress · August peak" value="4 districts"
-          onClick={() => onSignal("demand", "Which districts hit infrastructure stress in August?")} />
-        <SignalRow accent={A["market"]} icon="TrendingUp" label="Top STR yield · Pangrati" value="11.4%"
-          onClick={() => onSignal("market", "Rank Athens neighbourhoods by projected STR yield")} />
-        <SignalRow accent={A["host-revenue"]} icon="Coins" label="Median underpricing gap" value="€29"
-          onClick={() => onSignal("host-revenue", "Why is my listing underpriced vs the neighbourhood?")} />
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: 10 }}>
+        <button className="aria-focus" onClick={() => onSignal("market", "Which Athens neighbourhoods offer the strongest short-term rental yield?")}
+          style={cardButton}>
+          <KpiCard icon="UsersRound" accent={A["market"]} label="Family-friendly stay base" value="Koukaki"
+            sub="central Athens · 1,333 listings"
+            foot={<Delta value="98.8 occupancy index" positive />} />
+        </button>
+        <button className="aria-focus" onClick={() => onSignal("gentrification", "Where is host risk highest in Athens?")}
+          style={cardButton}>
+          <KpiCard icon="ShieldCheck" accent={CD.success} label="Lowest risk proxy" value="Akropoli"
+            sub="25.8% high-risk share"
+            foot={<StackBar segments={[{ value: 116, color: A["gentrification"] }, { value: 333, color: CD.success }]} />} />
+        </button>
+        <button className="aria-focus" onClick={() => onSignal("market", "Which Athens neighbourhoods offer the strongest short-term rental yield?")}
+          style={cardButton}>
+          <KpiCard icon="BadgeEuro" accent={A["host-revenue"]} label="Cheapest median nightly" value="€44"
+            sub="Agios Eleftherios · Athens"
+            viz={<MiniBars data={[82, 81, 66, 55, 44]} color={A["host-revenue"]} />} />
+        </button>
+        <button className="aria-focus" onClick={() => onSignal("market", "Which Athens neighbourhoods offer the strongest short-term rental yield?")}
+          style={cardButton}>
+          <KpiCard icon="Trophy" accent={A["demand"]} label="Best opportunity score" value="Zappeio"
+            sub="0.96 score · €15.4k avg revenue"
+            viz={<Sparkline data={[35, 54, 68, 74, 96]} color={A["demand"]} />} />
+        </button>
+        <button className="aria-focus" onClick={() => onSignal("market", "Which Paris arrondissement is best for a new short-term rental investment?")}
+          style={cardButton}>
+          <KpiCard icon="MapPinned" accent={A["market"]} label="Paris entry signal" value="Hôtel-de-Ville"
+            sub="0.86 opportunity score"
+            foot={<Delta value="top Paris area" positive />} />
+        </button>
+        <button className="aria-focus" onClick={() => onSignal("host-revenue", "What price change could improve my Athens listing revenue?")}
+          style={cardButton}>
+          <KpiCard icon="TrendingUp" accent={A["host-revenue"]} label="Underpricing upside" value="Zappeio"
+            sub="€41 avg nightly gap"
+            viz={<MiniBars data={[29, 33, 34, 36, 41]} color={A["host-revenue"]} />} />
+        </button>
+        <button className="aria-focus" onClick={() => onSignal("market", "Compare Paris vs Athens for a small short-term rental portfolio.")}
+          style={cardButton}>
+          <KpiCard icon="ReceiptText" accent={A["crime"]} label="Median nightly baseline" value="€81-€82"
+            sub="Paris €81 · Athens €82"
+            foot={<StackBar segments={[{ value: 81, color: A["market"] }, { value: 82, color: A["gentrification"] }]} />} />
+        </button>
+        <button className="aria-focus" onClick={() => onSignal("gentrification", "Which Athens listings need attention first because they are high-risk and underpriced?")}
+          style={cardButton}>
+          <KpiCard icon="ListChecks" accent={A["gentrification"]} label="Priority review queue" value="865"
+            sub="high-risk + underpriced listings"
+            foot={<Delta value="best first action list" positive />} />
+        </button>
       </div>
     </div>
   );

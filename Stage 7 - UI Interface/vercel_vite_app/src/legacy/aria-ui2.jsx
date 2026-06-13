@@ -303,8 +303,18 @@ function LiveDataStatus() {
 }
 
 /* ---------- Empty state ---------- */
-function EmptyState({ agent, onChip, composer, onSignal }) {
+function EmptyState({ composer, onSignal }) {
   const landingWidth = 1022;
+  const scriptedPrompts = [
+    { agentId: "market", prompt: "Which Paris arrondissement is best for a new short-term rental investment?" },
+    { agentId: "market", prompt: "Which Paris areas look saturated and should I avoid?" },
+    { agentId: "host-revenue", prompt: "Is my Paris listing underpriced compared with similar listings?" },
+    { agentId: "host-revenue", prompt: "What price change could improve my Athens listing revenue?" },
+    { agentId: "market", prompt: "Which Athens neighbourhoods offer the strongest short-term rental yield?" },
+    { agentId: "gentrification", prompt: "Which Athens listings need attention first because they are high-risk and underpriced?" },
+    { agentId: "gentrification", prompt: "Where is host risk highest in Athens?" },
+    { agentId: "market", prompt: "Compare Paris vs Athens for a small short-term rental portfolio." },
+  ];
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", padding: "26px 24px 36px", overflowY: "auto" }}>
       <div style={{ width: "100%", maxWidth: 1080, margin: "auto 0" }}>
@@ -320,29 +330,33 @@ function EmptyState({ agent, onChip, composer, onSignal }) {
           {composer}
         </div>
 
-        {/* aligned cover-page cards */}
-        <div style={{ width: "100%", maxWidth: landingWidth, margin: "0 auto", display: "flex", flexWrap: "wrap", gap: 22, alignItems: "stretch", justifyContent: "center" }}>
-          <div style={{ flex: "1 1 520px", minWidth: 0, maxWidth: 560, display: "flex", flexDirection: "column", gap: 14 }}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-              {agent.chips.map((c) => (
-                <button key={c} className="aria-focus aria-elev" onClick={() => onChip(c)}
-                  style={{
-                    display: "flex", alignItems: "center", gap: 10, textAlign: "left", padding: "12px 14px",
-                    borderRadius: 14, background: C2.s1, border: `1px solid ${C2.hair}`, color: C2.inkSoft,
-                    fontSize: 13, lineHeight: 1.35, transition: "background 0.13s, transform 0.13s",
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.background = C2.s2; e.currentTarget.style.transform = "translateY(-1px)"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = C2.s1; e.currentTarget.style.transform = "none"; }}>
-                  <Icon name="ArrowUpRight" size={15} color={agent.accent} style={{ marginTop: 1, flexShrink: 0 }} />
-                  <span style={{ textWrap: "pretty" }}>{c}</span>
-                </button>
-              ))}
+        <div style={{ width: "100%", maxWidth: landingWidth, margin: "0 auto", display: "flex", flexDirection: "column", gap: 16 }}>
+          <div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 9 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: C2.ink }}>Scripted analyses</div>
+              <div style={{ fontSize: 12, color: C2.muted }}>8 prompts</div>
             </div>
-            <LiveDataStatus />
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: 10 }}>
+              {scriptedPrompts.map((item) => {
+                const a = AGENT_BY_ID[item.agentId];
+                return (
+                  <button key={`${item.agentId}-${item.prompt}`} className="aria-focus aria-elev"
+                    onClick={() => onSignal(item.agentId, item.prompt)}
+                    style={{
+                      minHeight: 72, display: "flex", alignItems: "flex-start", gap: 10, textAlign: "left", padding: "13px 14px",
+                      borderRadius: 14, background: C2.s1, border: `1px solid ${C2.hair}`, color: C2.inkSoft,
+                      fontSize: 13, lineHeight: 1.32, transition: "background 0.13s, transform 0.13s",
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = C2.s2; e.currentTarget.style.transform = "translateY(-1px)"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = C2.s1; e.currentTarget.style.transform = "none"; }}>
+                    <Icon name="ArrowUpRight" size={15} color={a.accent} style={{ marginTop: 1, flexShrink: 0 }} />
+                    <span style={{ textWrap: "pretty" }}>{item.prompt}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
-          <div style={{ flex: "1 1 420px", minWidth: 0, maxWidth: 440, display: "flex" }}>
-            <LandingDashboard onSignal={onSignal} />
-          </div>
+          <LandingDashboard onSignal={onSignal} />
         </div>
       </div>
     </div>
