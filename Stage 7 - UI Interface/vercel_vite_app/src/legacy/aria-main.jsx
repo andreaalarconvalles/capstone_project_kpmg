@@ -94,9 +94,9 @@ function AnswerView({ m, live, onCopy, onRegen, onExport }) {
       if (!text) continue;
       blocks.push(<RichText key={bi} text={text} cursor={!full && live} />);
     } else if (block.type === "chart") {
-      blocks.push(<ChartBlock key={chartBlockKey(block.chart, bi)} chart={block.chart} />);
+      blocks.push(<div key={chartBlockKey(block.chart, bi)} className="aria-export-visual"><ChartBlock chart={block.chart} /></div>);
     } else if (block.type === "map") {
-      blocks.push(<NeighbourhoodMap key={bi} {...block.map} />);
+      blocks.push(<div key={bi} className="aria-export-visual"><NeighbourhoodMap {...block.map} /></div>);
     } else if (block.type === "kpis") {
       blocks.push(<LiveKpiGrid key={bi} kpis={block.kpis} />);
     } else if (block.type === "details") {
@@ -104,14 +104,14 @@ function AnswerView({ m, live, onCopy, onRegen, onExport }) {
     }
   }
   return (
-    <div>
+    <div data-aria-answer="true">
       <ReasoningTrace steps={m.trace} doneCount={m.traceDone} running={m.traceRunning} elapsed={m.elapsed} />
       {blocks}
       {m.done && (
         <div className="aria-fadein no-print" style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 12 }}>
           <ActionBtn icon="Copy" label="Copy" onClick={onCopy} />
           <ActionBtn icon="RefreshCw" label="Regenerate" onClick={onRegen} />
-          <button onClick={onExport} className="aria-focus"
+          <button onClick={(event) => onExport && onExport(event)} className="aria-focus"
             style={{ display: "flex", alignItems: "center", gap: 7, padding: "7px 13px", borderRadius: 100, background: CA.s1, border: `1px solid ${CA.hair}`, color: CA.ink, fontSize: 13, fontWeight: 500, marginLeft: 4 }}
             onMouseEnter={(e) => e.currentTarget.style.background = CA.s2}
             onMouseLeave={(e) => e.currentTarget.style.background = CA.s1}>
@@ -236,7 +236,7 @@ function ActionBtn({ icon, label, onClick }) {
   const [done, setDone] = useState(false);
   return (
     <button title={label} className="aria-focus"
-      onClick={() => { onClick && onClick(); if (icon === "Copy") { setDone(true); setTimeout(() => setDone(false), 1200); } }}
+      onClick={(event) => { onClick && onClick(event); if (icon === "Copy") { setDone(true); setTimeout(() => setDone(false), 1200); } }}
       style={{ width: 34, height: 34, borderRadius: 8, display: "grid", placeItems: "center", color: CA.muted }}
       onMouseEnter={(e) => { e.currentTarget.style.background = CA.s1; e.currentTarget.style.color = CA.ink; }}
       onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = CA.muted; }}>
@@ -261,7 +261,7 @@ function Thread({ agent, messages, live, scrollRef, onCopy, onRegen, onExport })
               </div>
             ) : (
               <AnswerView m={m} live={false}
-                onCopy={() => onCopy(m)} onRegen={() => onRegen(m)} onExport={() => onExport(m)} />
+                onCopy={() => onCopy(m)} onRegen={() => onRegen(m)} onExport={(event) => onExport(m, event)} />
             )}
           </div>
         ))}
@@ -567,7 +567,7 @@ function App() {
       }
     }, 40);
   }, [live, activeConvId, runStream, runLive]);
-  const exportMsg = useCallback((m) => exportBrief(AGENT_BY_ID[m.agentId], m.prompt, m.brief), []);
+  const exportMsg = useCallback((m, event) => exportBrief(AGENT_BY_ID[m.agentId], m.prompt, m, event), []);
 
   /* autoscroll while streaming */
   useEffect(() => {
