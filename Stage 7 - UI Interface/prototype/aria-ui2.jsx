@@ -5,13 +5,105 @@ const C2 = ARIA.c;
 /* ---------- Model picker (opens upward) ---------- */
 function ModelPicker({ modelId, onPick }) {
   const [open, setOpen] = React.useState(false);
+  const [menuPos, setMenuPos] = React.useState({
+    placement: "top",
+    left: 12,
+    width: 296,
+    maxHeight: 360,
+    top: 12,
+    bottom: 12,
+  });
   const ref = React.useRef(null);
+  const menuRef = React.useRef(null);
   const cur = MODEL_BY_ID[modelId];
+  const updateMenuPosition = React.useCallback(() => {
+    if (!ref.current) return;
+    const rect = ref.current.getBoundingClientRect();
+    const margin = 12;
+    const gap = 8;
+    const preferredWidth = 296;
+    const viewportWidth = window.innerWidth || document.documentElement.clientWidth || preferredWidth;
+    const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 640;
+    const mobileSheet = viewportWidth < 520;
+    const width = mobileSheet
+      ? Math.max(220, viewportWidth - margin * 2)
+      : Math.min(preferredWidth, Math.max(220, viewportWidth - margin * 2));
+    const left = mobileSheet
+      ? margin
+      : Math.min(Math.max(margin, rect.left), Math.max(margin, viewportWidth - width - margin));
+    const availableAbove = Math.max(0, rect.top - margin - gap);
+    const availableBelow = Math.max(0, viewportHeight - rect.bottom - margin - gap);
+    const placement = mobileSheet ? "sheet" : availableAbove >= 260 || availableAbove >= availableBelow ? "top" : "bottom";
+    const available = placement === "top" ? availableAbove : availableBelow;
+    setMenuPos({
+      placement,
+      left,
+      width,
+      maxHeight: Math.floor(mobileSheet ? Math.min(520, viewportHeight - margin * 2) : Math.max(140, available)),
+      top: Math.floor(rect.bottom + gap),
+      bottom: Math.floor(mobileSheet ? margin : viewportHeight - rect.top + gap),
+    });
+  }, []);
   React.useEffect(() => {
-    const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    const h = (e) => {
+      if (
+        ref.current && !ref.current.contains(e.target) &&
+        (!menuRef.current || !menuRef.current.contains(e.target))
+      ) setOpen(false);
+    };
     document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
   }, []);
+  React.useLayoutEffect(() => {
+    if (!open) return;
+    updateMenuPosition();
+    window.addEventListener("resize", updateMenuPosition);
+    window.addEventListener("scroll", updateMenuPosition, true);
+    return () => {
+      window.removeEventListener("resize", updateMenuPosition);
+      window.removeEventListener("scroll", updateMenuPosition, true);
+    };
+  }, [open, updateMenuPosition]);
+  const menu = open && (
+    <div ref={menuRef} className="aria-scalein" style={{
+      position: "fixed",
+      top: menuPos.placement === "bottom" ? menuPos.top : "auto",
+      bottom: menuPos.placement === "top" || menuPos.placement === "sheet" ? menuPos.bottom : "auto",
+      left: menuPos.left,
+      width: menuPos.width,
+      maxHeight: menuPos.maxHeight,
+      overflowY: "auto",
+      overscrollBehavior: "contain",
+      transformOrigin: `${menuPos.placement === "bottom" ? "top" : "bottom"} left`,
+      background: C2.s2, border: `1px solid ${C2.hair}`, borderRadius: 14, padding: 6,
+      boxShadow: "0 -1px 0 rgba(255,255,255,0.06) inset, 0 18px 50px rgba(0,0,0,0.6)", zIndex: 1000,
+    }}>
+      {MODELS.map((g) => (
+        <div key={g.group}>
+          <div style={{ display: "flex", alignItems: "center", gap: 7, padding: "9px 10px 5px", fontSize: 11.5, color: C2.muted, fontWeight: 500, letterSpacing: -0.1 }}>
+            {g.group}
+            {g.badge && <span style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: 0.3, color: C2.teal, border: `1px solid ${C2.teal}55`, borderRadius: 5, padding: "1px 5px" }}>{g.badge}</span>}
+          </div>
+          {g.items.map((m) => (
+            <button key={m.id} className="aria-focus" onClick={() => { onPick(m.id); setOpen(false); }}
+              style={{
+                width: "100%", display: "flex", alignItems: "center", gap: 11, padding: "9px 10px", borderRadius: 10,
+                background: modelId === m.id ? C2.s1 : "transparent", textAlign: "left", color: C2.ink,
+              }}
+              onMouseEnter={(e) => { if (modelId !== m.id) e.currentTarget.style.background = "rgba(255,255,255,0.04)"; }}
+              onMouseLeave={(e) => { if (modelId !== m.id) e.currentTarget.style.background = "transparent"; }}>
+              {m.ml ? <Icon name="Cpu" size={16} color={C2.muted} /> : <Icon name="Sparkles" size={16} color={C2.muted} />}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13.5, fontWeight: 500 }}>{m.name}{m.default && <span style={{ color: C2.muted, fontWeight: 400 }}> · default</span>}</div>
+                <div style={{ fontSize: 12, color: C2.muted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.desc}</div>
+              </div>
+              {modelId === m.id && <Icon name="Check" size={15} color={C2.blue} sw={2.4} />}
+            </button>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
   return (
     <div ref={ref} style={{ position: "relative" }}>
       <button className="aria-focus" onClick={() => setOpen((o) => !o)}
@@ -24,38 +116,7 @@ function ModelPicker({ modelId, onPick }) {
         {cur.name}
         <Icon name="ChevronDown" size={14} color={C2.muted} style={{ transform: open ? "rotate(180deg)" : "none", transition: "transform 0.18s" }} />
       </button>
-      {open && (
-        <div className="aria-scalein" style={{
-          position: "absolute", bottom: "calc(100% + 8px)", left: 0, width: 296, transformOrigin: "bottom left",
-          background: C2.s2, border: `1px solid ${C2.hair}`, borderRadius: 14, padding: 6,
-          boxShadow: "0 -1px 0 rgba(255,255,255,0.06) inset, 0 18px 50px rgba(0,0,0,0.6)", zIndex: 40,
-        }}>
-          {MODELS.map((g) => (
-            <div key={g.group}>
-              <div style={{ display: "flex", alignItems: "center", gap: 7, padding: "9px 10px 5px", fontSize: 11.5, color: C2.muted, fontWeight: 500, letterSpacing: -0.1 }}>
-                {g.group}
-                {g.badge && <span style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: 0.3, color: C2.teal, border: `1px solid ${C2.teal}55`, borderRadius: 5, padding: "1px 5px" }}>{g.badge}</span>}
-              </div>
-              {g.items.map((m) => (
-                <button key={m.id} className="aria-focus" onClick={() => { onPick(m.id); setOpen(false); }}
-                  style={{
-                    width: "100%", display: "flex", alignItems: "center", gap: 11, padding: "9px 10px", borderRadius: 10,
-                    background: modelId === m.id ? C2.s1 : "transparent", textAlign: "left", color: C2.ink,
-                  }}
-                  onMouseEnter={(e) => { if (modelId !== m.id) e.currentTarget.style.background = "rgba(255,255,255,0.04)"; }}
-                  onMouseLeave={(e) => { if (modelId !== m.id) e.currentTarget.style.background = "transparent"; }}>
-                  {m.ml ? <Icon name="Cpu" size={16} color={C2.muted} /> : <Icon name="Sparkles" size={16} color={C2.muted} />}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13.5, fontWeight: 500 }}>{m.name}{m.default && <span style={{ color: C2.muted, fontWeight: 400 }}> · default</span>}</div>
-                    <div style={{ fontSize: 12, color: C2.muted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.desc}</div>
-                  </div>
-                  {modelId === m.id && <Icon name="Check" size={15} color={C2.blue} sw={2.4} />}
-                </button>
-              ))}
-            </div>
-          ))}
-        </div>
-      )}
+      {window.ReactDOM?.createPortal ? window.ReactDOM.createPortal(menu, document.body) : menu}
     </div>
   );
 }

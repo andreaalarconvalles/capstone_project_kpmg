@@ -25,7 +25,6 @@ function normaliseConversationStore(raw) {
     .map((c) => ({
       id: String(c.id),
       agentId: AGENT_BY_ID[c.agentId] ? c.agentId : "host-revenue",
-      requestedAgentId: AGENT_BY_ID[c.requestedAgentId] ? c.requestedAgentId : null,
       title: String(c.title || "Untitled chat"),
       group: c.group || "Today",
       prompt: c.prompt || "",
@@ -33,17 +32,17 @@ function normaliseConversationStore(raw) {
       updatedAt: c.updatedAt || null,
     }));
   const activeConvId = conversations.some((c) => c.id === raw.activeConvId) ? raw.activeConvId : null;
-  const agentId = AGENT_BY_ID[raw.agentId] ? raw.agentId : "auto";
+  const agentId = AGENT_BY_ID[raw.agentId] ? raw.agentId : "host-revenue";
   return { conversations, activeConvId, agentId };
 }
 
 function loadConversationStore() {
   try {
     const rawText = window.localStorage.getItem(CONVERSATION_STORAGE_KEY);
-    if (!rawText) return { conversations: seedConversations(), activeConvId: null, agentId: "auto" };
-    return normaliseConversationStore(JSON.parse(rawText)) || { conversations: seedConversations(), activeConvId: null, agentId: "auto" };
+    if (!rawText) return { conversations: seedConversations(), activeConvId: null, agentId: "host-revenue" };
+    return normaliseConversationStore(JSON.parse(rawText)) || { conversations: seedConversations(), activeConvId: null, agentId: "host-revenue" };
   } catch {
-    return { conversations: seedConversations(), activeConvId: null, agentId: "auto" };
+    return { conversations: seedConversations(), activeConvId: null, agentId: "host-revenue" };
   }
 }
 
@@ -105,7 +104,7 @@ function AnswerView({ m, live, onCopy, onRegen, onExport }) {
     }
   }
   return (
-    <div data-aria-answer="true">
+    <div data-aria-answer="true" aria-live={live ? "polite" : undefined} aria-busy={live && !m.done ? "true" : undefined}>
       <ReasoningTrace steps={m.trace} doneCount={m.traceDone} running={m.traceRunning} elapsed={m.elapsed} />
       {blocks}
       {m.done && (
@@ -165,6 +164,7 @@ function LiveKpiGrid({ kpis = [] }) {
 }
 function AnalysisDetails({ details = {} }) {
   const [open, setOpen] = useState(false);
+  const panelId = useRef(`analysis-details-${Math.random().toString(36).slice(2)}`).current;
   const sources = details.sourceFiles || [];
   const limits = details.limitations || [];
   const extra = details.extra || [];
@@ -172,13 +172,14 @@ function AnalysisDetails({ details = {} }) {
   return (
     <div className="aria-fadein" style={{ marginTop: 10, border: `1px solid ${CA.hair}`, borderRadius: 12, background: CA.s1, overflow: "hidden" }}>
       <button onClick={() => setOpen((v) => !v)} className="aria-focus"
+        aria-expanded={open} aria-controls={panelId}
         style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "10px 13px", color: CA.ink }}>
         <Icon name="ChevronDown" size={16} color={CA.muted}
           style={{ transform: open ? "none" : "rotate(-90deg)", transition: "transform 0.18s" }} />
         <span style={{ fontSize: 13.5, fontWeight: 600 }}>View details</span>
       </button>
       {open && (
-        <div style={{ borderTop: `1px solid ${CA.hairSoft}`, padding: "12px 14px 14px", fontSize: 13, lineHeight: 1.55, color: CA.inkSoft }}>
+        <div id={panelId} style={{ borderTop: `1px solid ${CA.hairSoft}`, padding: "12px 14px 14px", fontSize: 13, lineHeight: 1.55, color: CA.inkSoft }}>
           {details.methodology && (
             <div style={{ marginBottom: 10 }}>
               <div style={{ fontSize: 11.5, color: CA.muted, fontWeight: 600, marginBottom: 4 }}>Methodology</div>
@@ -236,7 +237,7 @@ function AnalysisDetails({ details = {} }) {
 function ActionBtn({ icon, label, onClick }) {
   const [done, setDone] = useState(false);
   return (
-    <button title={label} className="aria-focus"
+    <button title={label} aria-label={label} className="aria-focus"
       onClick={(event) => { onClick && onClick(event); if (icon === "Copy") { setDone(true); setTimeout(() => setDone(false), 1200); } }}
       style={{ width: 34, height: 34, borderRadius: 8, display: "grid", placeItems: "center", color: CA.muted }}
       onMouseEnter={(e) => { e.currentTarget.style.background = CA.s1; e.currentTarget.style.color = CA.ink; }}
@@ -406,30 +407,22 @@ function App() {
   }, []);
 
   /* live Vertex AI path for custom prompts */
-  const runLive = useCallback(async (convId, aId, prompt, routeOverride) => {
+  const runLive = useCallback(async (convId, aId, prompt) => {
     const runId = ++runIdRef.current;
     cancelRef.current = false;
-    const route = routeOverride || resolveAgentRoute(aId, prompt);
-    const effectiveAgentId = route.agentId;
-    const ag = AGENT_BY_ID[effectiveAgentId] || AGENT_BY_ID.market;
+    const ag = AGENT_BY_ID[aId];
     let model = modelId;
     if (MODEL_BY_ID[model].ml) model = settings.defaultModel;
-    const supportNames = (route.supportingAgentIds || []).map((id) => AGENT_BY_ID[id]?.name).filter(Boolean);
     const steps = [
-      route.auto ? {
-        node: "Auto Router",
-        detail: `selected ${ag.name}${supportNames.length ? ` with ${supportNames.length} supporting signals` : ""}`,
-      } : null,
       { node: "Orchestrator", detail: `routing to ${ag.name}` },
       { node: "GitHub Data Agent", detail: "fetching live ARIA CSV outputs" },
       { node: "Analytics Agent", detail: "computing verified metrics" },
       { node: "Visualization Agent", detail: "preparing chart payload" },
       { node: "Vertex AI", detail: `generating with ${model}` },
       { node: "Quality Agent", detail: "checking sources and answer shape" },
-    ].filter(Boolean);
+    ];
     const base = {
-      role: "assistant", agentId: effectiveAgentId, requestedAgentId: route.requestedAgentId, supportingAgentIds: route.supportingAgentIds || [],
-      prompt, trace: steps, blocks: [],
+      role: "assistant", agentId: aId, prompt, trace: steps, blocks: [],
       brief: genericScript(ag, prompt).brief, traceDone: 0, traceRunning: true,
       progress: { block: -1, text: "" }, done: false, elapsed: elapsedFor(steps),
     };
@@ -447,9 +440,7 @@ function App() {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           prompt,
-          agentId: effectiveAgentId,
-          requestedAgentId: route.requestedAgentId,
-          supportingAgentIds: route.supportingAgentIds || [],
+          agentId: aId,
           agentName: ag.name,
           agentTagline: ag.tagline,
           projectId: settings.project,
@@ -500,9 +491,7 @@ function App() {
   const send = useCallback((rawPrompt, forceAgentId) => {
     const prompt = (rawPrompt != null ? rawPrompt : input).trim();
     if (!prompt || live) return;
-    const requestedAid = forceAgentId || agentId;
-    const route = resolveAgentRoute(requestedAid, prompt);
-    const aid = route.agentId;
+    const aid = forceAgentId || agentId;
     const ag = AGENT_BY_ID[aid];
     if (forceAgentId && forceAgentId !== agentId) setAgentId(forceAgentId);
     setInput("");
@@ -517,10 +506,7 @@ function App() {
     setConversations((cs) => {
       if (isNew) {
         const title = prompt.length > 38 ? prompt.slice(0, 36) + "…" : prompt;
-        return [touchConversation({
-          id: convId, agentId: aid, requestedAgentId: route.requestedAgentId,
-          title, group: "Today", messages: [{ role: "user", text: prompt }],
-        }), ...cs];
+        return [touchConversation({ id: convId, agentId: aid, title, group: "Today", messages: [{ role: "user", text: prompt }] }), ...cs];
       }
       return cs.map((c) => c.id === convId
         ? touchConversation(c, { messages: [...(c.messages || []), { role: "user", text: prompt }] })
@@ -529,19 +515,11 @@ function App() {
     setActiveConvId(convId);
 
     setTimeout(() => {
-      if (useLive) runLive(convId, requestedAid, prompt, route);
+      if (useLive) runLive(convId, aid, prompt);
       else {
         const s = scripted;
-        const supportNames = (route.supportingAgentIds || []).map((id) => AGENT_BY_ID[id]?.name).filter(Boolean);
         const staticMsg = {
-          role: "assistant", agentId: aid, requestedAgentId: route.requestedAgentId, supportingAgentIds: route.supportingAgentIds || [],
-          prompt,
-          trace: route.auto ? [
-            { node: "Auto Router", detail: `selected ${ag.name}${supportNames.length ? ` with ${supportNames.length} supporting signals` : ""}` },
-            ...s.trace,
-          ] : s.trace,
-          blocks: s.blocks, brief: s.brief,
-          elapsed: elapsedFor(route.auto ? [{}, ...s.trace] : s.trace),
+          role: "assistant", agentId: aid, prompt, trace: s.trace, blocks: s.blocks, brief: s.brief, elapsed: elapsedFor(s.trace),
         };
         runStream(convId, aid, prompt, staticMsg);
       }
@@ -549,7 +527,7 @@ function App() {
   }, [input, activeConvId, agentId, agent, live, settings, runStream, runLive]);
 
   /* handlers */
-  const newChat = useCallback(() => { stopStream(); setAgentId("auto"); setActiveConvId(null); }, [stopStream]);
+  const newChat = useCallback(() => { stopStream(); setActiveConvId(null); }, [stopStream]);
   const pickAgent = useCallback((id) => { stopStream(); setAgentId(id); setActiveConvId(null); }, [stopStream]);
   const pickConv = useCallback((id) => {
     stopStream();
@@ -558,9 +536,11 @@ function App() {
   }, [conversations, ensureThread, stopStream]);
   const renameConv = useCallback((id, t) => setConversations((cs) => cs.map((c) => c.id === id ? touchConversation(c, { title: t || "Untitled chat" }) : c)), []);
   const deleteConv = useCallback((id) => {
+    const target = conversations.find((c) => c.id === id);
+    if (target && !window.confirm(`Delete "${target.title}"? This cannot be undone.`)) return;
     setConversations((cs) => cs.filter((c) => c.id !== id));
     setActiveConvId((a) => a === id ? null : a);
-  }, []);
+  }, [conversations]);
   const toggleFullscreen = useCallback(() => {
     const doc = document;
     if (doc.fullscreenElement) {
@@ -668,6 +648,7 @@ function App() {
           <div ref={themeMenuRef} style={{ marginLeft: "auto", flexShrink: 0, position: "relative" }}>
             <button className="aria-focus" onClick={() => setThemeMenuOpen((v) => !v)}
               title="Change theme"
+              aria-label={`Change theme. Current theme: ${activeTheme.label}`}
               aria-haspopup="menu" aria-expanded={themeMenuOpen}
               style={{
                 display: "flex", alignItems: "center", gap: 7, height: 34, padding: "0 12px", borderRadius: 100,

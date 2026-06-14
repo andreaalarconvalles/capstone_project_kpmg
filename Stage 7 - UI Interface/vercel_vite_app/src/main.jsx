@@ -1,11 +1,12 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
+import { createPortal } from "react-dom";
 import * as Recharts from "recharts";
 import * as LucideIcons from "lucide-react";
 import "./styles.css";
 
 window.React = React;
-window.ReactDOM = { createRoot };
+window.ReactDOM = { createRoot, createPortal };
 window.Recharts = Recharts;
 window.__ARIA_ICON_COMPONENTS = LucideIcons;
 

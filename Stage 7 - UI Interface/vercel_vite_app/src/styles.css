@@ -52,7 +52,7 @@
   ::-webkit-scrollbar-thumb:hover { background: var(--ink-muted, #2e2e2e); }
   * { scrollbar-width: thin; scrollbar-color: var(--scroll-thumb, #2a2a2a) transparent; }
 
-  button { font-family: inherit; letter-spacing: -0.14px; cursor: pointer; border: none; background: none; color: inherit; }
+  button { font-family: inherit; letter-spacing: -0.14px; cursor: pointer; border: none; background: none; color: inherit; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
   input, textarea { font-family: inherit; letter-spacing: -0.15px; }
   textarea { resize: none; }
   ::placeholder { color: var(--ink-muted); opacity: 1; }
@@ -73,6 +73,21 @@
   body.anim-on .aria-fadeup { animation: ariaFadeUp 0.4s cubic-bezier(0.22,1,0.36,1) both; }
   body.anim-on .aria-fadein { animation: ariaFadeIn 0.5s ease both; }
   body.anim-on .aria-scalein { animation: ariaScaleIn 0.16s cubic-bezier(0.22,1,0.36,1) both; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      scroll-behavior: auto !important;
+      transition-duration: 0.001ms !important;
+    }
+
+    .aria-spin {
+      animation: none !important;
+    }
+  }
 
   /* Markdown-ish answer styling */
   .aria-prose strong { font-weight: 600; color: var(--ink); }

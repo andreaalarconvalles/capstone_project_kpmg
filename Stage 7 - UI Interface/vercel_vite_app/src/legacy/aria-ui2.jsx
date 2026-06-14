@@ -5,16 +5,112 @@ const C2 = ARIA.c;
 /* ---------- Model picker (opens upward) ---------- */
 function ModelPicker({ modelId, onPick }) {
   const [open, setOpen] = React.useState(false);
+  const [menuPos, setMenuPos] = React.useState({
+    placement: "top",
+    left: 12,
+    width: 296,
+    maxHeight: 360,
+    top: 12,
+    bottom: 12,
+  });
   const ref = React.useRef(null);
+  const menuRef = React.useRef(null);
+  const listboxId = React.useRef(`model-list-${Math.random().toString(36).slice(2)}`).current;
   const cur = MODEL_BY_ID[modelId];
+  const updateMenuPosition = React.useCallback(() => {
+    if (!ref.current) return;
+    const rect = ref.current.getBoundingClientRect();
+    const margin = 12;
+    const gap = 8;
+    const preferredWidth = 296;
+    const viewportWidth = window.innerWidth || document.documentElement.clientWidth || preferredWidth;
+    const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 640;
+    const mobileSheet = viewportWidth < 520;
+    const width = mobileSheet
+      ? Math.max(220, viewportWidth - margin * 2)
+      : Math.min(preferredWidth, Math.max(220, viewportWidth - margin * 2));
+    const left = mobileSheet
+      ? margin
+      : Math.min(Math.max(margin, rect.left), Math.max(margin, viewportWidth - width - margin));
+    const availableAbove = Math.max(0, rect.top - margin - gap);
+    const availableBelow = Math.max(0, viewportHeight - rect.bottom - margin - gap);
+    const placement = mobileSheet ? "sheet" : availableAbove >= 260 || availableAbove >= availableBelow ? "top" : "bottom";
+    const available = placement === "top" ? availableAbove : availableBelow;
+    setMenuPos({
+      placement,
+      left,
+      width,
+      maxHeight: Math.floor(mobileSheet ? Math.min(520, viewportHeight - margin * 2) : Math.max(140, available)),
+      top: Math.floor(rect.bottom + gap),
+      bottom: Math.floor(mobileSheet ? margin : viewportHeight - rect.top + gap),
+    });
+  }, []);
   React.useEffect(() => {
-    const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    const h = (e) => {
+      if (
+        ref.current && !ref.current.contains(e.target) &&
+        (!menuRef.current || !menuRef.current.contains(e.target))
+      ) setOpen(false);
+    };
     document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
   }, []);
+  React.useLayoutEffect(() => {
+    if (!open) return;
+    updateMenuPosition();
+    window.addEventListener("resize", updateMenuPosition);
+    window.addEventListener("scroll", updateMenuPosition, true);
+    return () => {
+      window.removeEventListener("resize", updateMenuPosition);
+      window.removeEventListener("scroll", updateMenuPosition, true);
+    };
+  }, [open, updateMenuPosition]);
+  const menu = open && (
+    <div ref={menuRef} id={listboxId} role="listbox" aria-label="AI models" className="aria-scalein" style={{
+      position: "fixed",
+      top: menuPos.placement === "bottom" ? menuPos.top : "auto",
+      bottom: menuPos.placement === "top" || menuPos.placement === "sheet" ? menuPos.bottom : "auto",
+      left: menuPos.left,
+      width: menuPos.width,
+      maxHeight: menuPos.maxHeight,
+      overflowY: "auto",
+      overscrollBehavior: "contain",
+      transformOrigin: `${menuPos.placement === "bottom" ? "top" : "bottom"} left`,
+      background: C2.s2, border: `1px solid ${C2.hair}`, borderRadius: 14, padding: 6,
+      boxShadow: "0 -1px 0 rgba(255,255,255,0.06) inset, 0 18px 50px rgba(0,0,0,0.6)", zIndex: 1000,
+    }}>
+      {MODELS.map((g) => (
+        <div key={g.group} role="group" aria-label={g.group}>
+          <div style={{ display: "flex", alignItems: "center", gap: 7, padding: "9px 10px 5px", fontSize: 11.5, color: C2.muted, fontWeight: 500, letterSpacing: -0.1 }}>
+            {g.group}
+            {g.badge && <span style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: 0.3, color: C2.teal, border: `1px solid ${C2.teal}55`, borderRadius: 5, padding: "1px 5px" }}>{g.badge}</span>}
+          </div>
+          {g.items.map((m) => (
+            <button key={m.id} className="aria-focus" role="option" aria-selected={modelId === m.id}
+              onClick={() => { onPick(m.id); setOpen(false); }}
+              style={{
+                width: "100%", display: "flex", alignItems: "center", gap: 11, padding: "9px 10px", borderRadius: 10,
+                background: modelId === m.id ? C2.s1 : "transparent", textAlign: "left", color: C2.ink,
+              }}
+              onMouseEnter={(e) => { if (modelId !== m.id) e.currentTarget.style.background = "rgba(255,255,255,0.04)"; }}
+              onMouseLeave={(e) => { if (modelId !== m.id) e.currentTarget.style.background = "transparent"; }}>
+              {m.ml ? <Icon name="Cpu" size={16} color={C2.muted} /> : <Icon name="Sparkles" size={16} color={C2.muted} />}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13.5, fontWeight: 500 }}>{m.name}{m.default && <span style={{ color: C2.muted, fontWeight: 400 }}> · default</span>}</div>
+                <div style={{ fontSize: 12, color: C2.muted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.desc}</div>
+              </div>
+              {modelId === m.id && <Icon name="Check" size={15} color={C2.blue} sw={2.4} />}
+            </button>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
   return (
     <div ref={ref} style={{ position: "relative" }}>
       <button className="aria-focus" onClick={() => setOpen((o) => !o)}
+        aria-label={`Choose AI model. Current model: ${cur.name}`}
+        aria-haspopup="listbox" aria-expanded={open} aria-controls={open ? listboxId : undefined}
         style={{
           display: "flex", alignItems: "center", gap: 6, padding: "6px 10px", borderRadius: 100,
           background: open ? C2.s2 : "transparent", color: C2.ink, fontSize: 13, fontWeight: 500,
@@ -24,38 +120,7 @@ function ModelPicker({ modelId, onPick }) {
         {cur.name}
         <Icon name="ChevronDown" size={14} color={C2.muted} style={{ transform: open ? "rotate(180deg)" : "none", transition: "transform 0.18s" }} />
       </button>
-      {open && (
-        <div className="aria-scalein" style={{
-          position: "absolute", bottom: "calc(100% + 8px)", left: 0, width: 296, transformOrigin: "bottom left",
-          background: C2.s2, border: `1px solid ${C2.hair}`, borderRadius: 14, padding: 6,
-          boxShadow: "0 -1px 0 rgba(255,255,255,0.06) inset, 0 18px 50px rgba(0,0,0,0.6)", zIndex: 40,
-        }}>
-          {MODELS.map((g) => (
-            <div key={g.group}>
-              <div style={{ display: "flex", alignItems: "center", gap: 7, padding: "9px 10px 5px", fontSize: 11.5, color: C2.muted, fontWeight: 500, letterSpacing: -0.1 }}>
-                {g.group}
-                {g.badge && <span style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: 0.3, color: C2.teal, border: `1px solid ${C2.teal}55`, borderRadius: 5, padding: "1px 5px" }}>{g.badge}</span>}
-              </div>
-              {g.items.map((m) => (
-                <button key={m.id} className="aria-focus" onClick={() => { onPick(m.id); setOpen(false); }}
-                  style={{
-                    width: "100%", display: "flex", alignItems: "center", gap: 11, padding: "9px 10px", borderRadius: 10,
-                    background: modelId === m.id ? C2.s1 : "transparent", textAlign: "left", color: C2.ink,
-                  }}
-                  onMouseEnter={(e) => { if (modelId !== m.id) e.currentTarget.style.background = "rgba(255,255,255,0.04)"; }}
-                  onMouseLeave={(e) => { if (modelId !== m.id) e.currentTarget.style.background = "transparent"; }}>
-                  {m.ml ? <Icon name="Cpu" size={16} color={C2.muted} /> : <Icon name="Sparkles" size={16} color={C2.muted} />}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13.5, fontWeight: 500 }}>{m.name}{m.default && <span style={{ color: C2.muted, fontWeight: 400 }}> · default</span>}</div>
-                    <div style={{ fontSize: 12, color: C2.muted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.desc}</div>
-                  </div>
-                  {modelId === m.id && <Icon name="Check" size={15} color={C2.blue} sw={2.4} />}
-                </button>
-              ))}
-            </div>
-          ))}
-        </div>
-      )}
+      {window.ReactDOM?.createPortal ? window.ReactDOM.createPortal(menu, document.body) : menu}
     </div>
   );
 }
@@ -64,6 +129,7 @@ function ModelPicker({ modelId, onPick }) {
 function AgentPicker({ agentId, agents, onPick }) {
   const [open, setOpen] = React.useState(false);
   const ref = React.useRef(null);
+  const listboxId = React.useRef(`agent-list-${Math.random().toString(36).slice(2)}`).current;
   const cur = agents.find((a) => a.id === agentId) || agents[0];
   React.useEffect(() => {
     const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
@@ -73,6 +139,8 @@ function AgentPicker({ agentId, agents, onPick }) {
   return (
     <div ref={ref} style={{ position: "relative" }}>
       <button className="aria-focus" onClick={() => setOpen((o) => !o)}
+        aria-label={`Choose agent. Current agent: ${cur.name}`}
+        aria-haspopup="listbox" aria-expanded={open} aria-controls={open ? listboxId : undefined}
         style={{
           display: "flex", alignItems: "center", gap: 8, padding: "5px 10px 5px 6px", borderRadius: 100,
           background: open ? C2.s2 : "transparent", color: C2.ink, fontSize: 13, fontWeight: 500,
@@ -83,14 +151,15 @@ function AgentPicker({ agentId, agents, onPick }) {
         <Icon name="ChevronDown" size={14} color={C2.muted} style={{ transform: open ? "rotate(180deg)" : "none", transition: "transform 0.18s" }} />
       </button>
       {open && (
-        <div className="aria-scalein" style={{
+        <div id={listboxId} className="aria-scalein" role="listbox" aria-label="Agents" style={{
           position: "absolute", bottom: "calc(100% + 8px)", left: 0, width: 322, transformOrigin: "bottom left",
           background: C2.s2, border: `1px solid ${C2.hair}`, borderRadius: 14, padding: 6,
           boxShadow: "0 -1px 0 rgba(255,255,255,0.06) inset, 0 18px 50px rgba(0,0,0,0.6)", zIndex: 40,
         }}>
           <div style={{ padding: "9px 10px 5px", fontSize: 11.5, color: C2.muted, fontWeight: 500, letterSpacing: -0.1 }}>AGENTS</div>
           {agents.map((a) => (
-            <button key={a.id} className="aria-focus" onClick={() => { onPick(a.id); setOpen(false); }}
+            <button key={a.id} className="aria-focus" role="option" aria-selected={agentId === a.id}
+              onClick={() => { onPick(a.id); setOpen(false); }}
               style={{
                 width: "100%", display: "flex", alignItems: "center", gap: 11, padding: "9px 10px", borderRadius: 10,
                 background: agentId === a.id ? C2.s1 : "transparent", textAlign: "left", color: C2.ink,
@@ -163,6 +232,7 @@ const Composer = React.forwardRef(function Composer({
       }}>
         <div style={{ display: "flex", alignItems: "flex-start", width: "100%", padding: "0 6px 6px" }}>
           <textarea ref={taRef} value={value} rows={1}
+            aria-label={`Ask ${agent.name}`} name="aria-prompt" autoComplete="off"
             onChange={(e) => { setValue(e.target.value); grow(e.target); }}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submit(); }
@@ -185,7 +255,7 @@ const Composer = React.forwardRef(function Composer({
                 <span title={item.name} style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontSize: 12.5, color: C2.inkSoft }}>
                   {item.name}
                 </span>
-                <button className="aria-focus" onClick={() => removePhoto(item.id)} title="Remove photo"
+                <button className="aria-focus" onClick={() => removePhoto(item.id)} title="Remove photo" aria-label={`Remove ${item.name}`}
                   style={{ width: 22, height: 22, borderRadius: 100, display: "grid", placeItems: "center", color: C2.muted, flexShrink: 0 }}>
                   <Icon name="X" size={13} />
                 </button>
@@ -198,8 +268,8 @@ const Composer = React.forwardRef(function Composer({
           display: "flex", alignItems: "center", gap: 8, rowGap: 6, flexWrap: "wrap",
           padding: "7px 0 0", borderTop: `1px solid ${C2.hairSoft}`,
         }}>
-          <input ref={fileRef} type="file" accept="image/*" multiple onChange={addPhotos} style={{ display: "none" }} />
-          <button className="aria-focus" title="Upload photos" onClick={() => fileRef.current && fileRef.current.click()}
+          <input ref={fileRef} type="file" accept="image/*" multiple onChange={addPhotos} aria-label="Upload listing photos" style={{ display: "none" }} />
+          <button className="aria-focus" title="Upload photos" aria-label="Upload photos" onClick={() => fileRef.current && fileRef.current.click()}
             style={{ width: 34, height: 34, borderRadius: 100, display: "grid", placeItems: "center", color: C2.muted, flexShrink: 0 }}>
             <Icon name="Plus" size={19} />
           </button>
@@ -228,7 +298,7 @@ const Composer = React.forwardRef(function Composer({
             }}>
               <span style={{ width: 6, height: 6, borderRadius: 4, background: C2.teal }} />
               Engine: {engine.chip}
-              <button onClick={() => setModelId("gemini-2.5-pro")} title="Remove engine"
+              <button onClick={() => setModelId("gemini-2.5-pro")} title="Remove engine" aria-label="Remove analysis engine"
                 style={{ display: "grid", placeItems: "center", color: C2.muted, marginLeft: 1 }}>
                 <Icon name="X" size={13} />
               </button>
@@ -236,12 +306,12 @@ const Composer = React.forwardRef(function Composer({
           )}
           <div style={{ flex: "1 1 auto", minWidth: 8 }} />
           {streaming ? (
-            <button className="aria-focus" onClick={onStop} title="Stop generating"
+            <button className="aria-focus" onClick={onStop} title="Stop generating" aria-label="Stop generating"
               style={{ width: 36, height: 36, borderRadius: 100, display: "grid", placeItems: "center", background: C2.ink, color: C2.canvas, flexShrink: 0 }}>
               <span style={{ width: 11, height: 11, borderRadius: 3, background: C2.canvas }} />
             </button>
           ) : (
-            <button className="aria-focus" onClick={submit} disabled={!value.trim()} title="Send"
+            <button className="aria-focus" onClick={submit} disabled={!value.trim()} title="Send" aria-label="Send message"
               style={{
                 width: 36, height: 36, borderRadius: 100, display: "grid", placeItems: "center", flexShrink: 0,
                 background: value.trim() ? C2.cta : C2.s2, color: value.trim() ? C2.ctaText : C2.muted,
@@ -403,6 +473,44 @@ function EmptyState({ composer, onSignal }) {
 function SettingsModal({ open, onClose, settings, setSettings }) {
   const [tab, setTab] = React.useState("api");
   const [testState, setTestState] = React.useState("idle"); // idle | testing | ok | fail
+  const panelRef = React.useRef(null);
+  const titleId = React.useRef(`settings-title-${Math.random().toString(36).slice(2)}`).current;
+  const previousFocusRef = React.useRef(null);
+  React.useEffect(() => {
+    if (!open) return;
+    previousFocusRef.current = document.activeElement;
+    const focusableSelector = "button, [href], input, select, textarea, [tabindex]:not([tabindex='-1'])";
+    const focusFirst = () => {
+      const first = panelRef.current?.querySelector(focusableSelector);
+      (first || panelRef.current)?.focus();
+    };
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onClose();
+        return;
+      }
+      if (e.key !== "Tab" || !panelRef.current) return;
+      const focusable = Array.from(panelRef.current.querySelectorAll(focusableSelector))
+        .filter((el) => !el.disabled && el.offsetParent !== null);
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    setTimeout(focusFirst, 0);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      previousFocusRef.current?.focus?.();
+    };
+  }, [open, onClose]);
   if (!open) return null;
 
   const set = (k, v) => setSettings((s) => ({ ...s, [k]: v }));
@@ -424,15 +532,16 @@ function SettingsModal({ open, onClose, settings, setSettings }) {
   return (
     <div className="aria-fadein no-print" onMouseDown={onClose}
       style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(3px)", display: "grid", placeItems: "center", zIndex: 100, padding: 24 }}>
-      <div className="aria-scalein" onMouseDown={(e) => e.stopPropagation()}
+      <div ref={panelRef} className="aria-scalein" onMouseDown={(e) => e.stopPropagation()}
+        role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1}
         style={{
           width: 560, maxWidth: "100%", height: "min(546px, calc(100vh - 48px))", maxHeight: "86vh", overflow: "hidden", display: "flex", flexDirection: "column",
           background: C2.s2, borderRadius: 18, border: `1px solid ${C2.hair}`,
           boxShadow: "0 -1px 0 rgba(255,255,255,0.10) inset, 0 30px 80px rgba(0,0,0,0.7)",
         }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 18px", borderBottom: `1px solid ${C2.hairSoft}` }}>
-          <div style={{ fontSize: 16, fontWeight: 600, letterSpacing: -0.3 }}>Settings</div>
-          <button className="aria-focus" onClick={onClose} style={{ width: 32, height: 32, borderRadius: 8, display: "grid", placeItems: "center", color: C2.muted }}>
+          <div id={titleId} style={{ fontSize: 16, fontWeight: 600, letterSpacing: -0.3 }}>Settings</div>
+          <button className="aria-focus" onClick={onClose} aria-label="Close settings" style={{ width: 32, height: 32, borderRadius: 8, display: "grid", placeItems: "center", color: C2.muted }}>
             <Icon name="X" size={18} />
           </button>
         </div>
@@ -449,24 +558,26 @@ function SettingsModal({ open, onClose, settings, setSettings }) {
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 <div>
-                  <label style={labelS}>Vertex project ID</label>
-                  <input value={settings.project} onChange={(e) => { set("project", e.target.value); setTestState("idle"); }} placeholder="capstoneprojectkpmg" className="aria-focus" style={field} />
+                  <label htmlFor="vertex-project-id" style={labelS}>Vertex project ID</label>
+                  <input id="vertex-project-id" name="vertex-project-id" autoComplete="off" spellCheck={false}
+                    value={settings.project} onChange={(e) => { set("project", e.target.value); setTestState("idle"); }} placeholder="capstoneprojectkpmg" className="aria-focus" style={field} />
                 </div>
                 <div>
-                  <label style={labelS}>Vertex project number</label>
-                  <input value={settings.projectNumber || ""} onChange={(e) => { set("projectNumber", e.target.value); setTestState("idle"); }} placeholder="52102703097" className="aria-focus" style={field} />
+                  <label htmlFor="vertex-project-number" style={labelS}>Vertex project number</label>
+                  <input id="vertex-project-number" name="vertex-project-number" autoComplete="off" inputMode="numeric" spellCheck={false}
+                    value={settings.projectNumber || ""} onChange={(e) => { set("projectNumber", e.target.value); setTestState("idle"); }} placeholder="52102703097" className="aria-focus" style={field} />
                 </div>
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 <div>
-                  <label style={labelS}>Region</label>
-                  <select value={settings.region} onChange={(e) => { set("region", e.target.value); setTestState("idle"); }} className="aria-focus" style={{ ...field, appearance: "none" }}>
+                  <label htmlFor="vertex-region" style={labelS}>Region</label>
+                  <select id="vertex-region" name="vertex-region" autoComplete="off" value={settings.region} onChange={(e) => { set("region", e.target.value); setTestState("idle"); }} className="aria-focus" style={{ ...field, appearance: "none" }}>
                     <option>europe-west1</option><option>europe-west4</option><option>us-central1</option><option>global</option>
                   </select>
                 </div>
                 <div>
-                  <label style={labelS}>Default model</label>
-                  <select value={settings.defaultModel} onChange={(e) => { set("defaultModel", e.target.value); setTestState("idle"); }} className="aria-focus" style={{ ...field, appearance: "none" }}>
+                  <label htmlFor="default-model" style={labelS}>Default model</label>
+                  <select id="default-model" name="default-model" autoComplete="off" value={settings.defaultModel} onChange={(e) => { set("defaultModel", e.target.value); setTestState("idle"); }} className="aria-focus" style={{ ...field, appearance: "none" }}>
                     <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
                     <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
                     <option value="gemini-3.5-flash">Gemini 3.5 Flash</option>
@@ -482,8 +593,10 @@ function SettingsModal({ open, onClose, settings, setSettings }) {
                   {testState === "testing" && <Icon name="Loader" size={15} className="aria-spin" />}
                   Test backend
                 </button>
-                {testState === "ok" && <span style={{ display: "flex", alignItems: "center", gap: 6, color: C2.success, fontSize: 13.5 }}><Icon name="CircleCheck" size={16} /> Vertex backend ready</span>}
-                {testState === "fail" && <span style={{ display: "flex", alignItems: "center", gap: 6, color: C2.coral, fontSize: 13.5 }}><Icon name="CircleX" size={16} /> Needs Vercel auth</span>}
+                <span aria-live="polite" role="status" style={{ display: "flex", alignItems: "center", gap: 6, minHeight: 18 }}>
+                  {testState === "ok" && <span style={{ display: "flex", alignItems: "center", gap: 6, color: C2.success, fontSize: 13.5 }}><Icon name="CircleCheck" size={16} /> Vertex backend ready</span>}
+                  {testState === "fail" && <span style={{ display: "flex", alignItems: "center", gap: 6, color: C2.coral, fontSize: 13.5 }}><Icon name="CircleX" size={16} /> Needs Vercel auth</span>}
+                </span>
               </div>
               <div style={{ fontSize: 12, color: C2.muted, lineHeight: 1.5 }}>
                 Suggested prompts keep their scripted demo answers. Custom typed prompts call the server-side Vertex AI backend, load live GitHub project data, and return grounded KPIs, charts, and sources. The project fields identify where to run the Vertex request; Vercel still needs a service account environment variable for authentication.
