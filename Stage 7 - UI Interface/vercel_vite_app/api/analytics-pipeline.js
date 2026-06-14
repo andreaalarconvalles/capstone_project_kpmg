@@ -501,9 +501,9 @@ function classifyIntent(prompt, agentId) {
   const cityMentions = cityMentionsFromPrompt(prompt);
   if (/(portfolio|50-unit|fifty-unit)/.test(p) || cityMentions.has("Paris") && cityMentions.has("Athens")) return "portfolio-comparison";
   if (/(underprice|underpriced|fair price|predicted price|pricing gap|price gap|shap|model driver)/.test(p)) return "pricing";
-  if (/(family|safe|safest|live|living|cheap|cheapest|affordable|budget|rent|rental)/.test(p)) return "market-entry";
+  if (/(family|safe|safest|live|living|cheap|cheapest|affordable|budget|expensive|costliest|premium|luxury|rent|rental)/.test(p)) return "market-entry";
   if (/(risk|high-risk|declin|vulnerab|priority|churn|warning)/.test(p)) return "risk";
-  if (/(opportunity|saturat|distance zone|segment|heat.?map|short-term rental|market|investment|nightly prices?|median nightly|median price|revenue.*saturation|saturation.*revenue)/.test(p)) return "market-entry";
+  if (/(opportunity|saturat|distance zone|segment|heat.?map|short-term rental|market|investment|nightly prices?|median nightly|median price|highest price|highest priced|most expensive|revenue.*saturation|saturation.*revenue)/.test(p)) return "market-entry";
   if (/(map|region|regions|area comparison|compare areas|compare regions|neighbourhoods|neighborhoods|arrondissements|districts|where in|which areas|which regions)/.test(p)) return "market-entry";
   if (/(underprice|price|pricing|revenue|nightly|gap|earning|income|adr)/.test(p)) return "pricing";
   if (/(forecast|occupancy|tourist|demand|season|90 day|future|summer|peak)/.test(p)) return "demand";
@@ -520,6 +520,82 @@ function cityFromPrompt(prompt) {
   if (mentions.has("Paris") && !mentions.has("Athens")) return "Paris";
   if (mentions.has("Athens") && !mentions.has("Paris")) return "Athens";
   return "";
+}
+
+function compactContextText(text, max = 700) {
+  const clean = String(text || "").replace(/\s+/g, " ").trim();
+  return clean.length > max ? `${clean.slice(0, max - 1).trim()}…` : clean;
+}
+
+function normaliseContextMessages(messages = []) {
+  if (!Array.isArray(messages)) return [];
+  return messages
+    .filter((message) => message && (message.role === "user" || message.role === "assistant"))
+    .map((message) => ({
+      role: message.role,
+      text: compactContextText(message.text || message.content || ""),
+    }))
+    .filter((message) => message.text)
+    .slice(-8);
+}
+
+function lastSingleCity(messages = []) {
+  for (let i = messages.length - 1; i >= 0; i -= 1) {
+    const mentions = cityMentionsFromPrompt(messages[i].text);
+    if (mentions.size === 1) return [...mentions][0];
+  }
+  return "";
+}
+
+function metricFocus(prompt) {
+  const p = String(prompt || "");
+  if (/(expensive|costliest|costly|premium|luxury|highest (?:median |nightly |rental |rent )?price|highest priced|most expensive|pricey)/i.test(p)) return "expensive nightly-price ranking";
+  if (/(cheap|cheapest|affordable|budget|low price|lowest|least expensive|lowest (?:median |nightly |rental |rent )?price)/i.test(p)) return "affordable nightly-price ranking";
+  if (/(saturat|avoid|too high|crowd|overbuilt|worst places|worst areas)/i.test(p)) return "saturation and avoidance";
+  if (/(revenue|income|earning|yield)/i.test(p)) return "revenue";
+  if (/(occupancy|demand|booked|tourist)/i.test(p)) return "demand";
+  if (/(risk|high-risk|declin|vulnerab|priority|churn|warning)/i.test(p)) return "risk";
+  if (/(underprice|underpriced|fair price|predicted price|pricing gap|price gap|shap|model driver)/i.test(p)) return "pricing gap";
+  if (/(family|safe|safest|live|living)/i.test(p)) return "livability and saturation";
+  return "";
+}
+
+function isFollowUpPrompt(prompt) {
+  const p = String(prompt || "").trim();
+  const words = promptTokens(p);
+  return words.length <= 14
+    || /\b(there|that|those|these|same|it|them|they|their|also|what about|how about|and which|which are|where are)\b/i.test(p);
+}
+
+export function resolvePromptContext(prompt, messages = []) {
+  const history = normaliseContextMessages(messages);
+  const currentCity = cityFromPrompt(prompt);
+  const priorCity = lastSingleCity(history);
+  const currentFocus = metricFocus(prompt);
+  const priorFocus = [...history].reverse().map((message) => metricFocus(message.text)).find(Boolean) || "";
+  const notes = [];
+  let analysisPrompt = String(prompt || "").trim();
+
+  if (!currentCity && priorCity && isFollowUpPrompt(prompt)) {
+    notes.push(`Use ${priorCity} as the city because this is a follow-up in the same conversation.`);
+    analysisPrompt += `\nContext city: ${priorCity}. Interpret location words such as "there", "that area", or "same city" as ${priorCity}.`;
+  }
+
+  if (!currentFocus && priorFocus && isFollowUpPrompt(prompt)) {
+    notes.push(`Continue the previous analytical focus: ${priorFocus}.`);
+    analysisPrompt += `\nContext focus: continue the previous ${priorFocus} question unless the current user asks for a different metric.`;
+  }
+
+  return {
+    analysisPrompt,
+    history,
+    currentCity,
+    priorCity,
+    currentFocus,
+    priorFocus,
+    notes,
+    summary: notes.length ? notes.join(" ") : "No prior chat context was needed to resolve this prompt.",
+  };
 }
 
 function normaliseAreaKey(area) {
@@ -1070,20 +1146,24 @@ async function marketAnalysis(prompt) {
   const rows = await loadNeighbourhoodStats();
   const city = cityFromPrompt(prompt) || "Paris";
   const cityRows = rows.filter((r) => r.city === city);
+  const expensive = /(expensive|costliest|costly|premium|luxury|highest (?:median |nightly |rental |rent )?price|highest priced|most expensive|pricey)/i.test(prompt);
   const cheap = /(cheap|cheapest|affordable|budget|low price|lowest|nightly price|median price|rent price|rental price|monthly rent)/i.test(prompt);
   const revenue = /(revenue|income|earning|yield)/i.test(prompt);
   const demand = /(occupancy|demand|booked|tourist)/i.test(prompt);
   const family = /(family|safe|safest|live|living)/i.test(prompt);
   const saturated = /(saturat|avoid|too high|crowd|overbuilt)/i.test(prompt);
-  const scoreKey = cheap ? "medianPrice" : revenue ? "revenue" : demand ? "occupancy" : saturated ? "saturation" : family ? "saturation" : "opportunity";
-  const ranked = topN(cityRows, scoreKey, 6, !cheap && !family);
+  const scoreKey = expensive || cheap ? "medianPrice" : revenue ? "revenue" : demand ? "occupancy" : saturated ? "saturation" : family ? "saturation" : "opportunity";
+  const lowerIsBetter = cheap || family;
+  const ranked = topN(cityRows, scoreKey, 6, !lowerIsBetter);
   const mapSourceRows = cityRows;
   const best = ranked[0] || cityRows[0] || {};
   const totalListings = cityRows.reduce((s, r) => s + r.listings, 0);
-  const chartMetric = cheap ? "medianPrice" : revenue ? "revenue" : demand ? "occupancy" : saturated ? "saturation" : family ? "saturation" : "opportunity";
-  const chartTitle = cheap
-    ? `${city} lowest median nightly prices`
-    : revenue
+  const chartMetric = expensive || cheap ? "medianPrice" : revenue ? "revenue" : demand ? "occupancy" : saturated ? "saturation" : family ? "saturation" : "opportunity";
+  const chartTitle = expensive
+    ? `${city} highest median nightly prices`
+    : cheap
+      ? `${city} lowest median nightly prices`
+      : revenue
       ? `${city} average revenue by region`
       : demand
         ? `${city} occupancy by region`
@@ -1092,10 +1172,10 @@ async function marketAnalysis(prompt) {
           : saturated
             ? `${city} areas with highest saturation pressure`
             : `${city} opportunity ranking`;
-  const mainKpi = cheap ? "Cheapest area" : revenue ? "Top revenue area" : demand ? "Top demand area" : family ? "Lower-pressure area" : saturated ? "Highest saturation" : "Best opportunity";
-  const mainScoreLabel = cheap ? "Median nightly price" : revenue ? "Average revenue" : demand ? "Average occupancy" : family || saturated ? "Saturation score" : "Opportunity score";
-  const mainScoreValue = cheap ? fmtEuro(best.medianPrice) : revenue ? fmtEuro(best.revenue) : demand ? fmtPct(best.occupancy) : fmtScore(best[chartMetric]);
-  const supportingKpis = cheap
+  const mainKpi = expensive ? "Most expensive area" : cheap ? "Cheapest area" : revenue ? "Top revenue area" : demand ? "Top demand area" : family ? "Lower-pressure area" : saturated ? "Highest saturation" : "Best opportunity";
+  const mainScoreLabel = expensive || cheap ? "Median nightly price" : revenue ? "Average revenue" : demand ? "Average occupancy" : family || saturated ? "Saturation score" : "Opportunity score";
+  const mainScoreValue = expensive || cheap ? fmtEuro(best.medianPrice) : revenue ? fmtEuro(best.revenue) : demand ? fmtPct(best.occupancy) : fmtScore(best[chartMetric]);
+  const supportingKpis = expensive || cheap
     ? [
       { label: "Opportunity score", value: fmtScore(best.opportunity) },
       { label: "Listings reviewed", value: fmtInt(totalListings) },
@@ -1127,11 +1207,13 @@ async function marketAnalysis(prompt) {
           ];
   const mapRequested = wantsRegionMap(prompt);
   const vizRequest = visualizationRequest(prompt);
-  const metricLabel = cheap ? "Median nightly price" : revenue ? "Average revenue" : demand ? "Average occupancy" : saturated || family ? "Saturation score" : "Opportunity score";
-  const metricDisplay = cheap || revenue ? fmtEuro : demand ? fmtPct : fmtScore;
-  const mapTitle = cheap
-    ? `${city} map: lowest nightly prices`
-    : revenue
+  const metricLabel = expensive || cheap ? "Median nightly price" : revenue ? "Average revenue" : demand ? "Average occupancy" : saturated || family ? "Saturation score" : "Opportunity score";
+  const metricDisplay = expensive || cheap || revenue ? fmtEuro : demand ? fmtPct : fmtScore;
+  const mapTitle = expensive
+    ? `${city} map: highest nightly prices`
+    : cheap
+      ? `${city} map: lowest nightly prices`
+      : revenue
       ? `${city} map: strongest revenue regions`
       : demand
         ? `${city} map: strongest occupancy regions`
@@ -1149,16 +1231,16 @@ async function marketAnalysis(prompt) {
         metricLabel,
         metricDisplay,
       {
-        tone: cheap ? "price" : family ? "livability" : saturated ? "risk" : revenue ? "price" : "opportunity",
-        lowerIsBetter: cheap || family,
-        legendLow: cheap ? "cheaper" : family ? "calmer" : "lower",
-        legendHigh: cheap ? "costlier" : family ? "more saturated" : "higher",
+        tone: expensive || cheap ? "price" : family ? "livability" : saturated ? "risk" : revenue ? "price" : "opportunity",
+        lowerIsBetter,
+        legendLow: expensive || cheap ? "cheaper" : family ? "calmer" : "lower",
+        legendHigh: expensive || cheap ? "costlier" : family ? "more saturated" : "higher",
       }
     )
     : vizRequest.heatmap
       ? makeSegmentHeatmap(`${city} ${metricLabel.toLowerCase()} by segment`, cityRows, chartMetric, metricLabel, {
         formatter: metricDisplay,
-        tone: cheap ? "price" : family ? "livability" : saturated ? "risk" : "opportunity",
+        tone: expensive || cheap ? "price" : family ? "livability" : saturated ? "risk" : "opportunity",
       })
     : vizRequest.relationship
       ? makeBubbleScatter(`${city} revenue versus saturation trade-off`, topN(cityRows, "opportunity", 10, true), {
@@ -1189,13 +1271,15 @@ async function marketAnalysis(prompt) {
       label: r.area,
       value: r[chartMetric],
       display: metricDisplay(r[chartMetric]),
-    })), metricLabel, cheap ? "price" : revenue ? "revenue" : demand ? "occupancy" : "score", { kind: "horizontal-bar" });
+    })), metricLabel, expensive || cheap ? "price" : revenue ? "revenue" : demand ? "occupancy" : "score", { kind: "horizontal-bar" });
   return {
     intent: "market-entry",
     title: `${city} market-entry recommendation`,
-    recommendation: cheap
-      ? `${shortArea(best.area)} is the lowest-price area in the current ${city} neighbourhood summary, so it is the clearest affordability shortlist.`
-      : revenue
+    recommendation: expensive
+      ? `${shortArea(best.area)} is the highest-price area in the current ${city} neighbourhood summary, so treat it as the clearest premium-cost area in this short-term-rental dataset.`
+      : cheap
+        ? `${shortArea(best.area)} is the lowest-price area in the current ${city} neighbourhood summary, so it is the clearest affordability shortlist.`
+        : revenue
         ? `${shortArea(best.area)} has the strongest average revenue signal among the ${city} regions in the prepared project data.`
         : demand
           ? `${shortArea(best.area)} has the strongest occupancy signal among the ${city} regions in the prepared project data.`
@@ -1219,7 +1303,7 @@ async function marketAnalysis(prompt) {
       [FILES.neighbourhoodStats],
       mapRequested
         ? "Rank neighbourhoods using the prepared neighbourhood summary table and render a real city map with approximate ARIA neighbourhood overlays. The map zooms to the city detected in the prompt and colors regions by the selected metric: opportunity, saturation, median nightly price, average revenue, or occupancy."
-        : "Rank neighbourhoods using the prepared neighbourhood summary table. The chart metric changes with the prompt: opportunity for investment, saturation for avoid/family-style shortlist prompts, median nightly price for affordability prompts, average revenue for revenue prompts, and occupancy for demand prompts.",
+        : "Rank neighbourhoods using the prepared neighbourhood summary table. The chart metric changes with the prompt: opportunity for investment, saturation for avoid/family-style shortlist prompts, median nightly price for affordability or premium-price prompts, average revenue for revenue prompts, and occupancy for demand prompts.",
       ["This is short-term-rental market intelligence, not a complete home-purchase or mortgage dataset."],
       ranked.map((r) => `${shortArea(r.area)}: opportunity ${fmtScore(r.opportunity)}, saturation ${fmtScore(r.saturation)}, median price ${fmtEuro(r.medianPrice)}`),
       metricGuides(["opportunity", "saturation", "medianNightlyPrice", "averageRevenue", "occupancy", "listings"])
@@ -1612,25 +1696,37 @@ function qualityCheck(answer, analysis) {
   return { score, warnings, passed: score >= 97 };
 }
 
-export async function buildGroundedAnalysis({ prompt, agentId }) {
-  const intent = classifyIntent(prompt, agentId);
+export async function buildGroundedAnalysis({ prompt, agentId, messages = [] }) {
+  const context = resolvePromptContext(prompt, messages);
+  const analysisPrompt = context.analysisPrompt;
+  const intent = classifyIntent(analysisPrompt, agentId);
   let analysis;
-  if (intent === "pricing") analysis = await pricingAnalysis(prompt);
-  else if (intent === "risk") analysis = await riskAnalysis(prompt);
-  else if (intent === "demand") analysis = await demandAnalysis(prompt);
-  else if (intent === "portfolio-comparison") analysis = await portfolioAnalysis(prompt);
-  else if (intent === "compliance") analysis = await complianceAnalysis(prompt);
-  else analysis = await marketAnalysis(prompt);
+  if (intent === "pricing") analysis = await pricingAnalysis(analysisPrompt);
+  else if (intent === "risk") analysis = await riskAnalysis(analysisPrompt);
+  else if (intent === "demand") analysis = await demandAnalysis(analysisPrompt);
+  else if (intent === "portfolio-comparison") analysis = await portfolioAnalysis(analysisPrompt);
+  else if (intent === "compliance") analysis = await complianceAnalysis(analysisPrompt);
+  else analysis = await marketAnalysis(analysisPrompt);
 
   analysis.kpis = attachKpiHelp(uniqueKpis(analysis.kpis || []));
   const fallbackAnswer = deterministicAnswer(analysis);
   const quality = qualityCheck(fallbackAnswer, analysis);
+  const conversationText = context.history.length
+    ? context.history.map((message) => `${message.role === "user" ? "User" : "ARIA"}: ${message.text}`).join("\n")
+    : "No previous conversation supplied.";
   return {
     ...analysis,
+    prompt,
+    resolvedPrompt: analysisPrompt,
+    conversationContext: context,
     fallbackAnswer,
     quality,
     sources: analysis.details.sourceFiles,
     contextText: [
+      `Current user question: ${prompt}`,
+      `Resolved analysis question: ${analysisPrompt}`,
+      `Conversation resolution: ${context.summary}`,
+      `Recent conversation: ${conversationText}`,
       `Intent: ${analysis.intent}`,
       `Recommendation: ${analysis.recommendation}`,
       `Facts: ${analysis.facts.join(" ")}`,

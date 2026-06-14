@@ -6,82 +6,10 @@ const DEFAULT_LOCATION = "europe-west1";
 const DEFAULT_MODEL = "gemini-2.5-pro";
 const PARIS_ARRONDISSEMENTS_GEOJSON_URL = "https://geo.api.gouv.fr/communes?codeDepartement=75&type=arrondissement-municipal&format=geojson&geometry=contour";
 const ANTHROPIC_VERTEX_VERSION = "vertex-2023-10-16";
-const AGENT_PROFILES = {
-  "host-revenue": { name: "Host Revenue Intelligence", tagline: "your personal revenue manager" },
-  gentrification: { name: "Gentrification Early Warning", tagline: "displacement risk 12-24 months ahead" },
-  crime: { name: "STR Financial Crime Detection", tagline: "AML anomaly and SAR intelligence" },
-  demand: { name: "Tourism Demand Forecast", tagline: "infrastructure load intelligence" },
-  market: { name: "Market Entry Advisor", tagline: "site selection and ROI intelligence" },
-};
-const AGENT_ROUTER_RULES = [
-  {
-    id: "host-revenue",
-    supporting: ["demand", "market"],
-    patterns: [
-      "price", "pricing", "priced", "underpriced", "overpriced", "revenue", "nightly", "rate",
-      "rent out", "host", "listing", "occupancy", "income", "profit", "yield", "description",
-    ],
-  },
-  {
-    id: "gentrification",
-    supporting: ["market", "crime"],
-    patterns: [
-      "gentrification", "displacement", "family", "live", "safe", "safest", "neighbourhood pressure",
-      "neighborhood pressure", "resident", "community", "risk highest", "host risk", "attention first",
-    ],
-  },
-  {
-    id: "crime",
-    supporting: ["gentrification", "host-revenue"],
-    patterns: [
-      "aml", "money laundering", "financial crime", "sar", "suspicious", "anomaly", "compliance",
-      "flagged", "fraud", "regulator", "risk score", "high-risk",
-    ],
-  },
-  {
-    id: "demand",
-    supporting: ["host-revenue", "market"],
-    patterns: [
-      "forecast", "tourism", "demand", "season", "seasonality", "infrastructure", "metro", "airport",
-      "event", "peak", "30 days", "90 days", "occupancy forecast",
-    ],
-  },
-  {
-    id: "market",
-    supporting: ["host-revenue", "demand", "gentrification"],
-    patterns: [
-      "invest", "investment", "buy", "purchase", "best area", "best place", "where should",
-      "compare", "portfolio", "paris vs athens", "athens vs paris", "market entry", "opportunity",
-      "region", "map", "short-term rental", "airbnb", "arrondissement", "neighbourhood", "neighborhood",
-    ],
-  },
-];
 
 function json(res, status, payload) {
   res.status(status).setHeader("Content-Type", "application/json");
   res.end(JSON.stringify(payload));
-}
-
-function routeAgentForPrompt({ requestedAgentId, prompt }) {
-  if (requestedAgentId && requestedAgentId !== "auto" && AGENT_PROFILES[requestedAgentId]) {
-    return { agentId: requestedAgentId, requestedAgentId, supportingAgentIds: [], auto: false };
-  }
-
-  const p = String(prompt || "").toLowerCase();
-  const scored = AGENT_ROUTER_RULES.map((rule, index) => {
-    const score = rule.patterns.reduce((sum, pattern) => (
-      p.includes(pattern) ? sum + (pattern.length > 8 ? 2 : 1) : sum
-    ), 0);
-    return { ...rule, score, index };
-  }).sort((a, b) => (b.score - a.score) || (a.index - b.index));
-
-  const selected = scored[0]?.score > 0 ? scored[0] : AGENT_ROUTER_RULES.find((rule) => rule.id === "market");
-  const supportingAgentIds = [
-    ...(selected.supporting || []),
-    ...scored.filter((rule) => rule.id !== selected.id && rule.score > 0).map((rule) => rule.id),
-  ].filter((id, index, arr) => id !== selected.id && arr.indexOf(id) === index).slice(0, 3);
-
-  return { agentId: selected.id, requestedAgentId: "auto", supportingAgentIds, auto: true };
 }
 
 function readCredentials() {
@@ -130,6 +58,43 @@ function endpointFor({ projectId, location, model }) {
   const provider = modelProvider(model);
   const method = provider === "anthropic" ? "rawPredict" : "generateContent";
   return `https://${host}/v1/projects/${projectId}/locations/${location}/publishers/${provider}/models/${model}:${method}`;
+}
+
+function compactText(text, max = 900) {
+  const clean = String(text || "").replace(/\s+/g, " ").trim();
+  return clean.length > max ? `${clean.slice(0, max - 1).trim()}…` : clean;
+}
+
+function normaliseConversationMessages(messages = []) {
+  if (!Array.isArray(messages)) return [];
+  return messages
+    .filter((message) => message && (message.role === "user" || message.role === "assistant"))
+    .map((message) => ({
+      role: message.role,
+      text: compactText(message.text || message.content || ""),
+    }))
+    .filter((message) => message.text)
+    .slice(-8);
+}
+
+function formatConversationForPrompt(messages = []) {
+  if (!messages.length) return "No previous conversation supplied.";
+  return messages
+    .map((message) => `${message.role === "user" ? "User" : "ARIA"}: ${message.text}`)
+    .join("\n");
+}
+
+function buildModelPrompt({ prompt, analysis, messages }) {
+  return [
+    "Recent conversation context, oldest to newest:",
+    formatConversationForPrompt(messages),
+    "",
+    `Current user question: ${prompt}`,
+    `Resolved analysis question: ${analysis.resolvedPrompt || prompt}`,
+    `Conversation resolution note: ${analysis.conversationContext?.summary || "No prior context needed."}`,
+    "",
+    "Answer the current user question only. Use the recent conversation to resolve pronouns, city references, and follow-up phrases such as there, those areas, same city, or what about. If the current question asks for a new metric, use that new metric while keeping the previous city/topic context unless the user explicitly changes it.",
+  ].join("\n");
 }
 
 async function callGeminiVertex({ accessToken, projectId, location, model, prompt, systemPrompt }) {
@@ -221,6 +186,8 @@ function buildSystemPrompt({ agentName, agentTagline, analysis }) {
 You are ${agentName}, ${agentTagline}, inside the ARIA capstone demo.
 
 Answer as a concise consumer-facing consulting analyst. Use only the verified analytics pack below for numeric claims.
+Use the recent conversation context to resolve follow-up questions. If the user says "there", "those areas", "same city", or asks a short follow-up without naming a city, keep the previous city unless the current question explicitly changes it.
+When the current question asks for a different metric than the previous one, answer the new metric while preserving the contextual city. For example, after a Paris saturation-map question, "which are the most expensive areas to live there?" means expensive Paris areas in the ARIA dataset, not a new generic city answer.
 If the user's wording asks for residential real-estate advice, clarify that ARIA's evidence is short-term-rental market intelligence, not a complete home-buying transaction dataset.
 Do not invent row counts, model scores, neighbourhood rankings, or monetary values.
 Structure the answer with short, human-readable sections separated by blank lines.
@@ -407,12 +374,10 @@ export default async function handler(req, res) {
   const projectNumber = String(body.projectNumber || process.env.GOOGLE_CLOUD_PROJECT_NUMBER || process.env.VERTEX_PROJECT_NUMBER || "").trim();
   const location = String(body.location || process.env.GOOGLE_CLOUD_LOCATION || process.env.VERTEX_LOCATION || DEFAULT_LOCATION).trim();
   const model = String(body.model || process.env.VERTEX_MODEL || DEFAULT_MODEL).trim();
-  const requestedAgentId = String(body.requestedAgentId || body.agentId || "auto");
-  const route = routeAgentForPrompt({ requestedAgentId, prompt });
-  const agentId = route.agentId;
-  const profile = AGENT_PROFILES[agentId] || AGENT_PROFILES.market;
-  const agentName = String(body.agentName || profile.name);
-  const agentTagline = String(body.agentTagline || profile.tagline);
+  const agentId = String(body.agentId || "market");
+  const agentName = String(body.agentName || "ARIA Market Entry Advisor");
+  const agentTagline = String(body.agentTagline || "short-term rental market intelligence");
+  const messages = normaliseConversationMessages(body.messages || body.history || body.conversation || []);
 
   if (!prompt) return json(res, 400, { error: "Prompt is required." });
   if (!projectId) return json(res, 400, { error: "Vertex project ID is required." });
@@ -420,7 +385,7 @@ export default async function handler(req, res) {
 
   let analysis;
   try {
-    analysis = await buildGroundedAnalysis({ prompt, agentId });
+    analysis = await buildGroundedAnalysis({ prompt, agentId, messages });
   } catch (error) {
     return json(res, 502, {
       error: error.message || "Could not load live GitHub data for the ARIA analysis.",
@@ -433,7 +398,8 @@ export default async function handler(req, res) {
     if (!accessToken) throw new Error("Could not create a Google Cloud access token.");
 
     const systemPrompt = buildSystemPrompt({ agentName, agentTagline, analysis });
-    const vertex = await callVertexModel({ accessToken, projectId, location, model, prompt, systemPrompt });
+    const contextualPrompt = buildModelPrompt({ prompt, analysis, messages });
+    const vertex = await callVertexModel({ accessToken, projectId, location, model, prompt: contextualPrompt, systemPrompt });
     const rawAnswer = vertex.finishReason === "MAX_TOKENS" ? analysis.fallbackAnswer : (vertex.answer || analysis.fallbackAnswer);
     const fallbackAnswer = sanitizeAnswer(localizePlaceNames(addContextIfShort(analysis.fallbackAnswer, analysis)));
     const primaryAnswer = sanitizeAnswer(localizePlaceNames(addContextIfShort(rawAnswer, analysis)));
@@ -446,13 +412,11 @@ export default async function handler(req, res) {
       kpis: analysis.kpis,
       visualizations: analysis.visualizations,
       details: analysis.details,
-      agentId,
-      requestedAgentId: route.requestedAgentId,
-      supportingAgentIds: route.supportingAgentIds,
-      autoRouted: route.auto,
       projectId,
       location,
       model,
+      resolvedPrompt: analysis.resolvedPrompt,
+      contextResolution: analysis.conversationContext?.summary,
     });
   } catch (error) {
     return json(res, error.status || 500, {

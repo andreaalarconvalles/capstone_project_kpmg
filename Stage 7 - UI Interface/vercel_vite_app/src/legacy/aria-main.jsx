@@ -58,6 +58,43 @@ function saveConversationStore(payload) {
   }
 }
 
+function clampContextText(text, max = 900) {
+  const clean = String(text || "").replace(/\s+/g, " ").trim();
+  return clean.length > max ? `${clean.slice(0, max - 1).trim()}…` : clean;
+}
+
+function assistantTextForContext(message) {
+  const blocks = Array.isArray(message?.blocks) ? message.blocks : [];
+  const answerText = blocks
+    .filter((block) => block.type === "text" && block.text)
+    .map((block) => block.text)
+    .join(" ");
+  const kpiText = blocks
+    .find((block) => block.type === "kpis")
+    ?.kpis?.slice(0, 4)
+    .map((kpi) => `${kpi.label}: ${kpi.value}`)
+    .join("; ");
+  return clampContextText([answerText, kpiText && `KPIs: ${kpiText}`].filter(Boolean).join(" "));
+}
+
+function conversationContextMessages(conv, limit = 8) {
+  const messages = Array.isArray(conv?.messages)
+    ? conv.messages
+    : conv?.prompt
+      ? [{ role: "user", text: conv.prompt }]
+      : [];
+  return messages
+    .filter((message) => message && (message.role === "user" || message.role === "assistant"))
+    .slice(-limit)
+    .map((message) => ({
+      role: message.role,
+      text: message.role === "user"
+        ? clampContextText(message.text)
+        : assistantTextForContext(message),
+    }))
+    .filter((message) => message.text);
+}
+
 /* build a fully-rendered (done) assistant message from a script */
 function builtMessage(agentId, prompt) {
   const s = getScript(agentId, prompt) || genericScript(AGENT_BY_ID[agentId], prompt);
@@ -407,7 +444,7 @@ function App() {
   }, []);
 
   /* live Vertex AI path for custom prompts */
-  const runLive = useCallback(async (convId, aId, prompt) => {
+  const runLive = useCallback(async (convId, aId, prompt, contextMessages = []) => {
     const runId = ++runIdRef.current;
     cancelRef.current = false;
     const ag = AGENT_BY_ID[aId];
@@ -440,6 +477,7 @@ function App() {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           prompt,
+          messages: contextMessages,
           agentId: aId,
           agentName: ag.name,
           agentTagline: ag.tagline,
@@ -494,6 +532,8 @@ function App() {
     const aid = forceAgentId || agentId;
     const ag = AGENT_BY_ID[aid];
     if (forceAgentId && forceAgentId !== agentId) setAgentId(forceAgentId);
+    const existingConv = conversations.find((c) => c.id === activeConvId);
+    const contextMessages = conversationContextMessages(existingConv);
     setInput("");
     if (taRef.current) taRef.current.style.height = "auto";
 
@@ -515,7 +555,7 @@ function App() {
     setActiveConvId(convId);
 
     setTimeout(() => {
-      if (useLive) runLive(convId, aid, prompt);
+      if (useLive) runLive(convId, aid, prompt, contextMessages);
       else {
         const s = scripted;
         const staticMsg = {
@@ -524,7 +564,7 @@ function App() {
         runStream(convId, aid, prompt, staticMsg);
       }
     }, 30);
-  }, [input, activeConvId, agentId, agent, live, settings, runStream, runLive]);
+  }, [input, activeConvId, agentId, agent, live, settings, conversations, runStream, runLive]);
 
   /* handlers */
   const newChat = useCallback(() => { stopStream(); setActiveConvId(null); }, [stopStream]);
@@ -557,6 +597,11 @@ function App() {
   }, []);
   const regenMsg = useCallback((m) => {
     if (live) return;
+    const conv = conversations.find((c) => c.id === activeConvId);
+    const idx = conv?.messages?.lastIndexOf(m) ?? -1;
+    const contextMessages = idx > 0
+      ? conversationContextMessages({ messages: conv.messages.slice(0, idx) })
+      : [];
     setConversations((cs) => cs.map((c) => {
       if (c.id !== activeConvId) return c;
       const idx = c.messages.lastIndexOf(m);
@@ -567,10 +612,10 @@ function App() {
       if (s) {
         runStream(activeConvId, m.agentId, m.prompt, { role: "assistant", agentId: m.agentId, prompt: m.prompt, trace: s.trace, blocks: s.blocks, brief: s.brief, elapsed: elapsedFor(s.trace) });
       } else {
-        runLive(activeConvId, m.agentId, m.prompt);
+        runLive(activeConvId, m.agentId, m.prompt, contextMessages);
       }
     }, 40);
-  }, [live, activeConvId, runStream, runLive]);
+  }, [live, activeConvId, conversations, runStream, runLive]);
   const exportMsg = useCallback((m, event) => exportBrief(AGENT_BY_ID[m.agentId], m.prompt, m, event), []);
   const canExportConversation = !!activeConv?.messages?.some((m) => m.role === "assistant" && m.done !== false);
   const exportConversation = useCallback(() => {

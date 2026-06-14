@@ -564,7 +564,7 @@ function SettingsModal({ open, onClose, settings, setSettings }) {
                 </div>
                 <div>
                   <label htmlFor="vertex-project-number" style={labelS}>Vertex project number</label>
-                  <input id="vertex-project-number" name="vertex-project-number" autoComplete="off" inputMode="numeric" spellCheck={false}
+                  <input id="vertex-project-number" name="vertex-project-number" type="password" autoComplete="off" inputMode="numeric" spellCheck={false}
                     value={settings.projectNumber || ""} onChange={(e) => { set("projectNumber", e.target.value); setTestState("idle"); }} placeholder="52102703097" className="aria-focus" style={field} />
                 </div>
               </div>
