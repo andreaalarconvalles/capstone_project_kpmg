@@ -9,7 +9,7 @@
 
 ## What is ARIA
 
-**ARIA** (Agentic Real-estate Intelligence Advisor) is a multi-agent AI system for short-term rental investment intelligence, built in partnership with **KPMG Spain** as an IE Business School Corporate Capstone 2026.
+**ARIA** (Agentic Real-estate Intelligence Advisor) is a multi-agent AI system for short-term rental investment intelligence, built in partnership with **KPMG Spain** as an IE Sci-Tech School Corporate Capstone 2026.
 
 ARIA targets three primary personas:
 - **Institutional investor** — which neighbourhood should I enter, what is the yield, what is the risk
