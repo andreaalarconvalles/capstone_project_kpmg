@@ -1,5 +1,5 @@
 # ARIA — Agentic Real-estate Intelligence Advisor
-### IE Business School × KPMG Spain · Corporate Capstone 2026
+### IE Sci-Tech School × KPMG Spain · Corporate Capstone 2026
 
 **Vercel website:** [https://capstone-project-kpmg-git-main-lukatcheishvilis-projects.vercel.app/](https://capstone-project-kpmg-git-main-lukatcheishvilis-projects.vercel.app/)
 
