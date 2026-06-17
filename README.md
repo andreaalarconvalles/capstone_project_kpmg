@@ -28,24 +28,24 @@ User query (natural language)
 LangGraph Orchestrator ←────────────────── Human-in-the-loop approval
 ↓
 ┌───────────────────────────────────────────────────────┐
-│ Agent 1: XGBoost Pricing       (Phase 2 — COMPLETE)  │
+│ Agent 1: XGBoost Pricing       (Phase 2 — COMPLETE)   │
 │  → Predicts fair nightly price per listing            │
-│  → Paris R²=0.588 · Athens R²=0.676                  │
+│  → Paris R²=0.588 · Athens R²=0.676                   │
 ├───────────────────────────────────────────────────────┤
 │ Agent 2: Prophet Demand Forecast (Phase 4 — COMPLETE) │
 │  → 12-month occupancy forecast per neighbourhood      │
 ├───────────────────────────────────────────────────────┤
-│ Agent 3: LightGBM Host Risk    (Phase 3 — COMPLETE)  │
+│ Agent 3: LightGBM Host Risk    (Phase 3 — COMPLETE)   │
 │  → 865 priority targets: underpriced AND high-risk    │
 │  → €1.43M revenue opportunity identified              │
 ├───────────────────────────────────────────────────────┤
-│ Agent 4: RAG Compliance        (Phase 5 — COMPLETE)  │
-│  → ChromaDB index of AMA + Loi Le Meur regulations   │
+│ Agent 4: RAG Compliance        (Phase 5 — COMPLETE)   │
+│  → ChromaDB index of AMA + Loi Le Meur regulations    │
 │  → 137 unlicensed Athens listings as primary targets  │
 ├───────────────────────────────────────────────────────┤
-│ Agent 5: LLM Listing Coach     (Phase 6 — COMPLETE)  │
+│ Agent 5: LLM Listing Coach     (Phase 6 — COMPLETE)   │
 │  → Uses SHAP values as context                        │
-│  → Output: "Raise price by €X, improve Y feature"    │
+│  → Output: "Raise price by €X, improve Y feature"     │
 └───────────────────────────────────────────────────────┘
 ↓
 Vercel React UI (Phase 7 — COMPLETE) — scripted prompts + custom prompt composer
