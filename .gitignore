@@ -42,6 +42,7 @@ dist/
 
 # Prophet model files
 *.pkl
+!models/prophet_*.pkl
 
 # ChromaDB vector index (Phase 5)
 data/chroma_db/
