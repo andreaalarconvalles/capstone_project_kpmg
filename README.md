@@ -74,9 +74,9 @@ capstone_project_kpmg/
 ├── data/
 │   ├── raw/                           # Original source files — never modify
 │   │   ├── gyodi_nawaro_2021/
-│   │   ├── iab_athens_sept2025_listings.csv
-│   │   ├── iab_paris_2025_listings.csv
-│   │   └── maven_airbnb_listings_reviews.csv
+│   │   ├── iab_athens_sept2025_listings.csv   #gitignored
+│   │   ├── iab_paris_2025_listings.csv        #gitignored
+│   │   └── maven_airbnb_listings_reviews.csv  #gitignored
 │   ├── processed/                     # Produced by EDA notebook — gitignored
 │   │   └── aria_mega_dataset_v4_1_final.csv
 │   └── outputs/                       # Model outputs — join key: listing_id
