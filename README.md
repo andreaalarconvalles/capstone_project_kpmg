@@ -1,7 +1,7 @@
 # ARIA — Agentic Real-estate Intelligence Advisor
 ### IE Sci-Tech School × KPMG Spain · Corporate Capstone 2026
 
-**Vercel website:** [https://capstone-project-kpmg-git-main-lukatcheishvilis-projects.vercel.app/](https://capstone-project-kpmg-git-main-lukatcheishvilis-projects.vercel.app/)
+**Live demo:** [capstone-project-kpmg-git-main-lukatcheishvilis-projects.vercel.app](https://capstone-project-kpmg-git-main-lukatcheishvilis-projects.vercel.app/)
 
 **Agent handoff and project memory:** [`agent.md`](agent.md)
 
@@ -9,14 +9,14 @@
 
 ## What is ARIA
 
-**ARIA** (Agentic Real-estate Intelligence Advisor) is a multi-agent AI system for short-term rental investment intelligence, built in partnership with **KPMG Spain** as an IE Sci-Tech School Corporate Capstone 2026.
+**ARIA** (Agentic Real-estate Intelligence Advisor) is a fully-built multi-agent AI system for short-term rental investment intelligence, developed in partnership with **KPMG Spain** as an IE Sci-Tech School Corporate Capstone 2026.
 
 ARIA targets three primary personas:
 - **Institutional investor** — which neighbourhood should I enter, what is the yield, what is the risk
 - **Host / property manager** — am I priced correctly, is my listing declining, what should I improve
 - **Real estate developer / PE fund** — where is the supply shock opportunity, what is the entry price
 
-The system combines validated machine learning outputs, a Vercel React chat interface, and a server-side Vertex AI backend. Auto Agent is the default interaction mode: ARIA reads the user's prompt, selects the right specialist, and then runs either the scripted demo answer or the live grounded analysis. Scripted prompts stay available for polished demos, while custom prompts use live GitHub CSV outputs, deterministic analytics, one consumer-friendly visualization, and an expandable methodology/source panel. Gemini 2.5 Pro is the default narrative model in the UI, with additional Gemini and Claude-on-Vertex options available from the model picker. It covers **135,051 listings** across Paris and Athens.
+The system combines validated machine learning outputs (XGBoost, LightGBM, Prophet, RAG), a LangGraph orchestration layer, and a live Vercel React chat interface backed by Vertex AI Gemini 2.5 Pro. Auto Agent is the default interaction mode: ARIA reads the user's prompt, selects the right specialist, and runs either the scripted demo answer or the live grounded analysis. It covers **135,051 listings** across Paris and Athens.
 
 ---
 
@@ -24,40 +24,34 @@ The system combines validated machine learning outputs, a Vercel React chat inte
 ```
 User query (natural language)
 ↓
-LangGraph Orchestrator  ←────────────────── Human-in-the-loop approval
+LangGraph Orchestrator ←────────────────── Human-in-the-loop approval
 ↓
 ┌───────────────────────────────────────────────────────┐
-│  Agent 1: XGBoost Pricing          (Phase 2 — Done)   │
-│  → Predicts fair nightly price per listing            │
-│  → Identifies underpriced listings (gap > €15)        │
-│  → Paris R²=0.588 · Athens R²=0.676                  │
+│ Agent 1: XGBoost Pricing (Phase 2 — COMPLETE)        │
+│ → Predicts fair nightly price per listing             │
+│ → Paris R²=0.588 · Athens R²=0.676                   │
 ├───────────────────────────────────────────────────────┤
-│  Agent 2: Prophet Demand Forecast  (Phase 4)          │
-│  → 12-month occupancy forecast per neighbourhood      │
-│  → Buy/hold signal for investor persona               │
-│  → Feeds dynamic pricing layer in Phase 6             │
+│ Agent 2: Prophet Demand Forecast (Phase 4 — COMPLETE) │
+│ → 12-month occupancy forecast per neighbourhood       │
 ├───────────────────────────────────────────────────────┤
-│  Agent 3: LightGBM Host Risk       (Phase 3 — Done)   │
-│  → Risk probability per host (0–1)                    │
-│  → 865 priority targets: underpriced AND high-risk    │
-│  → €1.43M revenue opportunity identified              │
+│ Agent 3: LightGBM Host Risk (Phase 3 — COMPLETE)     │
+│ → 865 priority targets: underpriced AND high-risk     │
+│ → €1.43M revenue opportunity identified               │
 ├───────────────────────────────────────────────────────┤
-│  Agent 4: RAG Compliance           (Phase 5)          │
-│  → ChromaDB index of AMA + Loi Le Meur regulations   │
-│  → Cites specific article per listing                 │
-│  → 137 unlicensed Athens listings as primary targets  │
+│ Agent 4: RAG Compliance (Phase 5 — COMPLETE)         │
+│ → ChromaDB index of AMA + Loi Le Meur regulations    │
+│ → 137 unlicensed Athens listings as primary targets   │
 ├───────────────────────────────────────────────────────┤
-│  Agent 5: LLM Listing Coach        (Phase 6)          │
-│  → Uses SHAP values as context                        │
-│  → Writes personalised improvement recommendation     │
-│  → Output: "Raise price by €X, improve Y feature"    │
+│ Agent 5: LLM Listing Coach (Phase 6 — COMPLETE)      │
+│ → Uses SHAP values as context                         │
+│ → Output: "Raise price by €X, improve Y feature"     │
 └───────────────────────────────────────────────────────┘
 ↓
-Vercel React UI (Phase 7) — scripted prompts + custom prompt composer
+Vercel React UI (Phase 7 — COMPLETE) — scripted prompts + custom prompt composer
 ↓
 Vercel `/api/chat` backend — service-account-authenticated Vertex AI call
 ↓
-GitHub Data Agent → Analytics Agent → Visualization Agent → Narrative Agent → Quality checks
+GitHub Data Agent → Analytics Agent → Visualization Agent → Narrative Agent
 ↓
 KPIs + dynamic chart/map + expandable details + PDF brief export
 ```
@@ -66,45 +60,53 @@ KPIs + dynamic chart/map + expandable details + PDF brief export
 
 ## Project Structure
 ```
-KPMG Capstone/
+capstone_project_kpmg/
 ├── eda/
-│   ├── ARIA_EDA_v4_FINAL.ipynb              # Phase 1 — EDA (COMPLETE, A+/99)
-│   ├── ARIA_XGBoost_v1.ipynb                # Phase 2 — Pricing models (COMPLETE, A/96)
-│   ├── ARIA_LightGBM_v1.ipynb               # Phase 3 — Risk classifier (COMPLETE, A/95)
-│   ├── ARIA_Prophet_v1.ipynb                # Phase 4 — Demand forecasting (not started)
-│   └── eda_figures/                         # All generated charts and figures
+│   ├── ARIA_EDA_v4_FINAL.ipynb      # Phase 1 — EDA (COMPLETE, A+/99)
+│   ├── ARIA_XGBoost_v1.ipynb        # Phase 2 — Pricing models (COMPLETE, A/96)
+│   ├── ARIA_LightGBM_v1.ipynb       # Phase 3 — Risk classifier (COMPLETE, A/95)
+│   ├── ARIA_Prophet_v2.ipynb        # Phase 4 — Demand forecasting (COMPLETE)
+│   ├── ARIA_RAG_v1.ipynb            # Phase 5 — RAG compliance agent (COMPLETE)
+│   ├── ARIA_LangGraph_v1.ipynb      # Phase 6 — LangGraph orchestrator (COMPLETE)
+│   └── eda_figures/                 # 40 generated charts and figures
 ├── data/
-│   ├── raw/                                 # Original source files — never modify
-│   │   ├── gyodi_nawaro_2021/               # 4 CSVs: athens/paris weekdays+weekends
+│   ├── raw/                         # Original source files — never modify
+│   │   ├── gyodi_nawaro_2021/
 │   │   ├── iab_athens_sept2025_listings.csv
 │   │   ├── iab_paris_2025_listings.csv
 │   │   └── maven_airbnb_listings_reviews.csv
-│   ├── processed/                           # Produced by EDA notebook — gitignored
-│   │   ├── aria_mega_dataset_v4_1_final.csv # 135,051 rows × 96 cols
-│   │   └── neighbourhood_stats_*.csv
-│   └── outputs/                             # Model outputs — join key: listing_id
-│       ├── paris_predictions_v1.csv         # Phase 2
-│       ├── athens_predictions_v1.csv        # Phase 2
-│       ├── athens_underpricing_v1.csv       # Phase 2 — 2,945 underpriced listings
-│       ├── shap_paris_v1.csv                # Phase 2
-│       ├── shap_athens_v1.csv               # Phase 2
-│       ├── athens_risk_scores_v1.csv        # Phase 3 — risk_probability, risk_band
-│       ├── prophet_paris_forecast_v1.csv    # Phase 4 — not yet
-│       └── prophet_athens_forecast_v1.csv   # Phase 4 — not yet
+│   ├── processed/                   # Produced by EDA notebook — gitignored
+│   │   └── aria_mega_dataset_v4_1_final.csv
+│   └── outputs/                     # Model outputs — join key: listing_id
+│       ├── paris_predictions_v1.csv
+│       ├── athens_predictions_v1.csv
+│       ├── athens_underpricing_v1.csv
+│       ├── shap_paris_v1.csv
+│       ├── shap_athens_v1.csv
+│       ├── athens_risk_scores_v1.csv
+│       ├── prophet_paris_forecast_v1.csv
+│       └── prophet_athens_forecast_v1.csv
 ├── models/
-│   ├── xgb_paris_v1.json                    # Phase 2 — load with XGBRegressor
-│   ├── xgb_athens_v1.json                   # Phase 2
-│   ├── lgb_athens_risk_v1.txt               # Phase 3 — load with lgb.Booster
-│   ├── prophet_paris_v1.pkl                 # Phase 4 — not yet (gitignored)
-│   └── prophet_athens_v1.pkl                # Phase 4 — not yet (gitignored)
-├── rag/                                     # Phase 5 — ChromaDB index + RAG agent
-├── agents/                                  # Phase 6 — LangGraph orchestration code
-├── Stage 7 - UI Interface/                  # Phase 7 — all UI assets, prototypes, Vercel app, and API backend
+│   ├── xgb_paris_v1.json
+│   ├── xgb_athens_v1.json
+│   ├── lgb_athens_risk_v1.txt
+│   ├── prophet_paris_v1.pkl
+│   └── prophet_athens_v1.pkl
+├── rag/                             # Phase 5 — ChromaDB index + RAG agent
+├── agents/                          # Phase 6 — LangGraph orchestration code
+├── UI Interface/                    # Phase 7 — Vercel React UI and API backend
 │   └── vercel_vite_app/
-│       ├── api/                             # /api/chat + grounded analytics pipeline
-│       ├── public/                          # ARIA wordmark asset
-│       └── src/legacy/                      # Claude Design React UI modules
-├── docs/                                    # Methodology docs, proposals, planner
+│       ├── api/
+│       ├── public/
+│       └── src/legacy/
+├── docs/
+│   ├── ARIA_Master_Planner_V2.html
+│   ├── ARIA_Data_Methodology_FINAL.docx
+│   ├── PROJECT_SUMMARY.md
+│   ├── MLOPS_REPO_REVIEW.md
+│   ├── MENTOR_MEETING_SUMMARY.md
+│   ├── MENTOR_DEFENSE_QA.md
+│   └── KPMG EDA document.docx
 ├── KPMG Capstone.pdf
 ├── KPMG Proposal - Regulators.pdf
 ├── agent.md
@@ -123,7 +125,7 @@ KPMG Capstone/
 | Inside Airbnb | Athens | 14,242 | Sept 2025 |
 | **Total** | **Paris + Athens** | **135,051** | **2021–2025** |
 
-**Master dataset:** `aria_mega_dataset_v4_1_final.csv` — 135,051 listings × 96 columns, built from the 4 raw sources above.
+**Master dataset:** `aria_mega_dataset_v4_1_final.csv` — 135,051 listings × 96 columns.
 
 > ⚠️ Large files (>50MB) are excluded from version control. See Data Access section below.
 
@@ -134,35 +136,27 @@ KPMG Capstone/
 ### Phase 1 — EDA (COMPLETE · Grade A+/99)
 **Notebook:** `ARIA_EDA_v4_FINAL.ipynb`
 
-What was done: Full exploratory data analysis across 135,051 listings. 41 documented pipeline steps including encoding resolution, price normalisation, Haversine distance computation, VADER sentiment scoring across 594,000+ reviews, and at_risk_host label engineering across 6 validated dimensions. 10 embedded figures across 8 analytical sections.
+Full exploratory data analysis across 135,051 listings. 41 documented pipeline steps including encoding resolution, price normalisation, Haversine distance computation, VADER sentiment scoring across 594,000+ reviews, and `at_risk_host` label engineering across 6 validated dimensions.
 
-Key findings that shaped all downstream models:
-- Athens distance effect is 2.8× stronger than Paris — primary justification for separate city models
-- Paris XGBoost ceiling is the Maven 2021 vintage — 4-year-old prices introduce structural noise
+Key findings:
+- Athens distance effect is 2.8× stronger than Paris — justification for separate city models
 - VADER French-language bias inflates Paris scores by +0.178 — cross-city sentiment comparison invalid
-- 137 Athens listings unlicensed — pricing at market rate — reframed as supply shock opportunity
+- 137 Athens listings unlicensed — reframed as supply shock opportunity
 - Gross yield: Centre 2.3%, Near 2.4% (best entry), Mid 1.8%, Far 2.1%
 
-Business output: Athens centre vs far revenue €7,236 vs €1,848/yr (3.9× premium). ZAPPION neighbourhood opportunity score = 0.955, estimated revenue €15,416/yr.
+Business output: Athens centre vs far revenue €7,236 vs €1,848/yr (3.9× premium). ZAPPION opportunity score = 0.955, estimated revenue €15,416/yr.
 
 ---
 
 ### Phase 2 — XGBoost Price Prediction (COMPLETE · Grade A/96)
 **Notebook:** `ARIA_XGBoost_v1.ipynb`
 
-What was done: Two separate XGBoost models (Paris and Athens) predicting fair nightly price. 26-feature pipeline including 3 non-linear distance transforms, neighbourhood context, booking momentum signals, and 6 interaction terms. 100-trial Optuna hyperparameter optimisation. Full SHAP analysis with dependence plots and single-listing waterfall.
+Two separate XGBoost models (Paris and Athens) predicting fair nightly price. 26-feature pipeline, 100-trial Optuna optimisation, full SHAP analysis.
 
-Performance:
 | City | R² | MAE | vs Naive | Note |
 |---|---|---|---|---|
 | Paris | 0.588 | €29.1 | +36% | Above published 0.52–0.58 range for 2021-vintage data |
-| Athens | 0.676 | €29.1 | +44% | Target >0.65 PASSED |
-
-Key findings:
-- `neighbourhood_median_price` SHAP rank 1 both cities — local market context dominates
-- Paris ranks 2–4: person_capacity, bedrooms, room×capacity — size-driven market
-- Athens ranks 2–4: review_score_composite, dist_km, bedrooms — quality+location-driven market
-- Separate city models confirmed correct by SHAP structural divergence
+| Athens | 0.676 | €29.1 | +44% | Target >0.65 ✅ PASSED |
 
 Business output: 2,945 Athens listings underpriced >€15. Median gap €25. Total foregone revenue €4.8M/year.
 
@@ -173,154 +167,71 @@ Output files: `xgb_paris_v1.json` · `xgb_athens_v1.json` · `paris_predictions_
 ### Phase 3 — LightGBM Host Risk Classifier (COMPLETE · Grade A/95)
 **Notebook:** `ARIA_LightGBM_v1.ipynb`
 
-What was done: Binary classifier predicting host churn risk for Athens listings. Target: `at_risk_host` (1 = host showing 3+ of 6 booking decline dimensions). 11 features after leakage correction — 3 label dimensions excluded (`availability_365`, `review_scores_rating_norm`, `availability_pressure`). 100-trial Optuna, 5-fold stratified CV.
+Binary classifier predicting host churn risk for Athens listings. 11 features after leakage correction. 100-trial Optuna, 5-fold stratified CV.
 
-Important: An earlier run with leaking features produced AUC = 0.9995. Leakage was identified via SHAP (availability_365 at rank 1 with value 6.95), corrected, and documented. The honest AUC = 0.8288 reflects genuine discriminative power.
+> **Note on leakage:** An earlier run produced AUC = 0.9995. Leakage was identified via SHAP, corrected, and documented. The honest AUC = 0.8288 reflects genuine discriminative power.
 
-Performance:
 | Metric | Value | Target | Status |
 |---|---|---|---|
-| AUC-ROC | 0.8288 | >0.72 | PASSED |
-| Avg Precision | 0.8864 | >0.65 | PASSED |
-| Brier Score | 0.1656 | <0.25 | PASSED |
-| CV stability | ±0.0088 | <0.02 | STABLE |
+| AUC-ROC | 0.8288 | >0.72 | ✅ PASSED |
+| Avg Precision | 0.8864 | >0.65 | ✅ PASSED |
+| Brier Score | 0.1656 | <0.25 | ✅ PASSED |
+| CV stability | ±0.0088 | <0.02 | ✅ STABLE |
 
-Key findings:
-- `review_velocity_l30d` SHAP rank 1 (value=0.936) — zero recent bookings is the strongest at-risk signal. EDA prediction confirmed.
-- `review_score_composite` SHAP rank 2 — quality erosion is the churn mechanism, not just momentum decline
-- PATISIA neighbourhood: 65 at-risk hosts → €365k revenue redistribution if exited
-
-Business output: 865 listings flagged as both underpriced (Phase 2) AND high-risk (Phase 3). Revenue opportunity: €1.43M potential (€0.71M realisable at 50% gap closure).
+Business output: 865 listings flagged as both underpriced AND high-risk. Revenue opportunity: €1.43M potential (€0.71M realisable).
 
 Output files: `lgb_athens_risk_v1.txt` · `athens_risk_scores_v1.csv`
 
 ---
 
-## Upcoming Phases
+### Phase 4 — Prophet Demand Forecasting (COMPLETE)
+**Notebook:** `ARIA_Prophet_v2.ipynb`
 
-### Phase 4 — Prophet Demand Forecasting (Member 2)
-**Notebook to create:** `eda/ARIA_Prophet_v1.ipynb`
+Two Prophet time-series models (Paris and Athens) predicting monthly occupancy over a 12-month horizon. Paris: ~42,978 rows · Athens: ~10,661 rows. External regressor: `review_growth_24_25`.
 
-**What to build:** Two Prophet time-series models — Paris and Athens — predicting monthly occupancy over a 12-month horizon.
-
-**Training data:**
-- Filter `prophet_training_eligible = 1` in the mega dataset
-- Paris: ~42,978 rows · Athens: ~10,661 rows
-- Target column: `estimated_occupancy_l365d`
-- External regressor: `review_growth_24_25` (booking momentum)
-
-**Key technical note:** Prophet requires data in `ds` (date) and `y` (value) format. You must reshape listing-level data into monthly time-series aggregated by neighbourhood before fitting. This reshaping is the main engineering challenge of this phase.
-
-**Expected outputs:**
-- `models/prophet_paris_v1.pkl` — serialised Paris model
-- `models/prophet_athens_v1.pkl` — serialised Athens model
-- `data/outputs/prophet_paris_forecast_v1.csv` — 12-month forecast with confidence intervals
-- `data/outputs/prophet_athens_forecast_v1.csv` — same for Athens
-
-**Install first:** `pip install prophet`
-
-**Wide confidence intervals are expected for Paris** (2021 vintage). Athens is the primary actionable forecast.
+Output files: `prophet_paris_v1.pkl` · `prophet_athens_v1.pkl` · `prophet_paris_forecast_v1.csv` · `prophet_athens_forecast_v1.csv`
 
 ---
 
-### Phase 5 — RAG Compliance Agent (Member 3)
-**Location:** `rag/`
+### Phase 5 — RAG Compliance Agent (COMPLETE)
+**Notebook:** `ARIA_RAG_v1.ipynb` · **Location:** `rag/`
 
-**What to build:** A ChromaDB vector index of AMA regulations (Athens) and Loi Le Meur (Paris short-term rental law). An RAG retrieval agent that, given a listing, returns the specific regulation article that applies and whether the listing is compliant.
+ChromaDB vector index of AMA regulations (Athens) and Loi Le Meur (Paris). Given a listing, returns the applicable regulation article and compliance status. Primary targets: 137 unlicensed Athens listings (~€1.03M annual revenue).
 
-**Primary targets:** 137 unlicensed Athens listings identified in the EDA (has_license == False, city == athens). These represent ~€1.03M annual revenue that would redistribute to compliant operators if they exit.
-
-**How it connects:** The RAG agent is one of the 5 LangGraph nodes in Phase 6. It does not need any model files from Phases 2–4. It reads from the mega dataset and its own ChromaDB index only.
-
-**Key technical note:** Do not commit the ChromaDB index to git — it will be large binary files. Add `rag/chroma_db/` to .gitignore before committing.
+> ChromaDB index files are local only — `rag/chroma_db/` is gitignored.
 
 ---
 
-### Phase 6 — LangGraph Orchestrator (Member 4)
-**Location:** `agents/`
+### Phase 6 — LangGraph Orchestrator (COMPLETE)
+**Notebook:** `ARIA_LangGraph_v1.ipynb` · **Location:** `agents/`
 
-**What to build:** A LangGraph directed graph with 5 specialist agent nodes. The orchestrator receives a natural language query, identifies the persona (investor/host/developer), routes to the appropriate agents, collects their outputs, and passes everything to a narrative model for natural language synthesis. The deployed Vercel demo currently uses Vertex AI Gemini for this narrative step.
+LangGraph directed graph with 5 specialist agent nodes. Identifies persona (investor/host/developer), routes to agents, passes outputs to Vertex AI Gemini for narrative synthesis. Includes dynamic pricing layer and human-in-the-loop approval gate (KPMG Trusted AI requirement).
 
-**The 5 nodes:**
-1. XGBoost pricing node — loads `xgb_athens_v1.json`, returns predicted fair price and underpricing gap
-2. Prophet forecast node — loads `prophet_athens_v1.pkl`, returns occupancy trend and buy/hold signal
-3. LightGBM risk node — loads `lgb_athens_risk_v1.txt`, returns risk probability and band
-4. RAG compliance node — queries ChromaDB index, returns regulation citation and compliance status
-5. LLM coach node — takes SHAP values from `shap_athens_v1.csv` as context, returns personalised listing improvement recommendation
-
-**Dynamic pricing layer:** Add a rule-based pricing agent that combines XGBoost fair price with Prophet occupancy forecast. When forecast occupancy for next 30 days is above neighbourhood median → recommend raising price by 10–15%. When below → lower by 5–10%. When review_velocity_l30d = 0 → lower by 10% to restart booking momentum.
-
-**Human-in-the-loop:** Before the investor brief PDF is generated, route through a human approval step. This is the Trusted AI / Governance component required by the KPMG brief.
-
-**Universal join key:** `listing_id` is the join key across all output CSVs. Use it to merge Phase 2 and 3 outputs when assembling context for a query.
-
-**Current implementation note:** A Vercel Function version of the orchestration layer is now implemented in `Stage 7 - UI Interface/vercel_vite_app/api/`. It is not the final LangGraph package yet, but it already performs the practical demo workflow: classify the prompt, fetch live GitHub CSV outputs, compute deterministic statistics, choose a chart/map payload, call Vertex AI Gemini for the narrative, and return structured KPIs, visualization data, sources, methodology, and limitations.
-
-**Critical:** This phase depends on all other phases being complete (or mocked). Start with mock outputs and swap in real files when ready.
+The 5 nodes: XGBoost pricing · Prophet forecast · LightGBM risk · RAG compliance · LLM coach
 
 ---
 
-### Phase 7 — Streamlit MVP (Member 5)
-**Location:** `app/` (3-tab persona MVP) · `Stage 7 - UI Interface/` (agent-chat UI)
+### Phase 7 — Vercel React UI (COMPLETE)
+**Location:** `UI Interface/vercel_vite_app/`
 
-> **Built — Vercel agent-chat UI (`Stage 7 - UI Interface/`):** a ChatGPT-style multi-agent interface implemented from the Claude Design handoff. It defaults to Auto Agent routing across 5 KPMG agents (Host Revenue, Gentrification Early Warning, STR Financial Crime, Tourism Demand, Market Entry), includes 8 scripted demo prompts with a show-more control, KPI cards from recent analyses, image upload previews, theme switching, a settings modal, persistent browser conversations, LangGraph-style folded reasoning traces, adaptive charts, real Leaflet map overlays for supported geographic prompts, enhanced PDF brief export, and server-side Vertex AI custom-prompt support through `/api/chat`. Gemini 2.5 Pro is the default model, with Gemini Flash/preview and Claude partner-model options also selectable. The legacy Streamlit host remains available as an optional wrapper for the original prototype.
+ChatGPT-style multi-agent interface deployed live on Vercel. Auto Agent routing across 5 KPMG agents. Features: 8 scripted demo prompts, KPI cards, Recharts visuals, Leaflet maps, LangGraph-style reasoning traces, PDF brief export, persistent localStorage conversations, Gemini 2.5 Pro default with Claude Sonnet/Opus options.
 
-**What to build:** A 3-tab Streamlit application that serves the three personas. This tab **can be started now** using the existing CSV outputs from Phases 2 and 3 — it does not require Phase 4, 5, or 6 to be complete.
-
-**Tab 1 — Investor:**
-- Neighbourhood opportunity map (choropleth using opportunity scores from EDA)
-- Gross yield calculator per neighbourhood
-- Risk heatmap from `athens_risk_scores_v1.csv`
-- Prophet occupancy forecast chart (Phase 4, placeholder until ready)
-- AMA compliance status (Phase 5, placeholder until ready)
-
-**Tab 2 — Host:**
-- Underpricing gap per listing from `athens_underpricing_v1.csv`
-- SHAP feature breakdown from `shap_athens_v1.csv` — which features are suppressing price
-- Risk probability from `athens_risk_scores_v1.csv`
-- 3-action coaching plan (pricing, quality, velocity)
-- LLM personalised recommendation (Phase 6, placeholder until ready)
-
-**Tab 3 — Developer:**
-- Sweet-spot neighbourhood map (high opportunity + low risk + compliant)
-- Entry price range per neighbourhood
-- 12 highest-conviction entry-point neighbourhoods from EDA
-
-**Starting point:** Use `athens_risk_scores_v1.csv` and `athens_underpricing_v1.csv` as the primary data sources. The 865 priority listings (underpriced AND high-risk) are the centrepiece of the host tab.
-
----
-
-### Documentation + Presentation (Member 6)
-
-**What to produce:**
-- Methodology document — 96 columns, 41 pipeline steps, 8 challenges with resolutions, 5 limitations, 6 ML usage mappings
-- KPMG presentation slides — follows KPMG Lighthouse AI Factory framing (GenAI + Agents + Trusted AI + Data Platforms)
-- Project summary document — one-pager per phase with key metrics and business outputs
-
-**Existing assets:**
-- `KPMG Capstone.pdf` — original brief with use case definition
-- `KPMG Proposal - Regulators.pdf` — regulatory framing for the compliance agent
-- `docs/PROJECT_SUMMARY.md` — mentor-facing project summary with value proposition and detailed non-technical explanations
-- `docs/MENTOR_MEETING_SUMMARY.md` — meeting-prep summary and discussion material
+**Live:** [capstone-project-kpmg-git-main-lukatcheishvilis-projects.vercel.app](https://capstone-project-kpmg-git-main-lukatcheishvilis-projects.vercel.app/)
 
 ---
 
 ## Data Access
 
-Large files are excluded from version control. Download from the sources below.
-
-For repository data contracts and Git policy, see `data/README.md`.
-
 | File | Source | Local path |
 |---|---|---|
-| Maven Analytics Paris 2021 | [mavenanalytics.io/data-playground](https://mavenanalytics.io/data-playground) — search Airbnb | `data/raw/maven_airbnb_listings_reviews.csv` |
-| Inside Airbnb Paris 2025 | [insideairbnb.com/get-the-data](https://insideairbnb.com/get-the-data/) → Paris → listings.csv.gz | `data/raw/iab_paris_2025_listings.csv` |
-| Inside Airbnb Athens Sept 2025 | Same page → Athens → September 2025 → listings.csv.gz | `data/raw/iab_athens_sept2025_listings.csv` |
+| Maven Analytics Paris 2021 | [mavenanalytics.io/data-playground](https://mavenanalytics.io/data-playground) | `data/raw/maven_airbnb_listings_reviews.csv` |
+| Inside Airbnb Paris 2025 | [insideairbnb.com/get-the-data](https://insideairbnb.com/get-the-data/) → Paris | `data/raw/iab_paris_2025_listings.csv` |
+| Inside Airbnb Athens Sept 2025 | Same page → Athens → September 2025 | `data/raw/iab_athens_sept2025_listings.csv` |
 | Gyodi & Nawaro 2021 | [zenodo.org/record/4446043](https://zenodo.org/record/4446043) | `data/raw/gyodi_nawaro_2021/` |
 
-> **Gyodi & Nawaro — download 4 files only:** `athens_weekdays.csv`, `athens_weekends.csv`, `paris_weekdays.csv`, `paris_weekends.csv`
+> **Gyodi & Nawaro — download 4 files:** `athens_weekdays.csv`, `athens_weekends.csv`, `paris_weekdays.csv`, `paris_weekends.csv`
 
-> **Master dataset:** Run `ARIA_EDA_v4_FINAL.ipynb` end-to-end once on your machine. It saves `aria_mega_dataset_v4_1_final.csv` to `data/processed/` automatically. Every other notebook loads from there.
+> **Master dataset:** Run `ARIA_EDA_v4_FINAL.ipynb` end-to-end once. It saves `aria_mega_dataset_v4_1_final.csv` to `data/processed/` automatically.
 
 ---
 
@@ -333,31 +244,26 @@ For repository data contracts and Git policy, see `data/README.md`.
 | `athens_underpricing_v1.csv` | 2 | 2,945 listings where predicted price exceeds actual by >€15 |
 | `shap_paris_v1.csv` | 2 | Per-feature SHAP values for Paris holdout |
 | `shap_athens_v1.csv` | 2 | Per-feature SHAP values for Athens holdout |
-| `athens_risk_scores_v1.csv` | 3 | risk_probability (0–1), risk_band (Low/Moderate/High), high_risk_flag per listing |
-| `prophet_paris_forecast_v1.csv` | 4 | 12-month occupancy forecast — Paris (not yet) |
-| `prophet_athens_forecast_v1.csv` | 4 | 12-month occupancy forecast — Athens (not yet) |
+| `athens_risk_scores_v1.csv` | 3 | risk_probability (0–1), risk_band, high_risk_flag |
+| `prophet_paris_forecast_v1.csv` | 4 | 12-month occupancy forecast — Paris |
+| `prophet_athens_forecast_v1.csv` | 4 | 12-month occupancy forecast — Athens |
 
-**Priority target list (865 listings):** Cross-reference of `athens_underpricing_v1.csv` and `athens_risk_scores_v1.csv` on `listing_id`. These listings are underpriced AND declining. Revenue opportunity: €1.43M potential (€0.71M realisable). This is the ARIA host agent's primary output.
+**Priority target list (865 listings):** Cross-reference of `athens_underpricing_v1.csv` and `athens_risk_scores_v1.csv` on `listing_id`. Underpriced AND declining — €1.43M revenue opportunity.
 
-For model artifact governance, metrics, limitations, and feature rationale, see `models/MODEL_CARD.md`.
+For model artifact governance and metrics, see [`models/MODEL_CARD.md`](models/MODEL_CARD.md).
 
-For the repository organization and MLOps hygiene review, see `docs/MLOPS_REPO_REVIEW.md`.
+For MLOps hygiene review, see [`docs/MLOPS_REPO_REVIEW.md`](docs/MLOPS_REPO_REVIEW.md).
 
 ---
 
-## Project Phases & Team Assignments
+## Project Phases & Status
 
-> Live status board — update immediately when any phase progresses.
-
-| Phase | Owner | Status |
+| Phase | Notebook | Status |
 |---|---|---|
-| Phase 1 — EDA | Member 1 | ✅ Done |
-| Phase 2 — XGBoost Pricing | Member 1 | ✅ Done |
-| Phase 3 — LightGBM Risk | Member 1 | ✅ Done |
-| Phase 4 — Prophet Forecasting | Member 2 | 🔲 Not started |
-| Phase 5 — RAG Compliance | Member 3 | 🔲 Not started |
-| Phase 6 — LangGraph Orchestrator | Member 4 | 🔄 In progress |
-| Phase 7 — UI Demo / Streamlit MVP | Member 5 | 🔄 In progress |
-| Documentation + Presentation | Member 6 | 🔄 In progress |
-
-Status key: ✅ Done · 🔄 In progress · 🔲 Not started · ⏳ Blocked
+| Phase 1 — EDA | `ARIA_EDA_v4_FINAL.ipynb` | ✅ Done · A+/99 |
+| Phase 2 — XGBoost Pricing | `ARIA_XGBoost_v1.ipynb` | ✅ Done · A/96 |
+| Phase 3 — LightGBM Risk | `ARIA_LightGBM_v1.ipynb` | ✅ Done · A/95 |
+| Phase 4 — Prophet Forecasting | `ARIA_Prophet_v2.ipynb` | ✅ Done |
+| Phase 5 — RAG Compliance | `ARIA_RAG_v1.ipynb` | ✅ Done |
+| Phase 6 — LangGraph Orchestrator | `ARIA_LangGraph_v1.ipynb` | ✅ Done |
+| Phase 7 — Vercel React UI | `UI Interface/vercel_vite_app/` | ✅ Done · Live |
