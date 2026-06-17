@@ -517,16 +517,105 @@ function setScriptBlocks(key, blocks) {
   if (SCRIPTS[key]) SCRIPTS[key].blocks = blocks;
 }
 
+function scriptRegionMap({ city, title, metricLabel, tone = "opportunity", lowerIsBetter = false, rows }) {
+  const cityMeta = city === "Athens"
+    ? { center: { lat: 37.9838, lon: 23.7275 }, zoom: 12, mapLabel: "Athens" }
+    : { center: { lat: 48.8566, lon: 2.3522 }, zoom: 12, mapLabel: "Paris" };
+  return {
+    kind: "region-map",
+    city,
+    title,
+    mapLabel: cityMeta.mapLabel,
+    center: cityMeta.center,
+    zoom: cityMeta.zoom,
+    metricKey: "value",
+    metricLabel,
+    tone,
+    lowerIsBetter,
+    legendLow: lowerIsBetter ? "better" : "lower",
+    legendHigh: lowerIsBetter ? "worse" : "higher",
+    highlightedRegions: rows.slice(0, 4).map((row) => row.regionId),
+    data: rows.map((row) => ({
+      label: row.label,
+      regionId: row.regionId,
+      regionName: row.label,
+      value: row.value,
+      display: row.display,
+      explanation: row.explanation,
+      lat: row.lat,
+      lon: row.lon,
+      coordinateSource: "scripted",
+      listingsDisplay: row.listingsDisplay || null,
+      priceDisplay: row.priceDisplay || null,
+      revenueDisplay: row.revenueDisplay || null,
+      opportunityDisplay: row.opportunityDisplay || null,
+      saturationDisplay: row.saturationDisplay || null,
+      occupancyDisplay: row.occupancyDisplay || null,
+    })),
+  };
+}
+
+const SCRIPT_MAPS = {
+  parisOpportunity: scriptRegionMap({
+    city: "Paris",
+    title: "Paris opportunity map: eastern entry corridor",
+    metricLabel: "Opportunity signal",
+    tone: "opportunity",
+    rows: [
+      { regionId: "paris-19", label: "19th arrondissement", value: 0.41, display: "+0.41", lat: 48.8838, lon: 2.3822, explanation: "Best first shortlist in the scripted supply-demand view." },
+      { regionId: "paris-20", label: "20th arrondissement", value: 0.37, display: "+0.37", lat: 48.8646, lon: 2.3984, explanation: "Runner-up eastern entry option." },
+      { regionId: "paris-11", label: "11th arrondissement", value: 0.22, display: "+0.22", lat: 48.8574, lon: 2.3795, explanation: "Secondary option with established demand." },
+      { regionId: "paris-1-4", label: "1st-4th arrondissements", value: -0.28, display: "-0.28", lat: 48.8566, lon: 2.3444, explanation: "Avoid-first central core in the scripted view." },
+    ],
+  }),
+  parisSaturation: scriptRegionMap({
+    city: "Paris",
+    title: "Paris saturation map: avoid-first central core",
+    metricLabel: "Saturation pressure",
+    tone: "risk",
+    rows: [
+      { regionId: "paris-1-4", label: "1st-4th arrondissements", value: 0.92, display: "High", lat: 48.8566, lon: 2.3444, explanation: "Most saturated and regulation-sensitive scripted cluster." },
+      { regionId: "paris-11", label: "11th arrondissement", value: 0.48, display: "Moderate", lat: 48.8574, lon: 2.3795, explanation: "Secondary option with more balanced entry pressure." },
+      { regionId: "paris-20", label: "20th arrondissement", value: 0.39, display: "Lower", lat: 48.8646, lon: 2.3984, explanation: "Cleaner eastern entry option." },
+      { regionId: "paris-19", label: "19th arrondissement", value: 0.36, display: "Lower", lat: 48.8838, lon: 2.3822, explanation: "Best avoid-central-core alternative." },
+    ],
+  }),
+  athensYield: scriptRegionMap({
+    city: "Athens",
+    title: "Athens yield map: value-add neighbourhoods",
+    metricLabel: "Projected net yield",
+    tone: "price",
+    rows: [
+      { regionId: "athens-pangrati", label: "Pangrati", value: 11.4, display: "11.4%", lat: 37.9715, lon: 23.7433, explanation: "Top scripted yield shortlist." },
+      { regionId: "athens-kypseli", label: "Kypseli", value: 10.6, display: "10.6%", lat: 38.0024, lon: 23.7355, explanation: "Runner-up yield area." },
+      { regionId: "athens-mets", label: "Mets", value: 9.8, display: "9.8%", lat: 37.9683, lon: 23.7358, explanation: "Third scripted yield area." },
+      { regionId: "athens-plaka", label: "Plaka", value: 7.1, display: "7.1%", lat: 37.9725, lon: 23.7309, explanation: "Core tourist zone with weaker risk-adjusted yield." },
+    ],
+  }),
+  athensRisk: scriptRegionMap({
+    city: "Athens",
+    title: "Athens host-risk map: central concentration",
+    metricLabel: "Host-risk signal",
+    tone: "risk",
+    rows: [
+      { regionId: "athens-koukaki", label: "Koukaki", value: 0.84, display: "0.84", lat: 37.9636, lon: 23.7219, explanation: "Highest scripted host-risk concentration." },
+      { regionId: "athens-exarchia", label: "Exarchia", value: 0.76, display: "0.76", lat: 37.9861, lon: 23.7354, explanation: "Second-highest scripted host-risk signal." },
+      { regionId: "athens-plaka", label: "Plaka", value: 0.71, display: "0.71", lat: 37.9725, lon: 23.7309, explanation: "Central tourist area above warning threshold." },
+      { regionId: "athens-pangrati", label: "Pangrati", value: 0.58, display: "0.58", lat: 37.9715, lon: 23.7433, explanation: "Moderate scripted risk signal." },
+    ],
+  }),
+};
+
 setScriptBlocks("market::Which Paris arrondissement is best for a new short-term rental investment?", [
   { type: "text", text: "Direct recommendation:\nStart with the 19th arrondissement as the first Paris market-entry shortlist. ARIA reads it as the cleanest balance between demand and entry pressure for a small short-term-rental investor. The 20th is the runner-up, and the 11th is a secondary option if you want a slightly more established demand base.\n\nReasoning done by ARIA:\nThe 19th is attractive because it shows a stronger supply-demand opportunity signal (demand appears stronger than available comparable supply) than the central tourist core. For a non-technical user, the practical meaning is simple: you are not only chasing famous areas; you are looking for a district where competition is less crowded and upside is easier to justify." },
-  { type: "map", map: { city: "Paris", title: "Paris opportunity map: eastern entry corridor" } },
+  { type: "chart", chart: SCRIPT_MAPS.parisOpportunity },
   { type: "chart", chart: { kind: "supplygap", title: "Paris supply-demand opportunity signal" } },
   { type: "text", text: "Key evidence:\n- The strongest scripted opportunity ranking is 19th first, then 20th, then 11th.\n- The 1st-4th arrondissements are treated as avoid-first areas because they are more saturated (more crowded with short-term-rental competition) and more regulation-sensitive.\n- This is a short-term-rental investment signal, not a full residential purchase recommendation.\n\nVisualizations to review:\nUse the Paris map to understand the eastern corridor spatially, then use the supply-demand chart to compare the 19th, 20th, and central arrondissements. The map gives location context; the chart explains the ranking.\n\nPossible limitations:\nARIA does not replace property-level due diligence. Before buying, check building rules, licensing constraints, financing cost, renovation needs, and local operating restrictions.\n\nSources: neighbourhood stats, ARIA supply-demand opportunity signal" },
 ]);
 
 setScriptBlocks("market::Which Paris areas look saturated and should I avoid?", [
   { type: "text", text: "Direct recommendation:\nAvoid the 1st-4th arrondissements as the first move for a small short-term-rental portfolio. They may still work for a premium operator with strong capital and compliance capacity, but ARIA does not treat them as the cleanest entry point.\n\nReasoning done by ARIA:\nThe central arrondissements are already heavily competed and more exposed to regulatory friction. Saturation (how crowded an area is with short-term-rental supply) matters because even beautiful locations can become weak investments if too many similar listings are fighting for the same demand." },
-  { type: "map", map: { city: "Paris", title: "Paris saturation map: avoid-first central core" } },
+  { type: "chart", chart: SCRIPT_MAPS.parisSaturation },
   { type: "chart", chart: { kind: "supplygap", title: "Paris supply-demand gap: positive is cleaner entry" } },
   { type: "text", text: "Key evidence:\n- The scripted avoid-first group is the 1st-4th arrondissements.\n- Cleaner entry options are the 19th and 20th, with the 11th as a secondary option.\n- The decision is based on relative market-entry pressure, not on whether the central districts are desirable places to visit.\n\nVisualizations to review:\nUse the map to separate the central avoid-first cluster from the eastern opportunity corridor. Then use the supply-demand chart to see why positive gap areas are easier to justify than saturated central areas.\n\nPossible limitations:\nA high-end operator can still succeed in central Paris, but the required execution standard is higher. ARIA's advice is designed for a small portfolio seeking a cleaner first entry.\n\nSources: neighbourhood stats, ARIA supply-demand opportunity signal" },
 ]);
@@ -545,29 +634,29 @@ setScriptBlocks("host-revenue::What price change could improve my Athens listing
 
 setScriptBlocks("market::Which Athens neighbourhoods offer the strongest short-term rental yield?", [
   { type: "text", text: "Direct recommendation:\nPangrati is the strongest first look for Athens short-term-rental yield. In the current scripted ARIA view, Pangrati leads with an 11.4% projected net yield (the expected return after basic short-term-rental operating assumptions), followed by Kypseli and Mets.\n\nReasoning done by ARIA:\nThe recommendation is not based only on tourist fame. ARIA is prioritizing areas where yield, saturation, and entry logic work together. A famous central tourist area can have high nightly prices but still produce weaker net yield if competition and regulatory pressure are too high." },
-  { type: "map", map: { city: "Athens", title: "Athens yield map: value-add neighbourhoods" } },
+  { type: "chart", chart: SCRIPT_MAPS.athensYield },
   { type: "chart", chart: { kind: "yield", title: "Projected Athens short-term-rental yield" } },
   { type: "text", text: "Key evidence:\n- Pangrati: 11.4% projected net yield.\n- Kypseli: second-ranked yield signal.\n- Plaka/core tourist zones: attractive demand, but lower risk-adjusted yield in this scripted view.\n\nVisualizations to review:\nUse the map to place Pangrati, Kypseli, and Mets in the city context. Then use the yield chart to compare the numeric ranking. The map helps with location intuition; the chart explains why the recommendation is not simply the most famous tourist district.\n\nPossible limitations:\nYield depends on purchase price, renovation cost, licensing, financing, and actual booking execution. ARIA provides a shortlist, not a final acquisition decision.\n\nSources: neighbourhood stats, ARIA yield ranking" },
 ]);
 
 setScriptBlocks("gentrification::Which Athens listings need attention first because they are high-risk and underpriced?", [
   { type: "text", text: "Direct recommendation:\nPrioritize the overlap group first: the 865 Athens listings that are both underpriced and high-risk. This is the strongest action queue because it combines revenue upside with operational warning signs.\n\nReasoning done by ARIA:\nAn underpriced listing may deserve a pricing test, but a high-risk listing may need coaching, quality review, or operational support first. Risk probability (the model's estimated chance that a listing belongs to a decline-risk group) helps decide where a human manager should look before simply raising price." },
-  { type: "map", map: { city: "Athens", title: "Athens priority map: high-risk and underpriced areas" } },
+  { type: "chart", chart: { ...SCRIPT_MAPS.athensRisk, title: "Athens priority map: high-risk and underpriced areas" } },
   { type: "chart", chart: { kind: "riskbar", title: "Athens risk concentration by neighbourhood" } },
   { type: "text", text: "Key evidence:\n- Priority overlap: 865 listings.\n- High-risk threshold: 0.70.\n- The use case is host coaching and review, not automated enforcement.\n\nVisualizations to review:\nUse the map to see where intervention pressure is geographically concentrated. Then use the risk chart to compare which neighbourhoods should be reviewed first. Together, the visuals make the queue easier to explain to a non-technical service team.\n\nPossible limitations:\nRisk is a prioritization signal, not a final judgment about a host. ARIA should trigger review and coaching, not replace human assessment.\n\nSources: ARIA risk scores, Athens underpricing outputs" },
 ]);
 
 setScriptBlocks("gentrification::Where is host risk highest in Athens?", [
   { type: "text", text: "Direct recommendation:\nCentral Athens needs the closest monitoring. The current scripted ARIA risk view flags 4,695 high-risk listings overall, with central neighbourhoods carrying the strongest concentration of warning signals.\n\nReasoning done by ARIA:\nHost risk is not a moral judgment. It is a triage signal that highlights listings where recent activity, quality, availability, or host profile patterns suggest a higher chance of decline or intervention need." },
-  { type: "map", map: { city: "Athens", title: "Athens host-risk map: central concentration" } },
+  { type: "chart", chart: SCRIPT_MAPS.athensRisk },
   { type: "chart", chart: { kind: "riskbar", title: "Athens high-risk signal by neighbourhood" } },
   { type: "text", text: "Key evidence:\n- High-risk listings: 4,695.\n- Threshold: 0.70.\n- Main interpretation: central areas need earlier review because risk signals are more concentrated there.\n\nVisualizations to review:\nUse the map to understand the spatial concentration of risk, then use the risk chart to compare neighbourhood priority. This is useful for managers because it turns model output into an operational review route.\n\nPossible limitations:\nThe risk score should guide analyst attention, not replace human judgment. It does not prove misconduct, churn, or regulatory breach by itself.\n\nSources: ARIA risk scores, neighbourhood stats" },
 ]);
 
 setScriptBlocks("market::Compare Paris vs Athens for a small short-term rental portfolio.", [
   { type: "text", text: "Direct recommendation:\nUse Athens for targeted upside and Paris for scale. For a small portfolio, the best answer is not either/or: start with a focused Athens value-add thesis, then use selected Paris eastern arrondissements as the scale pathway once the operating model is proven.\n\nReasoning done by ARIA:\nParis is the larger and more liquid market, with 120,809 listings in the ARIA project view. Athens is smaller, with 14,242 listings, but it is easier to explain through specific pricing, yield, and host-risk opportunities. That makes Athens more practical for a first concentrated thesis, while Paris offers a larger expansion path." },
-  { type: "map", map: { city: "Athens", title: "Athens map: targeted value-add thesis" } },
-  { type: "map", map: { city: "Paris", title: "Paris map: scale pathway" } },
+  { type: "chart", chart: { ...SCRIPT_MAPS.athensYield, title: "Athens map: targeted value-add thesis" } },
+  { type: "chart", chart: { ...SCRIPT_MAPS.parisOpportunity, title: "Paris map: scale pathway" } },
   { type: "chart", chart: { kind: "yield", title: "Athens yield benchmark for targeted upside" } },
   { type: "text", text: "Key evidence:\n- Paris scale: 120,809 listings.\n- Athens depth: 14,242 listings with clearer value-add and risk-prioritization use cases.\n- Recommended portfolio logic: Athens first for focused yield; Paris next for selective scale.\n\nVisualizations to review:\nUse the two maps to compare the geographic logic: Athens supports concentrated neighbourhood selection, while Paris supports a corridor-style expansion view. Use the yield chart to understand why Athens is the first value-add test market.\n\nPossible limitations:\nThis is a short-term-rental portfolio framing, not a complete residential investment model. Final decisions still need purchase prices, licensing, financing, tax, and building-level checks.\n\nSources: neighbourhood stats, ARIA yield ranking, Paris supply-demand opportunity signal" },
 ]);
