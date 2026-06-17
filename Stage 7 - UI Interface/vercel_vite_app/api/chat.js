@@ -1,5 +1,6 @@
 import { GoogleAuth } from "google-auth-library";
 import { buildGroundedAnalysis, localizePlaceNames } from "./analytics-pipeline.js";
+import { ARIA_RESPONSE_POLICY } from "./aria-response-policy.js";
 
 const CLOUD_PLATFORM_SCOPE = "https://www.googleapis.com/auth/cloud-platform";
 const DEFAULT_LOCATION = "europe-west1";
@@ -84,6 +85,28 @@ function formatConversationForPrompt(messages = []) {
     .join("\n");
 }
 
+function friendlySourceNames(files = []) {
+  const labels = new Set();
+  for (const file of files || []) {
+    const source = String(file || "").toLowerCase();
+    if (source.includes("risk_scores")) labels.add("ARIA risk scores");
+    if (source.includes("neighbourhood_stats")) labels.add("neighbourhood stats");
+    if (source.includes("prediction")) labels.add("XGBoost predictions");
+    if (source.includes("underpricing")) labels.add("Athens underpricing outputs");
+    if (source.includes("shap")) labels.add("SHAP model explanations");
+    if (source.includes("prophet")) labels.add("Prophet forecast outputs");
+  }
+  return [...labels].join(", ") || "ARIA project data";
+}
+
+function ensureSourcesLine(answer, analysis) {
+  const clean = String(answer || "")
+    .replace(/\n{1,3}Sources:\s*[^\n]+(?:\n*)$/i, "")
+    .trim();
+  const sources = friendlySourceNames(analysis.sources || analysis.details?.sourceFiles || []);
+  return `${clean}\n\nSources: ${sources}`;
+}
+
 function buildModelPrompt({ prompt, analysis, messages }) {
   return [
     "Recent conversation context, oldest to newest:",
@@ -113,7 +136,7 @@ async function callGeminiVertex({ accessToken, projectId, location, model, promp
       ],
       generationConfig: {
         temperature: 0.35,
-        maxOutputTokens: 900,
+        maxOutputTokens: 1800,
       },
     }),
   });
@@ -151,7 +174,7 @@ async function callClaudeVertex({ accessToken, projectId, location, model, promp
         { role: "user", content: prompt },
       ],
       temperature: 0.35,
-      max_tokens: 900,
+      max_tokens: 1800,
       stream: false,
     }),
   });
@@ -182,24 +205,16 @@ async function callVertexModel({ accessToken, projectId, location, model, prompt
 }
 
 function buildSystemPrompt({ agentName, agentTagline, analysis }) {
+  const sourcesLine = `Sources: ${friendlySourceNames(analysis.sources || analysis.details?.sourceFiles || [])}`;
   return `
 You are ${agentName}, ${agentTagline}, inside the ARIA capstone demo.
 
-Answer as a concise consumer-facing consulting analyst. Use only the verified analytics pack below for numeric claims.
+Answer as a consumer-facing consulting analyst. Use only the verified analytics pack below for numeric claims.
 Use the recent conversation context to resolve follow-up questions. If the user says "there", "those areas", "same city", or asks a short follow-up without naming a city, keep the previous city unless the current question explicitly changes it.
 When the current question asks for a different metric than the previous one, answer the new metric while preserving the contextual city. For example, after a Paris saturation-map question, "which are the most expensive areas to live there?" means expensive Paris areas in the ARIA dataset, not a new generic city answer.
 If the user's wording asks for residential real-estate advice, clarify that ARIA's evidence is short-term-rental market intelligence, not a complete home-buying transaction dataset.
 Do not invent row counts, model scores, neighbourhood rankings, or monetary values.
-Structure the answer with short, human-readable sections separated by blank lines.
-Put each section label on its own line, then use 1 to 3 short dash lines underneath.
-Use these sections in this order:
-Recommendation:
-Why this makes sense:
-How to read the numbers:
-What this means for you:
-Next step:
-Write 190 to 260 words total. Each section should be short, but do not collapse everything into one paragraph.
-Do not answer with only one or two short sentences. The user should understand the reasoning without opening the details panel.
+Structure analytical answers with human-readable sections separated by blank lines. Simple prompts can receive a shorter direct answer with fewer sections.
 Avoid dense tables and avoid listing more than four numbers. The UI will show KPIs, charts, sources, and methodology separately.
 When you mention any number, explain it in the same sentence or the next sentence: what the metric means, whether high or low is better, what the lowest/highest possible value is when the metric has a fixed scale, and why this value is good or bad for the user's goal.
 Do not assume the user understands technical terms like saturation, opportunity score, occupancy, risk probability, SHAP, or underpricing gap. Define each one in plain language the first time you use it.
@@ -208,6 +223,10 @@ If a place name appears in Greek or any other non-English language, write the En
 Never output internal quality scores such as "Quality 100/100".
 Do not use Markdown bold markers or asterisks around section labels.
 Do not write the entire explanation as one dense paragraph.
+End with this exact final source line:
+${sourcesLine}
+
+${ARIA_RESPONSE_POLICY}
 
 Verified analytics pack:
 ${analysis.contextText}
@@ -304,20 +323,20 @@ function addContextIfShort(answer, analysis) {
     .join("\n");
   const sections = [String(answer || "").trim()];
 
-  if (!/\bWhy this makes sense:/i.test(answer)) {
-    sections.push(`Why this makes sense:\n- ARIA is comparing short-term-rental opportunity rather than giving a full residential home-buying recommendation.\n- The signal looks at prepared project data: revenue potential, market saturation, price levels, and listing scale.\n${facts}`);
+  if (!/\bReasoning done by ARIA:/i.test(answer)) {
+    sections.push(`Reasoning done by ARIA:\n- ARIA is comparing short-term-rental opportunity rather than giving a full residential home-buying recommendation.\n- The signal looks at prepared project data: revenue potential, market saturation, price levels, and listing scale.\n${facts}`);
   }
 
-  if (!/\bHow to read the numbers:/i.test(answer)) {
-    sections.push(`How to read the numbers:\n${metricContext}`);
+  if (!/\bKey evidence:/i.test(answer)) {
+    sections.push(`Key evidence:\n${metricContext}`);
   }
 
-  if (!/\bWhat this means for you:/i.test(answer)) {
-    sections.push("What this means for you:\nUse the result as a starting shortlist, not as a final purchase decision. A stronger signal means the area deserves earlier research because the rental-market conditions look more favourable in the project data.");
+  if (!/\bVisualizations to review:/i.test(answer)) {
+    sections.push("Visualizations to review:\nUse the generated chart or map to compare the relevant areas, risk signals, pricing gaps, or demand signals before making the decision.");
   }
 
-  if (!/\bNext step:/i.test(answer)) {
-    sections.push("Next step:\nReview actual purchase prices, local licensing limits, building condition, financing costs, and neighbourhood fit before making the final investment decision.");
+  if (!/\bPossible limitations:/i.test(answer)) {
+    sections.push("Possible limitations:\nUse the result as a starting shortlist, not as a final decision. Review actual purchase prices, local licensing limits, building condition, financing costs, and neighbourhood fit before committing.");
   }
 
   return sections.filter(Boolean).join("\n\n");
@@ -403,7 +422,8 @@ export default async function handler(req, res) {
     const rawAnswer = vertex.finishReason === "MAX_TOKENS" ? analysis.fallbackAnswer : (vertex.answer || analysis.fallbackAnswer);
     const fallbackAnswer = sanitizeAnswer(localizePlaceNames(addContextIfShort(analysis.fallbackAnswer, analysis)));
     const primaryAnswer = sanitizeAnswer(localizePlaceNames(addContextIfShort(rawAnswer, analysis)));
-    const polishedAnswer = completeAnswerSections(primaryAnswer, fallbackAnswer) || fallbackAnswer;
+    const completedAnswer = completeAnswerSections(primaryAnswer, fallbackAnswer) || fallbackAnswer;
+    const polishedAnswer = ensureSourcesLine(completedAnswer, analysis);
 
     return json(res, 200, {
       answer: polishedAnswer,

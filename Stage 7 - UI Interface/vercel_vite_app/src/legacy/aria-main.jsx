@@ -492,7 +492,9 @@ function App() {
       text = j.answer || "No response returned.";
       blocks = [{ type: "text", text }];
       if (Array.isArray(j.kpis) && j.kpis.length) blocks.push({ type: "kpis", kpis: j.kpis.slice(0, 4) });
-      if (Array.isArray(j.visualizations) && j.visualizations.length) blocks.push({ type: "chart", chart: j.visualizations[0] });
+      if (Array.isArray(j.visualizations) && j.visualizations.length) {
+        j.visualizations.forEach((chart) => blocks.push({ type: "chart", chart }));
+      }
       if (j.details) blocks.push({ type: "details", details: j.details });
       brief = {
         title: `${ag.name} — Vertex Analysis`,

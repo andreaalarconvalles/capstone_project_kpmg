@@ -1209,6 +1209,11 @@ async function marketAnalysis(prompt) {
   const vizRequest = visualizationRequest(prompt);
   const metricLabel = expensive || cheap ? "Median nightly price" : revenue ? "Average revenue" : demand ? "Average occupancy" : saturated || family ? "Saturation score" : "Opportunity score";
   const metricDisplay = expensive || cheap || revenue ? fmtEuro : demand ? fmtPct : fmtScore;
+  const rankingVisualization = makeViz(chartTitle, ranked.map((r) => ({
+    label: r.area,
+    value: r[chartMetric],
+    display: metricDisplay(r[chartMetric]),
+  })), metricLabel, expensive || cheap ? "price" : revenue ? "revenue" : demand ? "occupancy" : "score", { kind: "horizontal-bar" });
   const mapTitle = expensive
     ? `${city} map: highest nightly prices`
     : cheap
@@ -1223,7 +1228,8 @@ async function marketAnalysis(prompt) {
             ? `${city} map: highest saturation pressure`
             : `${city} map: best opportunity regions`;
   const visualizations = mapRequested
-    ? makeRegionMap(
+    ? [
+      ...makeRegionMap(
       mapTitle,
       city,
         mapSourceRows,
@@ -1236,7 +1242,9 @@ async function marketAnalysis(prompt) {
         legendLow: expensive || cheap ? "cheaper" : family ? "calmer" : "lower",
         legendHigh: expensive || cheap ? "costlier" : family ? "more saturated" : "higher",
       }
-    )
+      ),
+      ...rankingVisualization,
+    ]
     : vizRequest.heatmap
       ? makeSegmentHeatmap(`${city} ${metricLabel.toLowerCase()} by segment`, cityRows, chartMetric, metricLabel, {
         formatter: metricDisplay,
@@ -1267,11 +1275,7 @@ async function marketAnalysis(prompt) {
         labelFormatter: humanizeSegmentLabel,
         metricNote: "Donut chart: best for share questions. Each slice shows how much of the city dataset sits in each distance zone.",
       })
-    : makeViz(chartTitle, ranked.map((r) => ({
-      label: r.area,
-      value: r[chartMetric],
-      display: metricDisplay(r[chartMetric]),
-    })), metricLabel, expensive || cheap ? "price" : revenue ? "revenue" : demand ? "occupancy" : "score", { kind: "horizontal-bar" });
+    : rankingVisualization;
   return {
     intent: "market-entry",
     title: `${city} market-entry recommendation`,
@@ -1321,17 +1325,34 @@ async function pricingAnalysis(prompt) {
   const driverFocused = /(why|driver|explain|feature|shap|model|reason)/i.test(prompt);
   const compareFocused = /(actual|predicted|fair|compare|versus|vs|current)/i.test(prompt);
   const vizRequest = visualizationRequest(prompt);
+  const mapMode = wantsRegionMap(prompt);
+  const cityName = isParis ? "Paris" : "Athens";
+  const pricingRankingChart = makeViz(`${cityName} average underpricing gap by area`, ranked.map((r) => ({
+    label: r.area,
+    value: r.avgGap,
+    display: fmtEuro(r.avgGap),
+  })), "Avg gap", "gap", { kind: "horizontal-bar" });
   const sourceFiles = isParis
     ? [FILES.parisPredictions, FILES.shapParis]
     : [FILES.athensUnderpricing, FILES.shapAthens];
   const chart = driverFocused
-    ? makeViz(`${isParis ? "Paris" : "Athens"} main pricing model drivers`, shap.map((s) => ({
+    ? makeViz(`${cityName} main pricing model drivers`, shap.map((s) => ({
       label: s.displayFeature,
       value: s.impact,
       display: fmtScore(s.impact, 3),
     })), "Average SHAP impact", "impact", { kind: "horizontal-bar" })
+    : mapMode
+      ? [
+        ...makeRegionMap(`${cityName} map: average pricing gap`, cityName, pricing.areas, "avgGap", "Average pricing gap", fmtEuro, {
+          tone: "price",
+          lowerIsBetter: false,
+          legendLow: "lower gap",
+          legendHigh: "higher gap",
+        }),
+        ...pricingRankingChart,
+      ]
     : compareFocused
-      ? makeViz(`${isParis ? "Paris" : "Athens"} current vs predicted nightly price`, ranked.slice(0, 5).map((r) => ({
+      ? makeViz(`${cityName} current vs predicted nightly price`, ranked.slice(0, 5).map((r) => ({
         label: r.area,
         actual: r.avgActual,
         predicted: r.avgPredicted,
@@ -1344,12 +1365,12 @@ async function pricingAnalysis(prompt) {
         ],
       })
       : vizRequest.distribution
-        ? makeHistogram(`${isParis ? "Paris" : "Athens"} pricing-gap distribution`, pricing.areas, "avgGap", "Average pricing gap", {
+        ? makeHistogram(`${cityName} pricing-gap distribution`, pricing.areas, "avgGap", "Average pricing gap", {
           formatter: fmtEuro,
           metricNote: "Histogram: best for seeing whether pricing upside is concentrated in a few areas or spread across the market.",
         })
         : vizRequest.relationship
-          ? makeBubbleScatter(`${isParis ? "Paris" : "Athens"} current versus fair price relationship`, topN(pricing.areas, "count", 10, true), {
+          ? makeBubbleScatter(`${cityName} current versus fair price relationship`, topN(pricing.areas, "count", 10, true), {
             xKey: "avgActual",
             yKey: "avgPredicted",
             sizeKey: "count",
@@ -1357,11 +1378,7 @@ async function pricingAnalysis(prompt) {
             yLabel: "Predicted fair price",
             metricNote: "Bubble chart: best for comparing current price against model fair price. Points above the diagonal suggest pricing upside; larger bubbles represent more listings.",
           })
-      : makeViz(`${isParis ? "Paris" : "Athens"} average underpricing gap by area`, ranked.map((r) => ({
-        label: r.area,
-        value: r.avgGap,
-        display: fmtEuro(r.avgGap),
-      })), "Avg gap", "gap", { kind: "horizontal-bar" });
+      : pricingRankingChart;
   return {
     intent: "pricing",
     title: `${isParis ? "Paris" : "Athens"} pricing opportunity`,
@@ -1429,7 +1446,11 @@ async function riskAnalysis(prompt) {
         saturationDisplay: null,
         occupancyDisplay: null,
       })),
-    }]
+    }, ...makeViz("Athens high-risk share by neighbourhood", ranked.map((r) => ({
+      label: r.area,
+      value: r.highShare,
+      display: fmtPct(r.highShare),
+    })), "High-risk share", "share", { kind: "horizontal-bar" })]
     : vizRequest.relationship
       ? makeBubbleScatter("Athens risk versus underpricing trade-off", priorityRanked.slice(0, 10), {
         xKey: "highRiskShare",
@@ -1504,7 +1525,23 @@ async function demandAnalysis(prompt) {
   const forecastAsked = /(forecast|90 day|future|summer|season|peak)/i.test(prompt);
   const revenueAsked = /(revenue|income|earning|yield)/i.test(prompt);
   const vizRequest = visualizationRequest(prompt);
-  const chart = vizRequest.distribution
+  const mapMode = wantsRegionMap(prompt);
+  const occupancyRankingChart = makeViz(`${city} occupancy by neighbourhood`, ranked.map((r) => ({
+    label: r.area,
+    value: r.occupancy,
+    display: fmtPct(r.occupancy),
+  })), "Occupancy", "occupancy", { kind: "horizontal-bar" });
+  const chart = mapMode
+    ? [
+      ...makeRegionMap(`${city} map: strongest occupancy regions`, city, cityRows, "occupancy", "Occupancy", fmtPct, {
+        tone: "opportunity",
+        lowerIsBetter: false,
+        legendLow: "lower demand",
+        legendHigh: "higher demand",
+      }),
+      ...occupancyRankingChart,
+    ]
+    : vizRequest.distribution
     ? makeHistogram(`${city} occupancy distribution`, cityRows, "occupancy", "Occupancy", {
       formatter: fmtPct,
       metricNote: "Histogram: best for demand-spread questions. Each bar shows how many areas fall into an occupancy range.",
@@ -1527,11 +1564,7 @@ async function demandAnalysis(prompt) {
         yLabel: "Occupancy",
         metricNote: "Bubble chart: best for demand trade-offs. Higher revenue and higher occupancy are better together; bubble size shows how much listing evidence supports the point.",
       })
-    : makeViz(`${city} occupancy by neighbourhood`, ranked.map((r) => ({
-      label: r.area,
-      value: r.occupancy,
-      display: fmtPct(r.occupancy),
-    })), "Occupancy", "occupancy", { kind: "horizontal-bar" });
+    : occupancyRankingChart;
   return {
     intent: "demand",
     title: `${city} occupancy signal`,
@@ -1678,11 +1711,11 @@ function deterministicAnswer(analysis) {
     .map((g) => `- ${g.label}: ${g.meaning} ${g.good}`)
     .join("\n");
   return localizePlaceNames(
-    `Recommendation:\n${analysis.recommendation}\n\n` +
-    `Why this makes sense:\n- This recommendation is grounded in the project dataset, not a generic travel ranking.\n${factLines}\n\n` +
-    `How to read the numbers:\n${metricLines}\n\n` +
-    `What this means for you:\nUse this as a starting shortlist, not as a final purchase decision. A stronger signal means the area deserves earlier due diligence, but each apartment still needs property-level checks.\n\n` +
-    `Next step:\nCompare actual purchase prices, local licensing rules, building quality, financing costs, and neighbourhood fit before committing.`
+    `Direct recommendation:\n${analysis.recommendation}\n\n` +
+    `Reasoning done by ARIA:\n- This recommendation is grounded in the project dataset, not a generic travel ranking.\n${factLines}\n\n` +
+    `Key evidence:\n${metricLines}\n\n` +
+    `Visualizations to review:\nUse the generated chart or map to compare the strongest areas, risk signals, or pricing gaps visually before making a decision.\n\n` +
+    `Possible limitations:\nUse this as a starting shortlist, not as a final purchase decision. A stronger signal means the area deserves earlier due diligence, but each apartment still needs property-level checks. For compliance prompts, ARIA provides analyst triage rather than legal advice until the RAG layer is connected.`
   );
 }
 
@@ -1731,7 +1764,7 @@ export async function buildGroundedAnalysis({ prompt, agentId, messages = [] }) 
       `Recommendation: ${analysis.recommendation}`,
       `Facts: ${analysis.facts.join(" ")}`,
       `KPIs: ${analysis.kpis.map((k) => `${k.label}: ${k.value}`).join("; ")}`,
-      `Chart: ${analysis.visualizations?.[0]?.title || "none"}`,
+      `Visualizations: ${(analysis.visualizations || []).map((viz) => viz.title || viz.kind || "untitled").join("; ") || "none"}`,
       `Methodology: ${analysis.details.methodology}`,
       `Metric explanations: ${(analysis.details.metricGuides || []).map((g) => `${g.label} means ${g.meaning} Range: ${g.range} Interpretation: ${g.good} Optimal use: ${g.optimal}`).join(" ")}`,
       `Limitations: ${analysis.details.limitations.join(" ")}`,
