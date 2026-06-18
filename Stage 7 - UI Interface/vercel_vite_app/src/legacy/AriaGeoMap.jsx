@@ -1,6 +1,6 @@
 import React from "react";
 import L from "leaflet";
-import { CircleMarker, GeoJSON, MapContainer, Popup, TileLayer, Tooltip, useMap } from "react-leaflet";
+import { Circle, CircleMarker, GeoJSON, MapContainer, Popup, TileLayer, Tooltip, useMap } from "react-leaflet";
 import "leaflet/dist/leaflet.css";
 
 const DEFAULT_COLORS = {
@@ -299,10 +299,47 @@ function pointStyle(point, range, theme, activeId) {
   };
 }
 
+function pointAreaStyle(point, range, theme, activeId) {
+  const active = activeId && activeId === point.regionId;
+  const tone = valueTone(point.value, range);
+  const highlighted = Boolean(point.highlighted);
+  const color = tone == null ? mixColors(theme.surface2, theme.muted, 0.18) : mixColors(theme.surface2, theme.accent, tone);
+  return {
+    color: highlighted || active ? theme.ink : color,
+    weight: highlighted || active ? 1.8 : 1,
+    opacity: highlighted || active ? 0.6 : 0.34,
+    fillColor: color,
+    fillOpacity: highlighted || active ? 0.28 : 0.18,
+    dashArray: highlighted || active ? "" : "4 5",
+  };
+}
+
 function pointRadius(point) {
   const listings = Number(String(point.metadata?.listings || "").replace(/,/g, ""));
   if (!Number.isFinite(listings) || listings <= 0) return point.highlighted ? 10 : 8;
   return Math.max(point.highlighted ? 10 : 8, Math.min(18, 7 + Math.log(listings + 1) * 1.2));
+}
+
+function pointAreaRadius(point) {
+  const listings = Number(String(point.metadata?.listings || "").replace(/,/g, ""));
+  if (!Number.isFinite(listings) || listings <= 0) return point.highlighted ? 900 : 720;
+  return Math.max(point.highlighted ? 900 : 720, Math.min(1700, 620 + Math.log(listings + 1) * 145));
+}
+
+function pointEventHandlers({ point, setActiveRegionId, onRegionHover, onRegionClick }) {
+  return {
+    mouseover: () => {
+      setActiveRegionId(point.regionId);
+      if (typeof onRegionHover === "function") onRegionHover(point);
+    },
+    mouseout: () => {
+      setActiveRegionId(null);
+      if (typeof onRegionHover === "function") onRegionHover(null);
+    },
+    click: () => {
+      if (typeof onRegionClick === "function") onRegionClick(point);
+    },
+  };
 }
 
 function createTooltipContent(feature, metricLabel, selection) {
@@ -572,24 +609,21 @@ function AriaGeoMap({
               attribution={CARTO_LIGHT_ATTRIBUTION}
             />
             {pointMetrics.map((point) => (
+              <Circle
+                key={`${point.regionId}-area`}
+                center={[point.lat, point.lon]}
+                radius={pointAreaRadius(point)}
+                pathOptions={pointAreaStyle(point, pointRange, theme, activeRegionId)}
+                eventHandlers={pointEventHandlers({ point, setActiveRegionId, onRegionHover, onRegionClick })}
+              />
+            ))}
+            {pointMetrics.map((point) => (
               <CircleMarker
                 key={point.regionId}
                 center={[point.lat, point.lon]}
                 radius={pointRadius(point)}
                 pathOptions={pointStyle(point, pointRange, theme, activeRegionId)}
-                eventHandlers={{
-                  mouseover: () => {
-                    setActiveRegionId(point.regionId);
-                    if (typeof onRegionHover === "function") onRegionHover(point);
-                  },
-                  mouseout: () => {
-                    setActiveRegionId(null);
-                    if (typeof onRegionHover === "function") onRegionHover(null);
-                  },
-                  click: () => {
-                    if (typeof onRegionClick === "function") onRegionClick(point);
-                  },
-                }}
+                eventHandlers={pointEventHandlers({ point, setActiveRegionId, onRegionHover, onRegionClick })}
               >
                 <Tooltip sticky direction="top" opacity={1} className="aria-geo-map-tooltip">
                   <PointPopupContent point={point} metricLabel={metricLabel} selection={chatbotSelection} />
@@ -698,6 +732,31 @@ function AriaGeoMap({
             style={(feature) => featureStyle(feature, range, theme, activeRegionId)}
             onEachFeature={handleEachFeature}
           />
+          {pointMetrics.map((point) => (
+            <Circle
+              key={`${point.regionId}-area`}
+              center={[point.lat, point.lon]}
+              radius={pointAreaRadius(point)}
+              pathOptions={pointAreaStyle(point, pointRange || range, theme, activeRegionId)}
+              eventHandlers={pointEventHandlers({ point, setActiveRegionId, onRegionHover, onRegionClick })}
+            />
+          ))}
+          {pointMetrics.map((point) => (
+            <CircleMarker
+              key={point.regionId}
+              center={[point.lat, point.lon]}
+              radius={pointRadius(point)}
+              pathOptions={pointStyle(point, pointRange || range, theme, activeRegionId)}
+              eventHandlers={pointEventHandlers({ point, setActiveRegionId, onRegionHover, onRegionClick })}
+            >
+              <Tooltip sticky direction="top" opacity={1} className="aria-geo-map-tooltip">
+                <PointPopupContent point={point} metricLabel={metricLabel} selection={chatbotSelection} />
+              </Tooltip>
+              <Popup closeButton className="aria-geo-map-popup" maxWidth={280}>
+                <PointPopupContent point={point} metricLabel={metricLabel} selection={chatbotSelection} />
+              </Popup>
+            </CircleMarker>
+          ))}
           <FitGeoJsonBounds geoJson={enrichedGeoJson} />
           <LayerEventsCleanup layerRef={layerRef} layerKey={layerKey} />
         </MapContainer>
