@@ -2002,6 +2002,63 @@ function isFollowUpComparisonPrompt(analysis) {
     && Boolean(analysis?.conversationContext?.priorFocus || analysis?.conversationContext?.priorCity);
 }
 
+function focusFollowUpVisualPayload(analysis) {
+  if (
+    analysis.intent !== "demand"
+    || !/prophet/i.test(analysis.title || "")
+    || !isFollowUpComparisonPrompt(analysis)
+  ) return;
+
+  const ranking = (analysis.visualizations || []).find((viz) =>
+    /12-month prophet demand scenario by area/i.test(viz.title || "")
+    || viz.kind === "horizontal-bar"
+  );
+  const rows = (ranking?.data || [])
+    .slice(0, 3)
+    .map((row) => {
+      const value = num(row.forecastAvg ?? row.value, NaN);
+      if (!Number.isFinite(value)) return null;
+      return {
+        label: row.label || "Area",
+        value,
+        display: row.display || row.forecastAvgDisplay || fmtDays(value),
+        forecastAvgDisplay: row.forecastAvgDisplay || row.display || fmtDays(value),
+      };
+    })
+    .filter(Boolean);
+  if (!rows.length) return;
+
+  const city = analysis.conversationContext?.currentCity
+    || analysis.conversationContext?.priorCity
+    || cityFromPrompt(analysis.resolvedPrompt || analysis.prompt || "")
+    || "Paris";
+  const leader = rows[0]?.label || "recommended area";
+  const alternatives = rows.slice(1).map((row) => row.label).filter(Boolean);
+  analysis.visualizations = makeViz(
+    `${city} follow-up: ${leader} vs ${alternatives.join(" and ") || "next options"}`,
+    rows,
+    "Forecast occupied nights",
+    "forecastAvg",
+    {
+      kind: "horizontal-bar",
+      metricNote: "Follow-up chart: compares only the recommended area and the next two alternatives. Earlier map and seasonality visuals remain available in the previous answer, so they are not repeated here.",
+    }
+  );
+  analysis.kpis = [
+    { label: "Recommended screen", value: leader, help: "The area ARIA would review first based on the current forecast comparison." },
+    ...rows.slice(1).map((row, index) => ({
+      label: index === 0 ? "Runner-up" : "Second alternative",
+      value: row.label,
+      help: "A close alternative that should stay in the acquisition due-diligence shortlist.",
+    })),
+    { label: "Visual focus", value: "Top 3 only", help: "Follow-up mode avoids repeating the full map and chart pack from the prior answer." },
+  ];
+  analysis.details = {
+    ...analysis.details,
+    methodology: `${analysis.details?.methodology || ""} For follow-up comparison prompts, ARIA returns only the new focused comparison visual and avoids repeating maps or seasonality charts already shown in the conversation.`.trim(),
+  };
+}
+
 function deterministicDemandAnswer(analysis) {
   const facts = (analysis.facts || []).slice(0, 3);
   const signals = detailSignals(analysis, 6);
@@ -2040,7 +2097,9 @@ function deterministicDemandAnswer(analysis) {
     `Direct recommendation:\n${direct}\n\n` +
     `Reasoning done by ARIA:\n${why}\n\n` +
     `Key evidence:\n${evidenceLines}\n\n` +
-    `Visualizations to review:\nUse ${visualizationSummary(analysis) || "the returned map and charts"} to compare location, seasonality, and top-area ranking. The map shows where demand is concentrated; the line chart shows seasonality for ${leader}; the ranking chart compares the top Paris areas side by side.\n\n` +
+    `Visualizations to review:\n${followUp
+      ? `Use the focused comparison chart below to compare ${leader} with ${nextAreas.join(" and ") || "the next two options"}. The earlier map and seasonality chart remain useful context, so ARIA does not repeat them in this follow-up.`
+      : `Use ${visualizationSummary(analysis) || "the returned map and charts"} to compare location, seasonality, and top-area ranking. The map shows where demand is concentrated; the line chart shows seasonality for ${leader}; the ranking chart compares the top Paris areas side by side.`}\n\n` +
     `Possible limitations:\n${limitations || "This is a demand-screening result, not a final acquisition decision. It does not include purchase price, financing, tax, or final licensing checks."}\n\n` +
     `Next actions:\n${actions.map((action) => `- ${action}`).join("\n")}`
   );
@@ -2093,6 +2152,7 @@ export async function buildGroundedAnalysis({ prompt, agentId, messages = [] }) 
   analysis.prompt = prompt;
   analysis.resolvedPrompt = analysisPrompt;
   analysis.conversationContext = context;
+  focusFollowUpVisualPayload(analysis);
   analysis.kpis = attachKpiHelp(uniqueKpis(analysis.kpis || []));
   const fallbackAnswer = deterministicAnswer(analysis);
   const quality = qualityCheck(fallbackAnswer, analysis);

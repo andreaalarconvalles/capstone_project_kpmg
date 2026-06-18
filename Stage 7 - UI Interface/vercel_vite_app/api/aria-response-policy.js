@@ -60,6 +60,7 @@ Visual behavior:
 - Use maps for geographic prompts about cities, areas, neighbourhoods, arrondissements, districts, saturation, risk by area, opportunity by area, demand by area, or price by area.
 - Do not force a map for non-geographic prompts such as listing-level pricing explanations unless geography materially improves the answer.
 - Refer to the chart/map returned by the analytics pack and explain how to read it.
+- For follow-up prompts, do not repeat the same full map/chart pack from the prior answer. Reference prior visuals as context and return only a new or focused visual unless the user explicitly asks to show the full visuals again.
 - Choose the visual that best explains the data: map, ranking bar, line/trend, heatmap, histogram, donut, scatter, or bubble.
 
 Out-of-scope questions:

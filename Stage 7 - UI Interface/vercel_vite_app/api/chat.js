@@ -117,7 +117,7 @@ function buildModelPrompt({ prompt, analysis, messages }) {
     `Conversation resolution note: ${analysis.conversationContext?.summary || "No prior context needed."}`,
     "",
     "Answer the current user question only. Use the recent conversation to resolve pronouns, city references, and follow-up phrases such as there, those areas, same city, or what about. If the current question asks for a new metric, use that new metric while keeping the previous city/topic context unless the user explicitly changes it.",
-    "For follow-up questions, do not repeat the previous answer. Build on it: explain the difference, compare the named or implied options, and give the next decision step using the analytics pack below.",
+    "For follow-up questions, do not repeat the previous answer. Build on it: explain the difference, compare the named or implied options, and give the next decision step using the analytics pack below. If earlier visuals already showed the map or trend, reference them as prior context instead of implying they are repeated in this answer.",
   ].join("\n");
 }
 
