@@ -1,0 +1,39 @@
+{
+  "phase": "Phase 5 \u2014 RAG Compliance Agent",
+  "notebook": "eda/ARIA_RAG_v1.ipynb",
+  "completed": "2026-06-18",
+  "corpus": {
+    "n_docs": 20,
+    "categories": [
+      "AMA_ENFORCEMENT",
+      "AMA_REGISTRATION",
+      "AMA_FREEZE",
+      "AMA_COMPLIANCE",
+      "LOI_LE_MEUR"
+    ]
+  },
+  "unlicensed": {
+    "total": 137,
+    "HIGH": 27,
+    "MEDIUM": 89,
+    "LOW": 21
+  },
+  "revenue_at_risk": 991324.0,
+  "output_contract": [
+    "listing_id",
+    "neighbourhood",
+    "dist_zone",
+    "price_eur",
+    "occ_days",
+    "rev_est",
+    "compliance_status",
+    "risk_level",
+    "risk_reason",
+    "regularisable",
+    "investor_recommendation",
+    "top_citation",
+    "top_doc_title",
+    "similarity_score"
+  ],
+  "phase6_slot": "tool_compliance_check reads rag_unlicensed_report_v1.csv"
+}
