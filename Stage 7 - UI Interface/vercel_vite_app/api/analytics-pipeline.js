@@ -1196,10 +1196,80 @@ function makeDonut(title, rows, labelKey, valueKey, valueLabel, options = {}) {
   }];
 }
 
+function numericSpread(values = [], precision = 2) {
+  const clean = values.map((value) => num(value, NaN)).filter(Number.isFinite);
+  if (clean.length < 2) return { count: clean.length, distinct: clean.length, range: 0, ratio: 0 };
+  const min = Math.min(...clean);
+  const max = Math.max(...clean);
+  const range = max - min;
+  const meanAbs = clean.reduce((sum, value) => sum + Math.abs(value), 0) / clean.length;
+  const distinct = new Set(clean.map((value) => Number(value.toFixed(precision)))).size;
+  return {
+    count: clean.length,
+    distinct,
+    range,
+    ratio: meanAbs ? range / meanAbs : 0,
+  };
+}
+
+function crowdedPointShare(rows = [], xKey, yKey) {
+  const points = rows
+    .map((row) => ({ x: num(row[xKey], NaN), y: num(row[yKey], NaN) }))
+    .filter((point) => Number.isFinite(point.x) && Number.isFinite(point.y));
+  if (points.length < 4) return 1;
+  const xs = points.map((point) => point.x);
+  const ys = points.map((point) => point.y);
+  const minX = Math.min(...xs);
+  const maxX = Math.max(...xs);
+  const minY = Math.min(...ys);
+  const maxY = Math.max(...ys);
+  const xRange = maxX - minX;
+  const yRange = maxY - minY;
+  if (!xRange || !yRange) return 1;
+
+  const buckets = new Map();
+  points.forEach((point) => {
+    const bx = Math.min(4, Math.max(0, Math.floor(((point.x - minX) / xRange) * 5)));
+    const by = Math.min(4, Math.max(0, Math.floor(((point.y - minY) / yRange) * 5)));
+    const key = `${bx}:${by}`;
+    buckets.set(key, (buckets.get(key) || 0) + 1);
+  });
+  return Math.max(...buckets.values()) / points.length;
+}
+
+function bubbleScatterIsReadable(data = [], xKey, yKey, options = {}) {
+  const minPoints = options.minPoints || 4;
+  const minDistinct = options.minDistinct || Math.min(4, minPoints);
+  const minXSpreadRatio = options.minXSpreadRatio ?? 0.08;
+  const minYSpreadRatio = options.minYSpreadRatio ?? 0.12;
+  const maxCrowdedShare = options.maxCrowdedShare ?? 0.45;
+  const x = numericSpread(data.map((row) => row[xKey]));
+  const y = numericSpread(data.map((row) => row[yKey]));
+  const crowding = crowdedPointShare(data, xKey, yKey);
+  return data.length >= minPoints
+    && x.distinct >= minDistinct
+    && y.distinct >= minDistinct
+    && x.ratio >= minXSpreadRatio
+    && y.ratio >= minYSpreadRatio
+    && crowding <= maxCrowdedShare;
+}
+
 function makeBubbleScatter(title, rows, options = {}) {
   const xKey = options.xKey || "saturation";
   const yKey = options.yKey || "revenue";
   const sizeKey = options.sizeKey || "listings";
+  const data = rows.map((r) => {
+    const sizeValue = Math.max(1, Number(num(r[sizeKey] || r.count || 1).toFixed(0)));
+    return {
+      label: shortArea(r.area || r.label),
+      [xKey]: Number(num(r[xKey]).toFixed(2)),
+      [yKey]: Number(num(r[yKey]).toFixed(2)),
+      [sizeKey]: sizeValue,
+      display: options.display ? options.display(r) : "",
+      listingsDisplay: fmtInt(r[sizeKey] || r.count || 0),
+    };
+  });
+  if (!options.allowCrowded && !bubbleScatterIsReadable(data, xKey, yKey, options)) return [];
   return [{
     kind: "bubble-scatter",
     title,
@@ -1209,17 +1279,7 @@ function makeBubbleScatter(title, rows, options = {}) {
     xLabel: options.xLabel || "Saturation score",
     yLabel: options.yLabel || "Average revenue",
     metricNote: options.metricNote || "Bubble chart: position shows the trade-off between two metrics, while bubble size reflects listing volume.",
-    data: rows.map((r) => {
-      const sizeValue = Math.max(1, Number(num(r[sizeKey] || r.count || 1).toFixed(0)));
-      return {
-        label: shortArea(r.area || r.label),
-        [xKey]: Number(num(r[xKey]).toFixed(2)),
-        [yKey]: Number(num(r[yKey]).toFixed(2)),
-        [sizeKey]: sizeValue,
-        display: options.display ? options.display(r) : "",
-        listingsDisplay: fmtInt(r[sizeKey] || r.count || 0),
-      };
-    }),
+    data,
   }];
 }
 
@@ -1870,6 +1930,11 @@ async function portfolioAnalysis(prompt = "") {
         sizeKey: "listings",
         xLabel: "Saturation score",
         yLabel: "Opportunity score",
+        minPoints: 2,
+        minDistinct: 2,
+        minXSpreadRatio: 0.05,
+        minYSpreadRatio: 0.05,
+        maxCrowdedShare: 1,
         metricNote: "Bubble chart: best for strategy trade-offs. Higher opportunity is better, lower saturation is calmer, and bubble size shows market scale.",
       })
     : revenueAsked

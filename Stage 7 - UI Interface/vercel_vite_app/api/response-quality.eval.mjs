@@ -9,7 +9,7 @@
 // Exit: 0 if all gold answers score >= 97, the policy is complete, and the rubric
 //       correctly flags the bad answers; 1 otherwise.
 
-import { classifyIntent, resolvePromptContext } from "./analytics-pipeline.js";
+import { buildGroundedAnalysis, classifyIntent, resolvePromptContext } from "./analytics-pipeline.js";
 import { ARIA_RESPONSE_POLICY } from "./aria-response-policy.js";
 
 const PASS_BAR = 97;
@@ -174,6 +174,24 @@ function checkRouting() {
   return { passed: failures.length === 0, failures };
 }
 
+async function checkVisualSanity() {
+  const failures = [];
+  const analysis = await buildGroundedAnalysis({ prompt: PARIS_ONLY_PROPHET_PROMPT, agentId: "market" });
+  const visuals = analysis.visualizations || [];
+  const titles = visuals.map((visual) => String(visual.title || ""));
+  const kinds = visuals.map((visual) => String(visual.kind || ""));
+  if (!titles.some((title) => /paris map/i.test(title))) {
+    failures.push("Paris Prophet prompt did not return a Paris map.");
+  }
+  if (!titles.some((title) => /12-month Prophet demand scenario by area/i.test(title))) {
+    failures.push("Paris Prophet prompt did not return the area ranking chart.");
+  }
+  if (kinds.includes("bubble-scatter") || titles.some((title) => /forecast demand versus revenue/i.test(title))) {
+    failures.push("Paris Prophet prompt returned a clustered demand-versus-revenue bubble chart.");
+  }
+  return { passed: failures.length === 0, failures };
+}
+
 /* ------------------------------- gold answers ------------------------------ */
 
 const GOLD = [
@@ -335,7 +353,7 @@ Sources: Prophet forecast outputs, neighbourhood stats`,
 
 /* --------------------------------- runner ---------------------------------- */
 
-function run() {
+async function run() {
   let ok = true;
   const line = (s) => process.stdout.write(`${s}\n`);
 
@@ -354,6 +372,13 @@ function run() {
   if (!routing.passed) {
     ok = false;
     routing.failures.forEach((failure) => line(`  ${failure}`));
+  }
+
+  const visualSanity = await checkVisualSanity();
+  line(`\nVisual sanity checks: ${visualSanity.passed ? "PASS" : "FAIL"}`);
+  if (!visualSanity.passed) {
+    ok = false;
+    visualSanity.failures.forEach((failure) => line(`  ${failure}`));
   }
 
   line("\nGold answers (must score >= 97):");

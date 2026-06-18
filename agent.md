@@ -204,6 +204,7 @@ Skills are invoked by name (e.g., `/diagnose`, `/grill-me`). The following skill
 6. Open analytical answers with a direct recommendation, then explain ARIA's reasoning, key evidence, visualizations, limitations, next actions, and sources.
 7. Use plain language for non-technical readers. Briefly explain technical terms in brackets the first time they matter, but avoid repeating definitions already explained in the conversation.
 8. End with the backend-supplied `Sources` line. Do not invent sources, row counts, scores, model capabilities, or live RAG/legal retrieval.
+9. Run a chart sanity check before returning scatter or bubble visuals. If the x/y variables are too clustered, not distinct enough, or visually overlapping, drop that chart and prefer a map, ranking bar, line chart, or detail table that is easier to read.
 
 **Paris forecast demo standard:** For a Paris-only Prophet prompt, the answer should recommend the best Paris arrondissement/neighbourhood from the forecast output, show a Paris map, compare Paris areas with charts, cite Prophet forecast outputs plus neighbourhood stats, and avoid Athens unless the user explicitly requests a cross-city benchmark.
 
@@ -391,6 +392,8 @@ The live chat path must also respect requested geography. If a user asks a Paris
 
 Map and region-comparison prompts must use real map behavior or a clearly labeled no-boundary fallback. Do not return fake region grids for geographic requests. The current map approach uses Leaflet with OpenStreetMap-derived/CARTO light tiles for more English-friendly labels; some local map labels can still appear in the source map language.
 
+Charts must be readable before they are useful. Scatter and bubble visuals should only appear when both axes have enough spread and distinct values to separate the areas; otherwise the agent should return a clearer ranking, trend, map, or detail table.
+
 Conversation history is expected to persist in the browser and survive refreshes. Do not remove this behavior unless the user explicitly asks for a stateless demo.
 
 Secrets stay out of Git. `.env` is local and ignored. Vercel production secrets belong in Vercel Environment Variables, especially the server-side Google service-account credential.
@@ -460,3 +463,4 @@ Remaining roadmap: keep Prophet forecasts wired into the live Vercel demand agen
 - [2026-06-18] Session 57: Fixed the Paris-only demo prompt edge case where "do not compare Paris with Athens" was still counted as a cross-city request; added negative-comparison scope parsing, preserved Prophet demand focus across follow-ups, strengthened structured-answer fallback, and added routing checks to the response-quality harness.
 - [2026-06-18] Session 58: Fixed the live Paris Prophet follow-up loop so ARIA uses prior chat context instead of repeating the first answer; enriched UI-to-backend context with KPI, visual, and detail rows; added a demand-specific follow-up fallback comparing Bourse with Hotel-de-Ville and Temple; and added response-quality regression coverage for repeated follow-up answers.
 - [2026-06-18] Session 59: Fixed duplicated visuals in Paris Prophet follow-ups: the first answer keeps the full map/chart pack, while follow-up comparison prompts now return one focused top-three chart, refresh KPI cards for the follow-up, and tell the user to refer back to the earlier map/trend instead of rendering them again.
+- [2026-06-18] Session 60: Added chart sanity rules for ARIA visuals so scatter and bubble charts are dropped when x/y values are too clustered or overlapping; documented the rule in the live response policy and project agent skill guidance.
