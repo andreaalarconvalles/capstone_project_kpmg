@@ -74,7 +74,32 @@ function assistantTextForContext(message) {
     ?.kpis?.slice(0, 4)
     .map((kpi) => `${kpi.label}: ${kpi.value}`)
     .join("; ");
-  return clampContextText([answerText, kpiText && `KPIs: ${kpiText}`].filter(Boolean).join(" "));
+  const visualText = blocks
+    .filter((block) => block.type === "chart" && block.chart)
+    .slice(0, 4)
+    .map((block) => {
+      const chart = block.chart;
+      const rows = Array.isArray(chart.data)
+        ? chart.data.slice(0, 6).map((row) => {
+          const label = row.label || row.regionName || row.x || "item";
+          const value = row.display || row.forecastAvgDisplay || row.value || "";
+          return `${label}: ${value}`;
+        }).join(", ")
+        : "";
+      return `${chart.title || chart.kind}: ${rows}`;
+    })
+    .filter(Boolean)
+    .join(" ");
+  const detailText = blocks
+    .find((block) => block.type === "details")
+    ?.details?.extra?.slice(0, 8)
+    .join("; ");
+  return clampContextText([
+    answerText,
+    kpiText && `KPIs: ${kpiText}`,
+    visualText && `Visuals: ${visualText}`,
+    detailText && `Additional signals: ${detailText}`,
+  ].filter(Boolean).join(" "));
 }
 
 function conversationContextMessages(conv, limit = 8) {

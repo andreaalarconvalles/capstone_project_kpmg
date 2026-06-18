@@ -117,6 +117,7 @@ function buildModelPrompt({ prompt, analysis, messages }) {
     `Conversation resolution note: ${analysis.conversationContext?.summary || "No prior context needed."}`,
     "",
     "Answer the current user question only. Use the recent conversation to resolve pronouns, city references, and follow-up phrases such as there, those areas, same city, or what about. If the current question asks for a new metric, use that new metric while keeping the previous city/topic context unless the user explicitly changes it.",
+    "For follow-up questions, do not repeat the previous answer. Build on it: explain the difference, compare the named or implied options, and give the next decision step using the analytics pack below.",
   ].join("\n");
 }
 
@@ -366,9 +367,12 @@ function needsStructuredFallback(answer, analysis) {
   if (!text) return true;
   if (answerRecommendsOtherCity(text, requestedCityForAnalysis(analysis))) return true;
   const firstLine = text.split("\n").find((line) => line.trim()) || "";
-  const hasDirectRecommendation = /^(\*\*)?\s*direct recommendation\s*:/i.test(firstLine.trim());
+  const hasDirectRecommendation = /^(\*\*)?\s*direct recommendation\s*:/i.test(firstLine.trim())
+    || /\b(enter|keep|choose|prioriti[sz]e|start with|focus on|shortlist|target|avoid|raise|validate)\b/i.test(firstLine);
   const sections = text.split(/\n{2,}/).filter((section) => section.trim());
-  return !hasDirectRecommendation || sections.length < 3;
+  const hasUsefulStructure = sections.length >= 2
+    || /\b(reasoning done by aria|key evidence|visualizations? to review|possible limitations|next actions?)\b/i.test(text);
+  return wordCount(text) < 60 || !hasDirectRecommendation || !hasUsefulStructure;
 }
 
 function addContextIfShort(answer, analysis) {

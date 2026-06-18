@@ -45,6 +45,7 @@ Structure for analytical prompts (short labelled sections, blank line between ea
 6. Next actions
 7. Sources
 - Simple prompts skip the template and answer directly. Never bolt empty sections onto a simple answer.
+- Follow-up prompts should build on the prior answer instead of repeating it. Explain the difference, compare the implied options, and give the next decision step.
 
 Explaining numbers (highest-priority rule):
 - Whenever you state a number, interpret it in the same sentence or the next: what the metric means, which direction is good, the scale when it has a fixed one, and why this value is good or bad for the user's goal.

@@ -277,7 +277,7 @@ function RichText({ text, cursor }) {
   return (
     <div className="aria-prose" style={{ fontSize: ARIA.ui && ARIA.ui.fontSize || 15, lineHeight: 1.62, letterSpacing: 0, color: C.inkSoft }}>
       {paras.map((p, i) =>
-      <p key={i} style={{ margin: i ? "0 0 12px" : "0 0 12px", textAlign: "justify", textAlignLast: "left", textWrap: "pretty", hyphens: "auto", overflowWrap: "break-word" }}>
+      <p key={i} style={{ margin: i ? "0 0 12px" : "0 0 12px", textAlign: "justify", textAlignLast: "left", textWrap: "pretty", hyphens: "auto", overflowWrap: "break-word", whiteSpace: "pre-line" }}>
           {renderInline(p)}
           {cursor && i === paras.length - 1 && <span className="aria-cursor" />}
         </p>

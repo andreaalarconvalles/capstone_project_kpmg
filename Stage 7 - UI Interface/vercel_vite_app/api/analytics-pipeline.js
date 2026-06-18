@@ -1979,7 +1979,77 @@ async function complianceAnalysis() {
   };
 }
 
+function visualizationSummary(analysis) {
+  return (analysis.visualizations || [])
+    .slice(0, 4)
+    .map((viz) => viz.title || viz.kind || "untitled visual")
+    .join("; ");
+}
+
+function detailSignals(analysis, max = 5) {
+  return (analysis.details?.extra || [])
+    .slice(0, max)
+    .filter(Boolean);
+}
+
+function extraAreaName(line) {
+  return String(line || "").split(":")[0].trim();
+}
+
+function isFollowUpComparisonPrompt(analysis) {
+  const prompt = `${analysis?.prompt || ""} ${analysis?.resolvedPrompt || ""}`;
+  return /(why|better|next two|next 2|runner.?up|validate|acquiring|first property|before buying|before committing)/i.test(prompt)
+    && Boolean(analysis?.conversationContext?.priorFocus || analysis?.conversationContext?.priorCity);
+}
+
+function deterministicDemandAnswer(analysis) {
+  const facts = (analysis.facts || []).slice(0, 3);
+  const signals = detailSignals(analysis, 6);
+  const topSignals = signals.slice(0, 3);
+  const leader = analysis.kpis?.find((kpi) => /top|area/i.test(kpi.label))?.value
+    || extraAreaName(topSignals[0])
+    || "the recommended Paris area";
+  const nextAreas = topSignals.slice(1, 3).map(extraAreaName).filter(Boolean);
+  const followUp = isFollowUpComparisonPrompt(analysis);
+  const direct = followUp && nextAreas.length
+    ? `Keep ${leader} as the first Paris acquisition screen, then compare it directly with ${nextAreas.join(" and ")} before selecting a property.`
+    : analysis.recommendation;
+  const evidenceLines = topSignals.length
+    ? topSignals.map((line) => `- ${line}`).join("\n")
+    : facts.map((fact) => `- ${fact}`).join("\n");
+  const why = followUp
+    ? `${leader} stays ahead because it ranks first in the committed Prophet demand scenario (a scenario estimate of occupied nights per month; higher means stronger expected demand). The next two areas are close enough to remain viable alternates, so ARIA treats the result as a priority order for due diligence rather than a guaranteed winner.`
+    : `ARIA is using the committed Prophet demand scenario (a scenario estimate of occupied nights per month; higher means stronger expected demand) together with neighbourhood data. The goal is to shortlist the Paris areas most likely to support a small short-term-rental portfolio over the next 12 months.`;
+  const limitations = (analysis.details?.limitations || [])
+    .filter((line) => !/compliance prompts/i.test(line))
+    .slice(0, 2)
+    .join(" ");
+  const actions = followUp
+    ? [
+      `Compare acquisition price, renovation cost, and expected nightly-rate strategy for ${leader} versus ${nextAreas.join(" and ") || "the runner-up areas"}.`,
+      "Verify Paris short-term-rental registration, building rules, and the 120-day primary-residence limit with local counsel before committing.",
+      "Inspect the first property for noise, lift/access, safety, transport, and nearby construction because these asset-level details can overturn a neighbourhood-level signal.",
+    ]
+    : [
+      `Shortlist ${leader} and the next two areas from the ranking chart.`,
+      "Use the map to check whether the top areas form a practical acquisition cluster.",
+      "Validate property-level economics, licensing constraints, and seasonality before making an offer.",
+    ];
+
+  return localizePlaceNames(
+    `Direct recommendation:\n${direct}\n\n` +
+    `Reasoning done by ARIA:\n${why}\n\n` +
+    `Key evidence:\n${evidenceLines}\n\n` +
+    `Visualizations to review:\nUse ${visualizationSummary(analysis) || "the returned map and charts"} to compare location, seasonality, and top-area ranking. The map shows where demand is concentrated; the line chart shows seasonality for ${leader}; the ranking chart compares the top Paris areas side by side.\n\n` +
+    `Possible limitations:\n${limitations || "This is a demand-screening result, not a final acquisition decision. It does not include purchase price, financing, tax, or final licensing checks."}\n\n` +
+    `Next actions:\n${actions.map((action) => `- ${action}`).join("\n")}`
+  );
+}
+
 function deterministicAnswer(analysis) {
+  if (analysis.intent === "demand" && /prophet/i.test(analysis.title || "")) {
+    return deterministicDemandAnswer(analysis);
+  }
   const factLines = analysis.facts
     .slice(0, 3)
     .map((fact) => `- ${fact}`)
@@ -1993,7 +2063,7 @@ function deterministicAnswer(analysis) {
     `Reasoning done by ARIA:\n- This recommendation is grounded in the project dataset, not a generic travel ranking.\n${factLines}\n\n` +
     `Key evidence:\n${metricLines}\n\n` +
     `Visualizations to review:\nUse the generated chart or map to compare the strongest areas, risk signals, or pricing gaps visually before making a decision.\n\n` +
-    `Possible limitations:\nUse this as a starting shortlist, not as a final purchase decision. A stronger signal means the area deserves earlier due diligence, but each apartment still needs property-level checks. For compliance prompts, ARIA provides analyst triage rather than legal advice until the RAG layer is connected.\n\n` +
+    `Possible limitations:\nUse this as a starting shortlist, not as a final purchase decision. A stronger signal means the area deserves earlier due diligence, but each apartment still needs property-level checks.\n\n` +
     `Next actions:\n- Shortlist the strongest areas or listings above and open the chart or map to compare them side by side.\n- Verify actual purchase or listing prices, local licensing limits, and demand before committing.\n- Ask ARIA a follow-up to drill into the specific area, price gap, risk, or forecast that matters most to your decision.`
   );
 }
@@ -2020,6 +2090,9 @@ export async function buildGroundedAnalysis({ prompt, agentId, messages = [] }) 
   else if (intent === "compliance") analysis = await complianceAnalysis(analysisPrompt);
   else analysis = await marketAnalysis(analysisPrompt);
 
+  analysis.prompt = prompt;
+  analysis.resolvedPrompt = analysisPrompt;
+  analysis.conversationContext = context;
   analysis.kpis = attachKpiHelp(uniqueKpis(analysis.kpis || []));
   const fallbackAnswer = deterministicAnswer(analysis);
   const quality = qualityCheck(fallbackAnswer, analysis);
@@ -2028,9 +2101,6 @@ export async function buildGroundedAnalysis({ prompt, agentId, messages = [] }) 
     : "No previous conversation supplied.";
   return {
     ...analysis,
-    prompt,
-    resolvedPrompt: analysisPrompt,
-    conversationContext: context,
     fallbackAnswer,
     quality,
     sources: analysis.details.sourceFiles,
@@ -2044,6 +2114,14 @@ export async function buildGroundedAnalysis({ prompt, agentId, messages = [] }) 
       `Facts: ${analysis.facts.join(" ")}`,
       `KPIs: ${analysis.kpis.map((k) => `${k.label}: ${k.value}`).join("; ")}`,
       `Visualizations: ${(analysis.visualizations || []).map((viz) => viz.title || viz.kind || "untitled").join("; ") || "none"}`,
+      `Additional signals: ${(analysis.details?.extra || []).slice(0, 12).join(" ") || "none"}`,
+      `Visualization data summary: ${(analysis.visualizations || []).slice(0, 4).map((viz) => {
+        const sample = (viz.data || []).slice(0, 6).map((row) => {
+          const value = row.display || row.forecastAvgDisplay || row.value || "";
+          return `${row.label || row.regionName || row.x || "item"}: ${value}`;
+        }).join(", ");
+        return `${viz.title || viz.kind}: ${sample || "no row data"}`;
+      }).join(" | ") || "none"}`,
       `Methodology: ${analysis.details.methodology}`,
       `Metric explanations: ${(analysis.details.metricGuides || []).map((g) => `${g.label} means ${g.meaning} Range: ${g.range} Interpretation: ${g.good} Optimal use: ${g.optimal}`).join(" ")}`,
       `Limitations: ${analysis.details.limitations.join(" ")}`,

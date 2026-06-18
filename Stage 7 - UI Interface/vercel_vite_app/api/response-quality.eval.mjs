@@ -107,6 +107,18 @@ export function scoreAnswer(answer, opts = {}) {
     if (recommendsForbidden || omitsRequested) deduct(25, `answer does not stay within requested geography: ${opts.requestedCity}`);
   }
 
+  // 9c. Follow-up answers should use context instead of repeating the prior answer.
+  if (opts.followUp) {
+    if (/ask aria a follow-up|shortlist the strongest areas or listings above/i.test(a)) {
+      deduct(18, "follow-up answer repeats generic initial-answer next actions");
+    }
+    for (const phrase of opts.mustMention || []) {
+      if (!lower.includes(String(phrase).toLowerCase())) {
+        deduct(10, `follow-up answer misses required context: ${phrase}`);
+      }
+    }
+  }
+
   // 10. No invented metric, score, or capability claim (automatic fail).
   if (/(live regulation retrieval is active|quality \d{1,3}\/100|confidence score|evidence-strength)/i.test(a))
     deduct(40, "forbidden/invented claim");
@@ -236,6 +248,31 @@ Next actions:
 
 Sources: Prophet forecast outputs, neighbourhood stats`,
   },
+  {
+    name: "Paris forecast follow-up comparison",
+    tier: "analytical",
+    geographic: true,
+    requestedCity: "Paris",
+    forbiddenCity: "Athens",
+    followUp: true,
+    mustMention: ["Bourse", "Hotel-de-Ville", "Temple"],
+    answer: `Direct recommendation: Keep Bourse as the first Paris acquisition screen, then compare it directly with Hotel-de-Ville and Temple before selecting a property.
+
+Reasoning done by ARIA: Bourse remains first because it ranks highest in the committed Prophet demand scenario (a scenario estimate of occupied nights per month; higher means stronger expected demand). Hotel-de-Ville and Temple are close enough to stay in the shortlist, so the result should guide due diligence order rather than act as an automatic purchase decision.
+
+Key evidence: Bourse averages 10.4 days/mo, Hotel-de-Ville also averages 10.4 days/mo, and Temple averages 10.0 days/mo. These are close demand readings, so property-level economics and licensing checks become the deciding factors.
+
+Visualizations to review: Use the Paris map for location clustering, the line chart for Bourse seasonality, and the ranking chart to compare the top three areas side by side.
+
+Possible limitations: The Prophet output is a scenario demand proxy, not guaranteed bookings. It does not include acquisition price, financing, taxes, or final licensing checks.
+
+Next actions:
+- Compare acquisition price and renovation cost for Bourse, Hotel-de-Ville, and Temple.
+- Verify Paris registration, building rules, and short-term-rental limits with local counsel.
+- Inspect the first property for noise, access, safety, transport, and nearby construction.
+
+Sources: Prophet forecast outputs, neighbourhood stats`,
+  },
 ];
 
 const BAD = [
@@ -269,6 +306,30 @@ Next actions:
 - Start with Zappeio.
 
 Sources: neighbourhood stats`,
+  },
+  {
+    name: "Paris forecast follow-up repeated initial answer",
+    tier: "analytical",
+    geographic: true,
+    requestedCity: "Paris",
+    forbiddenCity: "Athens",
+    followUp: true,
+    mustMention: ["Hotel-de-Ville", "Temple"],
+    answer: `Direct recommendation: Bourse has the strongest committed Prophet demand scenario for Paris, so it should lead the forecast-based shortlist.
+
+Reasoning done by ARIA: This recommendation is grounded in the project dataset, not a generic travel ranking.
+
+Key evidence: Forecast occupied nights is a demand proxy.
+
+Visualizations to review: Use the generated chart or map to compare the strongest areas, risk signals, or pricing gaps visually before making a decision.
+
+Possible limitations: Use this as a starting shortlist, not as a final purchase decision.
+
+Next actions:
+- Shortlist the strongest areas or listings above and open the chart or map to compare them side by side.
+- Ask ARIA a follow-up to drill into the specific area, price gap, risk, or forecast that matters most to your decision.
+
+Sources: Prophet forecast outputs, neighbourhood stats`,
   },
 ];
 
