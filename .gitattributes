@@ -1,3 +1,5 @@
 *.csv filter=lfs diff=lfs merge=lfs -text
 data/outputs/prophet_paris_forecast_v1.csv -filter -diff -merge text
 data/outputs/prophet_athens_forecast_v1.csv -filter -diff -merge text
+data/raw/*.csv filter=lfs diff=lfs merge=lfs -text
+data/processed/*.csv filter=lfs diff=lfs merge=lfs -text

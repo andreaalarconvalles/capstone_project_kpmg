@@ -1,8 +1,4 @@
-# Large data files — too big for GitHub (>50MB)
-data/raw/iab_athens_sept2025_listings.csv
-data/raw/iab_paris_2025_listings.csv
-data/raw/maven_airbnb_listings_reviews.csv
-data/processed/aria_mega_dataset_v4_1_final.csv
+# Large data files tracked via Git LFS
 
 # macOS
 .DS_Store
