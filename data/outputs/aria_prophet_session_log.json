@@ -1,0 +1,61 @@
+{
+  "phase": "Phase 4 - Prophet Demand Forecasting",
+  "notebook": "eda/ARIA_Prophet_v1.ipynb",
+  "completed": "2026-06-18",
+  "methodology": "snapshot-to-time-series via STR seasonal distribution",
+  "models": {
+    "athens": {
+      "path": "/Users/bass/Desktop/KPMG Capstone/models/prophet_athens_v1.pkl",
+      "training_months": 57,
+      "cv_mape_pct": 19.3,
+      "signal": "BUY",
+      "listings": 10661
+    },
+    "paris": {
+      "path": "/Users/bass/Desktop/KPMG Capstone/models/prophet_paris_v1.pkl",
+      "training_months": 57,
+      "cv_mape_pct": 17.4,
+      "signal": "BUY",
+      "note": "Directional only - Maven 2021 + IAB 2025 vintage"
+    }
+  },
+  "forecast_summaries": {
+    "Athens": {
+      "trend": "growing",
+      "signal": "BUY",
+      "mean_occ_monthly": 9.538,
+      "mean_occ_annual_days": 114.5,
+      "base_revenue_eur": 9729.0,
+      "optimistic_revenue": 10702.0,
+      "downside_revenue": 8270.0,
+      "ci_width_mean": 3.02,
+      "peak_month": "July 2026",
+      "trough_month": "January 2026"
+    },
+    "Paris": {
+      "trend": "growing",
+      "signal": "BUY",
+      "mean_occ_monthly": 10.183,
+      "mean_occ_annual_days": 122.2,
+      "base_revenue_eur": 20039.0,
+      "optimistic_revenue": 22043.0,
+      "downside_revenue": 17033.0,
+      "ci_width_mean": 2.93,
+      "peak_month": "August 2026",
+      "trough_month": "February 2026"
+    }
+  },
+  "output_contract": [
+    "ds",
+    "yhat",
+    "yhat_lower",
+    "yhat_upper",
+    "trend",
+    "yearly_seasonality",
+    "city",
+    "is_forecast",
+    "occ_annual_days",
+    "investor_signal"
+  ],
+  "phase6_slot": "Place CSVs at data/outputs/ - auto-detected by Phase 6 tool"
+}

@@ -1,0 +1,55 @@
+{
+  "phase": "Phase 6 -- LangGraph Multi-Agent Orchestrator",
+  "notebook": "eda/ARIA_LangGraph_v1.ipynb",
+  "completed": "2026-06-18",
+  "graph_nodes": [
+    "supervisor",
+    "pricing",
+    "risk",
+    "forecast",
+    "compliance",
+    "coach",
+    "synthesis",
+    "hitl",
+    "pdf"
+  ],
+  "state_fields": [
+    "query",
+    "persona",
+    "city_a",
+    "city_b",
+    "listing_id",
+    "intent",
+    "routing_log",
+    "pricing_output",
+    "risk_output",
+    "forecast_output",
+    "compliance_output",
+    "coach_output",
+    "memo_draft",
+    "approved",
+    "pdf_path",
+    "session_id",
+    "error_log"
+  ],
+  "routing_eval": {
+    "persona_accuracy": 1.0,
+    "intent_recall": 1.0,
+    "intent_precision": 1.0,
+    "perfect_match_pct": 1.0,
+    "n_queries": 12
+  },
+  "phase4_live": true,
+  "phase5_live": true,
+  "benchmark_persona": "investor",
+  "benchmark_intent": [
+    "pricing",
+    "risk",
+    "forecast",
+    "compliance",
+    "coach"
+  ],
+  "pdf_generated": true,
+  "join_key": "listing_id",
+  "phase7_import": "from ARIA_LangGraph_v1 import aria_graph, ARIAState"
+}

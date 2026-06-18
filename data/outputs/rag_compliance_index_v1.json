@@ -1,0 +1,155 @@
+{
+  "generated": "2026-06-18",
+  "n_documents": 20,
+  "categories": [
+    "AMA_ENFORCEMENT",
+    "AMA_REGISTRATION",
+    "AMA_FREEZE",
+    "AMA_COMPLIANCE",
+    "LOI_LE_MEUR"
+  ],
+  "chromadb_version": "1.5.9",
+  "embedding_model": "all-MiniLM-L6-v2 (ONNX via chromadb DefaultEmbeddingFunction)",
+  "documents": [
+    {
+      "id": "ama_001",
+      "category": "AMA_REGISTRATION",
+      "title": "AMA registration mandatory — Law 4276/2014",
+      "text": "AMA (Accommodation Registry) registration is mandatory for all short-term rental properties in Greece under Law 4276/2014. The requirement has been in force since 2017. Every property listed on platforms such as Airbnb must display a valid AMA registration number. Operating without an AMA number is a regulatory violation subject to administrative fines and listing removal.",
+      "citation": "Law 4276/2014 · Greek Ministry of Tourism"
+    },
+    {
+      "id": "ama_002",
+      "category": "AMA_REGISTRATION",
+      "title": "AMA registration process and requirements",
+      "text": "To obtain AMA registration a property owner must submit: proof of ownership, building permit or exemption certificate, tax identification number (AFM), and property floor plan. Registration is issued per property, not per platform. A single host operating multiple properties requires a separate AMA number for each property. AMA numbers must be displayed in all listing advertisements.",
+      "citation": "Greek Ministry of Tourism · AMA Registration Portal"
+    },
+    {
+      "id": "ama_003",
+      "category": "AMA_REGISTRATION",
+      "title": "AMA violation penalties",
+      "text": "Unlicensed short-term rental operation in Greece carries administrative fines of EUR 5,000 to EUR 50,000 per violation depending on property size and duration of unlicensed operation. Platforms are required to remove listings that cannot provide a valid AMA number upon request from authorities. Repeat violations carry higher fines and potential criminal referral.",
+      "citation": "Law 4276/2014 amended · Greek Tax Authority (AADE)"
+    },
+    {
+      "id": "ama_004",
+      "category": "AMA_REGISTRATION",
+      "title": "AMA enforcement tightened since 2022",
+      "text": "AMA enforcement has tightened significantly since 2022. The Greek government introduced mandatory AADE income reporting for STR hosts in 2022, creating a tax-compliance cross-check against AMA registration data. AADE can identify unregistered operators by matching Airbnb income declarations against AMA registration records. This cross-check is automated and runs quarterly.",
+      "citation": "AADE Circular 2022 · Greek Ministry of Finance"
+    },
+    {
+      "id": "ama_005",
+      "category": "AMA_REGISTRATION",
+      "title": "AMA number display requirement on platforms",
+      "text": "Since January 2021, Airbnb is required to display AMA registration numbers on all Greek property listings. Listings without a valid AMA number are flagged and subject to removal. Airbnb has agreed to share listing data with Greek authorities under an EU data-sharing agreement.",
+      "citation": "EU Short-Term Rental Regulation · Airbnb Policy Greece 2021"
+    },
+    {
+      "id": "ama_006",
+      "category": "AMA_FREEZE",
+      "title": "AMA registration freeze — central Athens — December 2024",
+      "text": "Effective 31 December 2024, the Greek government suspended new AMA registrations in central Athens zones. The freeze applies to central municipality districts including the commercial triangle (Emporiko Trigono), Kolonaki, Monastiraki, Psiri, Syntagma, and adjacent central neighbourhoods within the centre_0_1km distance zone. Any property in these zones without an existing AMA registration as of 31 December 2024 cannot obtain new registration and cannot be regularised.",
+      "citation": "Greek Ministry of Tourism Circular Dec 2024 · Joint Ministerial Decision"
+    },
+    {
+      "id": "ama_007",
+      "category": "AMA_FREEZE",
+      "title": "Implications of AMA freeze for unlicensed central zone listings",
+      "text": "For unlicensed listings in the central Athens freeze zone, the Dec 2024 registration freeze means permanent illegality with no path to regularisation. These operators face: (1) administrative fines up to EUR 50,000, (2) mandatory platform removal upon authority request, (3) no ability to apply for AMA registration to resolve the violation. These listings represent irreversible supply that will be removed by enforcement.",
+      "citation": "Greek Ministry of Tourism Circular Dec 2024"
+    },
+    {
+      "id": "ama_008",
+      "category": "AMA_FREEZE",
+      "title": "AMA freeze zones — geographic scope",
+      "text": "The AMA registration freeze covers central Athens municipalities where STR density exceeds the regulatory threshold. Key affected neighbourhoods include: Emporiko Trigono-Plaka (ΕΜΠΟΡΙΚΟ ΤΡΙΓΩΝΟ-ΠΛΑΚΑ), Kolonaki (ΚΟΛΩΝΑΚΙ), Lykavittos (ΛΥΚΑΒΗΤΤΟΣ), Stadio (ΣΤΑΔΙΟ), and parts of Koukaki-Makrygianni. Properties in near and mid distance zones (near_1_3km, mid_3_5km) are outside the freeze and can still apply for AMA registration.",
+      "citation": "Greek Ministry of Tourism Circular Dec 2024"
+    },
+    {
+      "id": "ama_009",
+      "category": "AMA_FREEZE",
+      "title": "AMA freeze — investor opportunity in compliant supply",
+      "text": "The AMA registration freeze creates a structural supply cap in central Athens. No new STR supply can enter freeze zones. Compliant operators benefit from: (1) protected market position with no new competition, (2) demand growth without supply growth creating upward price pressure, (3) priority access to redistributed demand as unlicensed operators are removed. The freeze makes existing AMA-registered properties in central Athens structurally more valuable.",
+      "citation": "ARIA Analysis based on Greek Ministry of Tourism Circular Dec 2024"
+    },
+    {
+      "id": "ama_010",
+      "category": "AMA_ENFORCEMENT",
+      "title": "AMA enforcement mechanism — inspection and removal",
+      "text": "AMA enforcement operates through two channels: (1) platform-level audit where Airbnb reviews listings against AMA registration database quarterly, and (2) local authority inspection where municipal inspectors physically verify properties flagged by the AADE cross-check. Upon confirmed violation, the authority issues a removal order. Platforms are legally obligated to remove the listing within 30 days of receiving a valid removal order.",
+      "citation": "Law 4276/2014 · EU STR Regulation Enforcement Protocol"
+    },
+    {
+      "id": "ama_011",
+      "category": "AMA_ENFORCEMENT",
+      "title": "Supply shock from enforcement — demand redistribution",
+      "text": "When AMA enforcement removes an unlicensed listing, the demand that listing served does not disappear. Tourists still travel to Athens. The bookings redistribute to surviving compliant listings in the same neighbourhood. If 50% of the 137 unlicensed Athens listings are removed by enforcement, approximately EUR 495,000 in annual revenue redistributes to compliant operators. Compliant operators in high-unlicensed-density neighbourhoods benefit most.",
+      "citation": "ARIA Phase 5 analysis based on Phase 1 EDA compliance audit"
+    },
+    {
+      "id": "ama_012",
+      "category": "AMA_ENFORCEMENT",
+      "title": "AMA compliance rate — Athens market context",
+      "text": "Athens has a 99.0% AMA compliance rate: 14,105 licensed listings vs 137 unlicensed out of 14,242 total. This is significantly higher than comparable European STR markets where registration compliance rates are typically 70-85%. The high compliance rate reflects effective AMA enforcement since 2022 and the AADE income cross-check. The 137 remaining unlicensed listings are the residual non-compliant tail.",
+      "citation": "ARIA Phase 1 EDA · IAB Athens Sept 2025"
+    },
+    {
+      "id": "ama_013",
+      "category": "AMA_ENFORCEMENT",
+      "title": "Unlicensed listings price at market rates — no discount",
+      "text": "Mann-Whitney U test confirms no statistically significant price difference between licensed and unlicensed Athens listings (p = 0.779, not significant). Unlicensed listings charge market-rate prices without passing regulatory cost savings to guests. Investors cannot identify unlicensed listings by price screening alone. Enforcement removes market-rate supply, not discounted supply.",
+      "citation": "ARIA Phase 1 EDA Section 8 · Mann-Whitney p=0.779"
+    },
+    {
+      "id": "ama_014",
+      "category": "AMA_COMPLIANCE",
+      "title": "Near zone unlicensed listings — regularisation pathway",
+      "text": "The 89 unlicensed listings in the near_1_3km zone (outside the AMA freeze) have a theoretical regularisation pathway. They can apply for AMA registration if they meet building and property requirements. The process typically takes 3-6 months from application to certificate. Investors considering these properties should verify the building permit status before acquisition, as missing permits block AMA registration.",
+      "citation": "AMA Registration Portal · Greek Ministry of Tourism"
+    },
+    {
+      "id": "ama_015",
+      "category": "AMA_COMPLIANCE",
+      "title": "High-risk unlicensed listing profile",
+      "text": "The highest-risk unlicensed listings combine three factors: (1) location in the AMA central zone freeze (cannot regularise), (2) high Phase 3 LightGBM risk score (host likely to exit market), (3) high Phase 2 XGBoost underpricing gap (currently below fair value). These listings represent the acute supply-shock risk: they will be removed, cannot be regularised, and their demand will redistribute to compliant operators.",
+      "citation": "ARIA multi-phase analysis"
+    },
+    {
+      "id": "ama_016",
+      "category": "AMA_COMPLIANCE",
+      "title": "Investor strategy — compliance as competitive moat",
+      "text": "AMA registration is a regulatory barrier to entry in central Athens. The Dec 2024 freeze means no new entrants can obtain registration in prime zones. An AMA-registered property in a freeze zone has a protected market position. ARIA recommends: acquire AMA-registered properties in freeze zones, price to Phase 2 XGBoost fair value, and hold through the enforcement cycle that removes unlicensed supply and redistributes their demand.",
+      "citation": "ARIA Investment Strategy · Phase 2 + Phase 5 synthesis"
+    },
+    {
+      "id": "loi_001",
+      "category": "LOI_LE_MEUR",
+      "title": "Loi Le Meur — 90-night annual cap for primary residences",
+      "text": "The French Loi Le Meur (2024) limits short-term rental of primary residences to 90 nights per calendar year, reduced from the previous 120-night limit. The law applies to all platforms including Airbnb operating in France. Platforms must enforce the cap automatically by deactivating listings that reach the 90-night threshold. The cap applies only to primary residences — secondary properties and dedicated STR apartments require SIRET registration.",
+      "citation": "Loi Le Meur No 2024-1039 · French Republic · October 2024"
+    },
+    {
+      "id": "loi_002",
+      "category": "LOI_LE_MEUR",
+      "title": "Loi Le Meur — SIRET number mandatory for Paris STR operators",
+      "text": "Under Loi Le Meur, all Paris STR operators must register as a business and obtain a SIRET number if their rental income exceeds EUR 23,000/year or if they operate a non-primary-residence property. Non-compliance carries fines of EUR 10,000 to EUR 50,000.",
+      "citation": "Loi Le Meur No 2024-1039 · DGFiP Guidance Note 2025"
+    },
+    {
+      "id": "loi_003",
+      "category": "LOI_LE_MEUR",
+      "title": "Paris compliance — no license field in dataset",
+      "text": "The Paris listing dataset does not contain a direct license or SIRET field. Paris compliance status is inferred from proxy signals: host_identity_verified, host_response_rate, availability_365 (near-90 cap patterns), and review patterns. Paris compliance cannot be directly verified from the ARIA dataset; the RAG agent flags structural risk factors rather than confirmed violations.",
+      "citation": "ARIA Phase 5 methodology · Loi Le Meur compliance inference"
+    },
+    {
+      "id": "loi_004",
+      "category": "LOI_LE_MEUR",
+      "title": "Loi Le Meur — enforcement from 2025 and investor implications",
+      "text": "Loi Le Meur enforcement began January 2025. Municipalities can set lower caps than 90 nights — Paris has proposed a 60-night cap for central arrondissements. Secondary properties and dedicated STR apartments are not subject to the night cap, making them structurally more valuable than primary-residence listings. The Phase 4 Prophet forecast treats Paris as directional precisely because Loi Le Meur creates regulatory compression on the supply side.",
+      "citation": "Loi Le Meur No 2024-1039 · City of Paris STR Policy 2025"
+    }
+  ]
+}
