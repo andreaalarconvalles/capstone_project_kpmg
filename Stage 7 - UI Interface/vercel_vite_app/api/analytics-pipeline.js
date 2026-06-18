@@ -1605,8 +1605,20 @@ async function portfolioAnalysis(prompt = "") {
   const winner = [...cities].sort((a, b) => b.opportunity - a.opportunity)[0];
   const revenueAsked = /(revenue|income|earning|money|yield)/i.test(prompt);
   const scaleAsked = /(scale|listings|size|supply)/i.test(prompt);
+  const saturationAsked = /(saturat|avoid|competition|crowd|overbuilt)/i.test(prompt);
   const vizRequest = visualizationRequest(prompt);
-  const chart = vizRequest.composition || scaleAsked
+  const mapMetric = saturationAsked ? "saturation" : scaleAsked ? "listings" : revenueAsked ? "revenue" : "opportunity";
+  const mapMetricLabel = saturationAsked ? "Saturation score" : scaleAsked ? "Listings reviewed" : revenueAsked ? "Average revenue" : "Opportunity score";
+  const mapMetricDisplay = scaleAsked ? fmtInt : revenueAsked ? fmtEuro : fmtScore;
+  const mapTone = saturationAsked ? "risk" : revenueAsked ? "price" : "opportunity";
+  const mapSubject = saturationAsked
+    ? "saturation pressure"
+    : scaleAsked
+      ? "listing supply by area"
+      : revenueAsked
+        ? "revenue opportunity"
+        : "best opportunity neighbourhoods";
+  const cityComparisonChart = vizRequest.composition || scaleAsked
     ? makeDonut("Listing share by city", cities, "city", "listings", "Listings", {
       formatter: fmtInt,
       metricNote: "Donut chart: best for portfolio share questions. It shows how much of the available listing evidence comes from each city.",
@@ -1647,6 +1659,37 @@ async function portfolioAnalysis(prompt = "") {
           saturation: Number(num(c.saturation).toFixed(2)),
         })),
       }];
+  const chart = [
+      ...makeRegionMap(
+        `Athens map: ${mapSubject}`,
+        "Athens",
+        rows.filter((r) => r.city === "Athens"),
+        mapMetric,
+        mapMetricLabel,
+        mapMetricDisplay,
+        {
+          tone: mapTone,
+          lowerIsBetter: saturationAsked,
+          legendLow: saturationAsked ? "calmer" : "lower",
+          legendHigh: saturationAsked ? "more saturated" : "higher",
+        }
+      ),
+      ...makeRegionMap(
+        `Paris map: ${mapSubject}`,
+        "Paris",
+        rows.filter((r) => r.city === "Paris"),
+        mapMetric,
+        mapMetricLabel,
+        mapMetricDisplay,
+        {
+          tone: mapTone,
+          lowerIsBetter: saturationAsked,
+          legendLow: saturationAsked ? "calmer" : "lower",
+          legendHigh: saturationAsked ? "more saturated" : "higher",
+        }
+      ),
+      ...cityComparisonChart,
+    ];
   return {
     intent: "portfolio-comparison",
     title: "Paris vs Athens portfolio comparison",
