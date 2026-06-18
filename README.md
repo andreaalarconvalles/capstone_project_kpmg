@@ -16,7 +16,24 @@ ARIA targets three primary personas:
 - **Host / property manager** — am I priced correctly, is my listing declining, what should I improve
 - **Real estate developer / PE fund** — where is the supply shock opportunity, what is the entry price
 
-The system combines validated machine learning outputs (XGBoost, LightGBM, Prophet, RAG), a LangGraph orchestration layer, and a live Vercel React chat interface backed by Vertex AI Gemini 2.5 Pro. Auto Agent is the default interaction mode: ARIA reads the user's prompt, selects the right specialist, and runs either the scripted demo answer or the live grounded analysis. It covers 135,051 listings across Paris and Athens.
+The system combines validated machine learning outputs (XGBoost, LightGBM, Prophet, RAG), a LangGraph orchestration layer, and a live Vercel React chat interface backed by Vertex AI Gemini 2.5 Pro. Auto Agent is the default interaction mode: ARIA reads the user's prompt, selects the right specialist, and runs either the scripted demo answer or the live grounded analysis. It covers 135,051 listings across Paris and Athens. In the deployed Vercel app, live grounded answers currently consume committed neighbourhood statistics, XGBoost pricing outputs, LightGBM risk scores, SHAP summaries, and Prophet scenario forecast CSVs. RAG compliance and LangGraph orchestration remain validated notebook layers until their production handoff artifacts are committed and wired into the backend.
+
+---
+
+## Project Story and Demo Readiness
+
+ARIA should be presented as a decision-support system with three layers:
+
+1. Research and modelling layer: the notebooks prove the analytical methods across pricing, risk, demand forecasting, compliance retrieval, and orchestration.
+2. Grounded model-output layer: committed CSV and model-output files are the trusted evidence base for generated answers.
+3. Live agent layer: the Vercel app turns those outputs into plain-English recommendations, KPI cards, charts, maps, and PDF briefs for non-technical users.
+
+For the demo, the strongest story is: ARIA does not simply chat about real estate; it routes the question to the right analytical agent, grounds the answer in the project outputs, visualizes the market signal, and explains the recommendation in business language.
+
+Current live status:
+- Live in Vercel: neighbourhood stats, XGBoost pricing, LightGBM risk, SHAP driver summaries, and committed Prophet scenario forecasts.
+- Conservative in Vercel: compliance prompts are analyst triage only until RAG CSV/JSON handoff artifacts are committed.
+- Notebook evidence: LangGraph demonstrates the multi-agent orchestration architecture; Vercel productionizes a compatible web demo flow.
 
 ---
 
@@ -128,9 +145,9 @@ All analytical phases are self-contained Jupyter notebooks in `eda/`. Run them i
 | 1 | `ARIA_EDA_v4_FINAL.ipynb` | `data/processed/aria_mega_dataset_v4_1_final.csv` | All subsequent phases |
 | 2 | `ARIA_XGBoost_v1.ipynb` | `paris_predictions_v1.csv`, `athens_predictions_v1.csv`, `athens_underpricing_v1.csv`, `shap_*.csv` | Phase 3, Phase 6 |
 | 3 | `ARIA_LightGBM_v1.ipynb` | `athens_risk_scores_v1.csv` | Phase 6 |
-| 4 | `ARIA_Prophet_v2.ipynb` | `prophet_paris_forecast_v1.csv`, `prophet_athens_forecast_v1.csv`, `prophet_*_v1.pkl` | Phase 6 |
-| 5 | `ARIA_RAG_v1.ipynb` | ChromaDB vector index (local only — `rag/chroma_db/` is gitignored) | Phase 6 |
-| 6 | `ARIA_LangGraph_v1.ipynb` | `aria_investor_brief.pdf`, routing evaluation results | Phase 7 (demo) |
+| 4 | `ARIA_Prophet_v2.ipynb` | `prophet_paris_forecast_v1.csv`, `prophet_athens_forecast_v1.csv`, `prophet_*_v1.pkl` | Phase 6, Phase 7 demand agent |
+| 5 | `ARIA_RAG_v1.ipynb` | Notebook RAG demo outputs; ChromaDB vector index local only (`rag/chroma_db/` is gitignored) | Phase 6 notebook, future Phase 7 RAG handoff |
+| 6 | `ARIA_LangGraph_v1.ipynb` | Notebook memo/routing evaluation evidence | Phase 7 demo story |
 | 7 | `Stage 7 - UI Interface/` | Live Vercel React app | End users |
 
 **Relationship between Phase 6 and Phase 7:**
@@ -216,7 +233,7 @@ Business output: 865 listings flagged as both underpriced AND high-risk. Revenue
 
 **Notebook:** `ARIA_Prophet_v2.ipynb`
 
-Two Prophet time-series models (Paris and Athens) predicting monthly occupancy over a 12-month horizon. Paris: ~42,978 rows · Athens: ~10,661 rows. External regressor: `review_growth_24_25`.
+Two Prophet scenario forecast outputs (Paris and Athens) estimate monthly occupied-night demand over a 12-month horizon by neighbourhood. The committed CSVs are now consumed by the live Vercel demand agent for forecast prompts. They should be presented as scenario-based demand forecasts, not guaranteed future booking calendars.
 
 **Output files:** `prophet_paris_v1.pkl` · `prophet_athens_v1.pkl` · `prophet_paris_forecast_v1.csv` · `prophet_athens_forecast_v1.csv`
 
@@ -226,9 +243,9 @@ Two Prophet time-series models (Paris and Athens) predicting monthly occupancy o
 
 **Notebook:** `ARIA_RAG_v1.ipynb` · **Location:** `rag/`
 
-ChromaDB vector index of AMA regulations (Athens) and Loi Le Meur (Paris). Given a listing, returns the applicable regulation article and compliance status. Primary targets: 137 unlicensed Athens listings (~€1.03M annual revenue).
+ChromaDB vector index of AMA regulations (Athens) and Loi Le Meur (Paris). Given a listing, the notebook returns the applicable regulation article and compliance status. Primary targets: 137 unlicensed Athens listings (~EUR 1.03M annual revenue).
 
-ChromaDB index files are local only — `rag/chroma_db/` is gitignored.
+Production handoff note: the Vercel app does not yet run live legal retrieval. Compliance answers remain analyst triage until the generated RAG report/index are committed as JS-readable CSV/JSON artifacts. ChromaDB index files are local only - `rag/chroma_db/` is gitignored.
 
 ---
 
@@ -236,7 +253,7 @@ ChromaDB index files are local only — `rag/chroma_db/` is gitignored.
 
 **Notebook:** `eda/ARIA_LangGraph_v1.ipynb`
 
-A fully executed 9-node LangGraph `StateGraph` wiring all five specialist agents into a single directed graph with checkpointed state and human-in-the-loop approval. The notebook runs end-to-end with all outputs present in the committed version.
+A fully executed 9-node LangGraph `StateGraph` wiring all five specialist agents into a single directed graph with checkpointed state and human-in-the-loop approval. The notebook is the Phase 6 orchestration proof. The live Vercel app mirrors the orchestration concept in JavaScript and grounded API responses; it does not currently execute the Python LangGraph runtime.
 
 **Architecture:**
 - `ARIAState` TypedDict with 17 fields carrying persona, query, agent outputs, narrative, and approval state across nodes
@@ -244,7 +261,7 @@ A fully executed 9-node LangGraph `StateGraph` wiring all five specialist agents
 - All 5 specialist tools implemented as pure functions loading real Phase 2–5 output files via `listing_id` join key
 - 9 explicit nodes: `classify_persona` → `run_pricing` → `run_forecast` → `run_risk` → `run_rag` → `run_coach` → `hitl` → `synthesise` → `export_pdf`
 
-**Validated outputs (all present in committed notebook):**
+**Validated outputs (present as notebook evidence unless separately committed):**
 - 5-section persona-aware investor memo generated in cell output
 - `aria_investor_brief.pdf` confirmed generated
 - 12-query routing evaluation: 100% persona classification accuracy, 100% specialist recall

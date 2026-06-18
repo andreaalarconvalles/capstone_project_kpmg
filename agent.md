@@ -167,15 +167,17 @@ This table is the single source of truth for what the team has shipped and what 
 
 ### In Progress
 
-- Phase 4 — Prophet demand forecasting (Member 2) — notebook: ARIA_Prophet_v1.ipynb
-- Phase 6 — Orchestration layer (Member 4) — Vercel Function backend is implemented for the demo; final LangGraph package remains to be formalized.
+- Phase 7 — Live agent strengthening — Vercel backend now grounds forecast prompts in committed Prophet scenario forecast CSVs; continue polishing response quality, map clarity, and evaluation harness coverage.
+- Phase 5 — RAG production handoff — notebook is complete, but Vercel should keep compliance as analyst triage until generated RAG CSV/JSON artifacts are committed and wired.
+- Phase 6 — Orchestration story — LangGraph notebook is complete as the research orchestration layer; Vercel remains the production demo implementation.
 - Phase 7 — UI demo (Member 5) — Vercel React app is live and actively polished; legacy Streamlit dashboard remains optional/future.
 - Documentation + Presentation (Member 6) — mentor summary and README documentation are in progress.
 
 ### Backlog
 
-- Phase 5 — RAG compliance agent (ChromaDB, AMA + Loi Le Meur, 137 unlicensed listings)
-- Phase 6 — Full LangGraph orchestrator package (5 explicit nodes, human-in-the-loop, dynamic pricing layer, tests)
+- Add JS-readable RAG handoff files: `data/outputs/rag_unlicensed_report_v1.csv` and `data/outputs/rag_compliance_index_v1.json`.
+- Decide whether to commit LangGraph demo artifacts (`aria_investor_brief.pdf`, `aria_session_log.json`, `aria_routing_eval.csv`) or keep Phase 6 as notebook evidence only.
+- Add exact Athens neighbourhood boundary GeoJSON if the map should highlight true polygons instead of centroid buffers.
 - Phase 7 — Optional Streamlit 3-tab analyst dashboard (investor, host, developer)
 - KPMG final presentation and methodology document
 
@@ -334,15 +336,17 @@ KPMG Capstone/
 │   ├── ARIA_EDA_v4_FINAL.ipynb       ← Phase 1 — run FIRST
 │   ├── ARIA_XGBoost_v1.ipynb         ← Phase 2
 │   ├── ARIA_LightGBM_v1.ipynb        ← Phase 3
-│   ├── ARIA_Prophet_v1.ipynb         ← Phase 4 (not started)
+│   ├── ARIA_Prophet_v2.ipynb         ← Phase 4
+│   ├── ARIA_RAG_v1.ipynb             ← Phase 5
+│   ├── ARIA_LangGraph_v1.ipynb       ← Phase 6
 │   └── eda_figures/
 ├── data/
 │   ├── raw/
 │   ├── processed/                    ← gitignored
 │   └── outputs/                      ← join key: listing_id
 ├── models/                           ← trained model files
-├── rag/                              ← Phase 5
-├── agents/                           ← Phase 6
+├── rag/                              ← Phase 5 documentation / local ChromaDB notes
+├── agents/                           ← Phase 6 documentation / orchestration notes
 ├── Stage 7 - UI Interface/      ← Phase 7 — all UI assets, prototypes, and Vercel app
 └── docs/                        ← methodology docs, proposals, planner
 ```
@@ -369,7 +373,7 @@ Conversation history is expected to persist in the browser and survive refreshes
 
 Secrets stay out of Git. `.env` is local and ignored. Vercel production secrets belong in Vercel Environment Variables, especially the server-side Google service-account credential.
 
-Remaining roadmap: finalize Phase 4 Prophet forecasting, implement the Phase 5 Retrieval-Augmented Generation compliance agent, formalize the Phase 6 LangGraph package, and prepare the final KPMG/mentor presentation materials.
+Remaining roadmap: keep Prophet forecasts wired into the live Vercel demand agent, add RAG production handoff artifacts before claiming live legal retrieval, decide whether to commit LangGraph demo outputs, add exact Athens boundary polygons if required, and prepare the final KPMG/mentor presentation materials.
 
 ---
 
@@ -429,3 +433,4 @@ Remaining roadmap: finalize Phase 4 Prophet forecasting, implement the Phase 5 R
 - [2026-06-13] Session 52: Expanded the UI model picker and Settings default model list with Gemini 3.5 Flash, Gemini 3.1 Pro, Claude Sonnet 4.6, and Claude Opus 4.7, while making Gemini 2.5 Pro the default every fresh session. Updated `/api/chat` so Gemini models use the Google Vertex `generateContent` route and Claude models use the Anthropic partner `rawPredict` route.
 - [2026-06-14] Session 53: Fixed the Stage 7 AI model picker overflow using viewport-aware portal positioning, constrained scrolling, and mobile sheet behavior; removed the Edge Visual Search hover target from the ARIA logo; applied Web Design Guidelines accessibility fixes; and pushed the clean UI commit `388d77e` to `main`.
 - [2026-06-14] Session 54: Added conversation-context support to the Stage 7 live chat path: frontend prompts now include recent thread history, `/api/chat` passes context to analytics and Vertex, follow-up prompts resolve prior city references such as "there", and premium-price questions rank the most expensive areas instead of falling back to generic livability/saturation logic.
+- [2026-06-18] Session 55: Wired committed Prophet scenario forecast CSVs into the live Vercel demand agent, fixed forecast/map intent routing, tightened Athens point-map buffers while noting that exact polygons need boundary GeoJSON, added the project story/readiness section, fixed the response-quality evaluation harness, and prepared the two Prophet forecast CSVs to be stored as normal Git files instead of LFS pointers for raw-GitHub fetching.

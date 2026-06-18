@@ -136,7 +136,7 @@ async function callGeminiVertex({ accessToken, projectId, location, model, promp
       ],
       generationConfig: {
         temperature: 0.35,
-        maxOutputTokens: 1800,
+        maxOutputTokens: 2600,
       },
     }),
   });
@@ -174,7 +174,7 @@ async function callClaudeVertex({ accessToken, projectId, location, model, promp
         { role: "user", content: prompt },
       ],
       temperature: 0.35,
-      max_tokens: 1800,
+      max_tokens: 2600,
       stream: false,
     }),
   });
@@ -204,16 +204,32 @@ async function callVertexModel({ accessToken, projectId, location, model, prompt
   return callGeminiVertex({ accessToken, projectId, location, model, prompt, systemPrompt });
 }
 
-function buildSystemPrompt({ agentName, agentTagline, analysis }) {
+function personaGuidance({ agentId, agentName, analysis }) {
+  const hay = `${agentId || ""} ${agentName || ""} ${analysis?.resolvedPrompt || ""} ${analysis?.prompt || ""}`.toLowerCase();
+  const isHost = /(host|manager|my listing|my price|am i priced|i own|i host|underpric)/.test(hay) || agentId === "host-revenue";
+  const isDeveloper = /(developer|pe fund|private equity|portfolio|supply shock|build|acquire|acquisition|entry price|scale|fund)/.test(hay);
+  if (isHost) {
+    return "Reader persona: host or property manager. Lead with the underpricing gap and listing-health/risk signals, and give specific, doable actions such as a price move or a feature to improve. Keep the tone practical and operational.";
+  }
+  if (isDeveloper) {
+    return "Reader persona: developer or PE fund. Lead with saturation, supply-demand imbalance, and the scale of the opportunity, and frame the answer around entry price and the number of targets. Keep the tone deal- and scale-focused.";
+  }
+  return "Reader persona: investor (default). Lead with opportunity score, yield or revenue, and risk, and frame the answer around entry timing and downside. Keep the answer useful for hosts and developers too. If the question wording clearly signals a host or developer instead, adapt to that persona.";
+}
+
+function buildSystemPrompt({ agentId, agentName, agentTagline, analysis }) {
   const sourcesLine = `Sources: ${friendlySourceNames(analysis.sources || analysis.details?.sourceFiles || [])}`;
   return `
 You are ${agentName}, ${agentTagline}, inside the ARIA capstone demo.
 
 Answer as a consumer-facing consulting analyst. Use only the verified analytics pack below for numeric claims.
+${personaGuidance({ agentId, agentName, analysis })}
+Open every analytical answer with a one-sentence direct recommendation the reader can act on, before any reasoning. Do not bury the takeaway. Close every analytical answer with 2 to 3 concrete next actions.
 Use the recent conversation context to resolve follow-up questions. If the user says "there", "those areas", "same city", or asks a short follow-up without naming a city, keep the previous city unless the current question explicitly changes it.
 When the current question asks for a different metric than the previous one, answer the new metric while preserving the contextual city. For example, after a Paris saturation-map question, "which are the most expensive areas to live there?" means expensive Paris areas in the ARIA dataset, not a new generic city answer.
-If the user's wording asks for residential real-estate advice, clarify that ARIA's evidence is short-term-rental market intelligence, not a complete home-buying transaction dataset.
+If the user's wording asks for residential real-estate advice or a city outside Paris and Athens, state the data boundary plainly, give cautious general guidance clearly labelled as general rather than ARIA data, and offer the closest in-scope question ARIA can answer well.
 Do not invent row counts, model scores, neighbourhood rankings, or monetary values.
+Match the answer length to the prompt: simple factual prompts get a short direct answer of about 80 to 180 words with no forced sections; standard analytical prompts about 250 to 450 words; investment, manager, comparison, or decision-support prompts about 400 to 800 words. Do not pad short answers.
 Structure analytical answers with human-readable sections separated by blank lines. Simple prompts can receive a shorter direct answer with fewer sections.
 Avoid dense tables and avoid listing more than four numbers. The UI will show KPIs, charts, sources, and methodology separately.
 When you mention any number, explain it in the same sentence or the next sentence: what the metric means, whether high or low is better, what the lowest/highest possible value is when the metric has a fixed scale, and why this value is good or bad for the user's goal.
@@ -221,7 +237,7 @@ Do not assume the user understands technical terms like saturation, opportunity 
 Use the "Metric explanations" section in the analytics pack to interpret numbers. Do not output a score without interpretation.
 If a place name appears in Greek or any other non-English language, write the English transliteration first and the original name in parentheses, for example: Zappeio (ΖΑΠΠΕΙΟ).
 Never output internal quality scores such as "Quality 100/100".
-Do not use Markdown bold markers or asterisks around section labels.
+You may use Markdown bold sparingly to highlight the recommendation and section labels, but never bold whole sentences or paragraphs.
 Do not write the entire explanation as one dense paragraph.
 End with this exact final source line:
 ${sourcesLine}
@@ -237,19 +253,28 @@ function wordCount(text) {
   return String(text || "").trim().split(/\s+/).filter(Boolean).length;
 }
 
+function humanizeSnakeCase(text) {
+  return String(text || "").replace(/\b[a-z]+(?:_[a-z0-9]+)+\b/g, (match) => {
+    const label = match
+      .replace(/_/g, " ")
+      .replace(/\beur\b/gi, "")
+      .replace(/\bkm\b/gi, "km")
+      .replace(/\s+/g, " ")
+      .trim();
+    return label.charAt(0).toUpperCase() + label.slice(1);
+  });
+}
+
 function sanitizeAnswer(text) {
-  return String(text || "")
-    .replace(/\*\*([^*]+)\*\*/g, "$1")
-    .replace(/\*\*/g, "")
-    .replace(/\b[a-z]+(?:_[a-z0-9]+)+\b/g, (match) => {
-      const label = match
-        .replace(/_/g, " ")
-        .replace(/\beur\b/gi, "")
-        .replace(/\bkm\b/gi, "km")
-        .replace(/\s+/g, " ")
-        .trim();
-      return label.charAt(0).toUpperCase() + label.slice(1);
-    });
+  const raw = String(text || "");
+  // Preserve matched **bold** so the UI can render <strong> on the recommendation and labels.
+  // Only strip markers if they are unbalanced (a stray ** would otherwise show as literal text).
+  const balanced = ((raw.match(/\*\*/g) || []).length % 2 === 0) ? raw : raw.replace(/\*\*/g, "");
+  // Humanize leftover snake_case metric keys, but never rewrite the final Sources line.
+  const sourcesMatch = balanced.match(/\n\nSources:[\s\S]*$/i);
+  const sourcesTail = sourcesMatch ? sourcesMatch[0] : "";
+  const body = sourcesTail ? balanced.slice(0, balanced.length - sourcesTail.length) : balanced;
+  return humanizeSnakeCase(body) + sourcesTail;
 }
 
 function endsWithDanglingPhrase(text) {
@@ -311,8 +336,17 @@ function completeAnswerSections(text, fallbackText) {
     .join("\n\n");
 }
 
+function isSimplePrompt(analysis) {
+  const p = String(analysis?.resolvedPrompt || analysis?.prompt || "").trim();
+  if (!p) return false;
+  const words = p.split(/\s+/).filter(Boolean).length;
+  const analyticalCue = /(compare|which|where|invest|risk|underpric|forecast|opportunit|saturat|yield|revenue|recommend|should i|best|worst|portfolio|strateg|enter|entry|price|pricing|demand|occupanc|neighbourhood|neighborhood|area|arrondissement)/i.test(p);
+  return words <= 12 && !analyticalCue;
+}
+
 function addContextIfShort(answer, analysis) {
-  if (wordCount(answer) >= 120) return answer;
+  // Do not pad simple, factual prompts with analytical boilerplate sections.
+  if (wordCount(answer) >= 120 || isSimplePrompt(analysis)) return answer;
   const facts = (analysis.facts || [])
     .slice(0, 2)
     .map((fact) => `- ${fact}`)
@@ -337,6 +371,10 @@ function addContextIfShort(answer, analysis) {
 
   if (!/\bPossible limitations:/i.test(answer)) {
     sections.push("Possible limitations:\nUse the result as a starting shortlist, not as a final decision. Review actual purchase prices, local licensing limits, building condition, financing costs, and neighbourhood fit before committing.");
+  }
+
+  if (!/\bNext actions:/i.test(answer)) {
+    sections.push("Next actions:\n- Compare the shortlisted areas or listings using the generated chart or map.\n- Verify actual prices, local licensing limits, and demand before committing.\n- Ask a follow-up to drill into the area, price gap, risk, or forecast that matters most.");
   }
 
   return sections.filter(Boolean).join("\n\n");
@@ -416,10 +454,13 @@ export default async function handler(req, res) {
     const accessToken = await getAccessToken();
     if (!accessToken) throw new Error("Could not create a Google Cloud access token.");
 
-    const systemPrompt = buildSystemPrompt({ agentName, agentTagline, analysis });
+    const systemPrompt = buildSystemPrompt({ agentId, agentName, agentTagline, analysis });
     const contextualPrompt = buildModelPrompt({ prompt, analysis, messages });
     const vertex = await callVertexModel({ accessToken, projectId, location, model, prompt: contextualPrompt, systemPrompt });
-    const rawAnswer = vertex.finishReason === "MAX_TOKENS" ? analysis.fallbackAnswer : (vertex.answer || analysis.fallbackAnswer);
+    // Keep a usable model answer even if generation was cut off (finishReason MAX_TOKENS / max_tokens).
+    // completeAnswerSections() trims any truncated trailing section to its last complete sentence,
+    // so we only fall back to the deterministic answer when the model returned nothing at all.
+    const rawAnswer = vertex.answer || analysis.fallbackAnswer;
     const fallbackAnswer = sanitizeAnswer(localizePlaceNames(addContextIfShort(analysis.fallbackAnswer, analysis)));
     const primaryAnswer = sanitizeAnswer(localizePlaceNames(addContextIfShort(rawAnswer, analysis)));
     const completedAnswer = completeAnswerSections(primaryAnswer, fallbackAnswer) || fallbackAnswer;

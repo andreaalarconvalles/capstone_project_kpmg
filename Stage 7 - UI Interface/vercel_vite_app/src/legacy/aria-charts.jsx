@@ -781,7 +781,7 @@ function ChartBlock({ chart }) {
     const yKey = chart.yKey || "value";
     const yLabel = chart.yLabel || title || "Value";
     const xLabel = chart.xLabel || "Area";
-    const data = chartDataWithLabels(chart.data, xKey, kind === "line" ? 8 : 6);
+    const data = chartDataWithLabels(chart.data, xKey, kind === "line" ? 12 : 6);
     const xPercentTick = axisPercentFormatter({ chart, label: xLabel, dataKey: xKey });
     const yPercentTick = axisPercentFormatter({ chart, label: yLabel, dataKey: yKey });
     if (kind === "heatmap") {

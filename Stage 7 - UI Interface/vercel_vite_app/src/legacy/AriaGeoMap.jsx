@@ -306,10 +306,10 @@ function pointAreaStyle(point, range, theme, activeId) {
   const color = tone == null ? mixColors(theme.surface2, theme.muted, 0.18) : mixColors(theme.surface2, theme.accent, tone);
   return {
     color: highlighted || active ? theme.ink : color,
-    weight: highlighted || active ? 1.8 : 1,
-    opacity: highlighted || active ? 0.6 : 0.34,
+    weight: highlighted || active ? 1.6 : 1,
+    opacity: highlighted || active ? 0.52 : 0.28,
     fillColor: color,
-    fillOpacity: highlighted || active ? 0.28 : 0.18,
+    fillOpacity: highlighted || active ? 0.20 : 0.12,
     dashArray: highlighted || active ? "" : "4 5",
   };
 }
@@ -322,8 +322,8 @@ function pointRadius(point) {
 
 function pointAreaRadius(point) {
   const listings = Number(String(point.metadata?.listings || "").replace(/,/g, ""));
-  if (!Number.isFinite(listings) || listings <= 0) return point.highlighted ? 900 : 720;
-  return Math.max(point.highlighted ? 900 : 720, Math.min(1700, 620 + Math.log(listings + 1) * 145));
+  if (!Number.isFinite(listings) || listings <= 0) return point.highlighted ? 620 : 500;
+  return Math.max(point.highlighted ? 620 : 500, Math.min(1150, 420 + Math.log(listings + 1) * 95));
 }
 
 function pointEventHandlers({ point, setActiveRegionId, onRegionHover, onRegionClick }) {
@@ -637,6 +637,9 @@ function AriaGeoMap({
           </MapContainer>
           {showLegend && <Legend range={pointRange} metricLabel={metricLabel} theme={theme} />}
           <AttributionNote theme={theme} />
+        </div>
+        <div style={{ marginTop: 8, color: theme.muted, fontSize: 11.5, lineHeight: 1.35 }}>
+          Exact neighbourhood boundary polygons are not bundled for this city yet; shaded areas are tighter centroid buffers around ARIA neighbourhood coordinates.
         </div>
         <MapStyles theme={theme} />
       </div>

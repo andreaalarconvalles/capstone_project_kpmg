@@ -16,6 +16,8 @@ const FILES = {
   shapAthens: "data/outputs/shap_athens_v1.csv",
   shapParis: "data/outputs/shap_paris_v1.csv",
   parisPredictions: "data/outputs/paris_predictions_v1.csv",
+  prophetParisForecast: "data/outputs/prophet_paris_forecast_v1.csv",
+  prophetAthensForecast: "data/outputs/prophet_athens_forecast_v1.csv",
 };
 
 const analysisCache = new Map();
@@ -116,6 +118,10 @@ function fmtScore(value, digits = 2) {
   return num(value).toFixed(digits);
 }
 
+function fmtDays(value, digits = 1) {
+  return `${num(value).toFixed(digits)} days/mo`;
+}
+
 const METRIC_GUIDES = {
   opportunity: {
     label: "Opportunity score",
@@ -151,6 +157,13 @@ const METRIC_GUIDES = {
     range: "Lowest is 0%, highest is 100%.",
     good: "Higher usually means stronger demand; very low occupancy suggests weak demand, while extremely high occupancy can also mean constrained supply.",
     optimal: "For screening, roughly 60% to 80% is usually a healthy demand signal before checking price and seasonality.",
+  },
+  forecastOccupiedNights: {
+    label: "Forecast occupied nights",
+    meaning: "The Prophet scenario estimate of occupied nights per month for an area.",
+    range: "Higher values indicate stronger expected demand in the 12-month forecast window.",
+    good: "Higher is better for demand screening, but this is a scenario-based demand proxy rather than a guarantee of future bookings.",
+    optimal: "Use it with revenue, saturation, risk, and local rules before choosing an area.",
   },
   listings: {
     label: "Listings reviewed",
@@ -227,6 +240,8 @@ function kpiHelpFor(label) {
   if (l.includes("saturation")) return "0-1 crowding score. Lower is calmer; above 0.60 means a more crowded market.";
   if (l.includes("median nightly") || l.includes("price")) return "Euro nightly rental price, not purchase price. Lower helps affordability; higher needs strong demand.";
   if (l.includes("revenue")) return "Rental revenue signal. Higher is better only if demand, risk, and saturation are acceptable.";
+  if (l.includes("forecast") || l.includes("occupied nights")) return "Prophet scenario estimate of occupied nights per month. Higher means stronger expected demand, but it is not a guaranteed booking forecast.";
+  if (l.includes("peak month")) return "Month with the highest forecast demand in the 12-month scenario window.";
   if (l.includes("occupancy") || l.includes("demand")) return "Booked-night share. Higher usually means stronger demand; around 60-80% is a healthy screen.";
   if (l.includes("listing")) return "Number of listings behind the calculation. More data improves confidence but can also mean more competition.";
   if (l.includes("gap") || l.includes("underpricing")) return "Euro-per-night pricing upside. Positive means the model thinks the current price may be low.";
@@ -274,6 +289,9 @@ function metricNoteForKey(key, fallbackLabel = "") {
     medianPrice: "medianNightlyPrice",
     revenue: "averageRevenue",
     occupancy: "occupancy",
+    forecast: "forecastOccupiedNights",
+    forecastAvg: "forecastOccupiedNights",
+    forecastPeak: "forecastOccupiedNights",
     share: "highRiskShare",
     count: "listings",
     listings: "listings",
@@ -501,12 +519,12 @@ function classifyIntent(prompt, agentId) {
   const cityMentions = cityMentionsFromPrompt(prompt);
   if (/(portfolio|50-unit|fifty-unit)/.test(p) || cityMentions.has("Paris") && cityMentions.has("Athens")) return "portfolio-comparison";
   if (/(underprice|underpriced|fair price|predicted price|pricing gap|price gap|shap|model driver)/.test(p)) return "pricing";
-  if (/(family|safe|safest|live|living|cheap|cheapest|affordable|budget|expensive|costliest|premium|luxury|rent|rental)/.test(p)) return "market-entry";
   if (/(risk|high-risk|declin|vulnerab|priority|churn|warning)/.test(p)) return "risk";
+  if (/(forecast|occupancy|tourist|demand|season|90 day|future|summer|peak)/.test(p)) return "demand";
+  if (/(family|safe|safest|live|living|cheap|cheapest|affordable|budget|expensive|costliest|premium|luxury|rent|rental)/.test(p)) return "market-entry";
   if (/(opportunity|saturat|distance zone|segment|heat.?map|short-term rental|market|investment|nightly prices?|median nightly|median price|highest price|highest priced|most expensive|revenue.*saturation|saturation.*revenue)/.test(p)) return "market-entry";
   if (/(map|region|regions|area comparison|compare areas|compare regions|neighbourhoods|neighborhoods|arrondissements|districts|where in|which areas|which regions)/.test(p)) return "market-entry";
   if (/(underprice|price|pricing|revenue|nightly|gap|earning|income|adr)/.test(p)) return "pricing";
-  if (/(forecast|occupancy|tourist|demand|season|90 day|future|summer|peak)/.test(p)) return "demand";
   if (/(license|licence|legal|law|regulation|compliance|permit)/.test(p)) return "compliance";
   if (/(saturat|avoid|invest|entry|arrondissement|neighbourhood|neighborhood|yield|region|where|area)/.test(p)) return "market-entry";
   if (agentId === "host-revenue") return "pricing";
@@ -757,6 +775,130 @@ async function loadNeighbourhoodStats() {
       });
     });
     return rows;
+  });
+}
+
+function forecastFileForCity(city) {
+  return city === "Paris" ? FILES.prophetParisForecast : FILES.prophetAthensForecast;
+}
+
+function monthLabel(value) {
+  const text = String(value || "").slice(0, 7);
+  const [year, rawMonth] = text.split("-");
+  const monthIndex = Number(rawMonth) - 1;
+  const names = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  if (!year || monthIndex < 0 || monthIndex > 11) return text || "Month";
+  return `${names[monthIndex]} ${year}`;
+}
+
+async function loadProphetForecast(city) {
+  const normalCity = normaliseCityName(city) || "Athens";
+  const sourceFile = forecastFileForCity(normalCity);
+  return cached(`prophet-forecast-${normalCity}`, async () => {
+    const text = await fetchCsv(sourceFile);
+    const rows = [];
+    eachCsvRow(text, (row) => {
+      const yhat = num(row.yhat, NaN);
+      if (!Number.isFinite(yhat)) return;
+      const forecastMonth = row.forecast_month || String(row.ds || "").slice(0, 7);
+      rows.push({
+        city: normaliseCityName(row.city) || normalCity,
+        area: row.neighbourhood || "Unknown",
+        date: row.ds,
+        month: forecastMonth,
+        monthLabel: monthLabel(forecastMonth),
+        yhat,
+        lower: num(row.yhat_lower, NaN),
+        upper: num(row.yhat_upper, NaN),
+        baseline: num(row.monthly_baseline, NaN),
+        annualBaseline: num(row.annual_occupancy_baseline, NaN),
+        reviewGrowth: num(row.review_growth_24_25_capped, NaN),
+        seasonality: num(row.seasonality_multiplier, NaN),
+        momentum: num(row.momentum_multiplier, NaN),
+        listings: num(row.n_listings),
+        modelLevel: row.model_level,
+        scenarioProxy: truthy(row.is_scenario_proxy),
+        trainingStart: row.training_start,
+        trainingEnd: row.training_end,
+        methodologyNote: row.methodology_note || "",
+      });
+    });
+    return rows.filter((row) => row.city === normalCity);
+  });
+}
+
+function aggregateForecastAreas(forecastRows, statsRows = []) {
+  const statsByArea = new Map(statsRows.map((row) => [normaliseAreaKey(row.area), row]));
+  const groups = new Map();
+  forecastRows.forEach((row) => {
+    const key = normaliseAreaKey(row.area);
+    const group = groups.get(key) || {
+      area: row.area,
+      rows: [],
+      sum: 0,
+      lowerSum: 0,
+      upperSum: 0,
+      count: 0,
+      listings: 0,
+      methodologyNote: row.methodologyNote,
+      scenarioProxy: row.scenarioProxy,
+    };
+    group.rows.push(row);
+    group.sum += row.yhat;
+    if (Number.isFinite(row.lower)) group.lowerSum += row.lower;
+    if (Number.isFinite(row.upper)) group.upperSum += row.upper;
+    group.count += 1;
+    group.listings = Math.max(group.listings, row.listings || 0);
+    groups.set(key, group);
+  });
+
+  return [...groups.entries()].map(([key, group]) => {
+    const stats = statsByArea.get(key) || {};
+    const sortedRows = [...group.rows].sort((a, b) => String(a.month).localeCompare(String(b.month)));
+    const peak = sortedRows.reduce((best, row) => row.yhat > (best?.yhat ?? -Infinity) ? row : best, null);
+    const trough = sortedRows.reduce((best, row) => row.yhat < (best?.yhat ?? Infinity) ? row : best, null);
+    const forecastAvg = weightedAverage(group.sum, group.count);
+    const forecastLowAvg = weightedAverage(group.lowerSum, group.count);
+    const forecastHighAvg = weightedAverage(group.upperSum, group.count);
+    return {
+      area: group.area,
+      forecastAvg,
+      forecastAvgDisplay: fmtDays(forecastAvg),
+      forecastLowAvg,
+      forecastLowAvgDisplay: fmtDays(forecastLowAvg),
+      forecastHighAvg,
+      forecastHighAvgDisplay: fmtDays(forecastHighAvg),
+      forecastPeak: peak?.yhat || 0,
+      forecastPeakDisplay: fmtDays(peak?.yhat || 0),
+      peakMonth: peak?.monthLabel || "",
+      forecastTrough: trough?.yhat || 0,
+      forecastTroughDisplay: fmtDays(trough?.yhat || 0),
+      troughMonth: trough?.monthLabel || "",
+      listings: group.listings || stats.listings || 0,
+      medianPrice: stats.medianPrice || 0,
+      revenue: stats.revenue || 0,
+      occupancy: stats.occupancy || 0,
+      opportunity: stats.opportunity || 0,
+      saturation: stats.saturation || 0,
+      confidence: stats.confidence || "forecast",
+      methodologyNote: group.methodologyNote,
+      scenarioProxy: group.scenarioProxy,
+      rows: sortedRows,
+    };
+  }).sort((a, b) => b.forecastAvg - a.forecastAvg);
+}
+
+function forecastLineChart(city, areaForecast) {
+  return makeViz(`${city} Prophet scenario: ${shortArea(areaForecast.area)} monthly demand`, areaForecast.rows.map((row) => ({
+    label: row.monthLabel,
+    value: row.yhat,
+    display: fmtDays(row.yhat),
+    forecastDisplay: fmtDays(row.yhat),
+    lowerDisplay: Number.isFinite(row.lower) ? fmtDays(row.lower) : "",
+    upperDisplay: Number.isFinite(row.upper) ? fmtDays(row.upper) : "",
+  })), "Forecast occupied nights", "forecast", {
+    kind: "line",
+    metricNote: "Line chart: best for forecast prompts. Each point is the Prophet scenario estimate of occupied nights per month for the recommended area.",
   });
 }
 
@@ -1520,12 +1662,83 @@ async function demandAnalysis(prompt) {
   const rows = await loadNeighbourhoodStats();
   const city = cityFromPrompt(prompt) || "Athens";
   const cityRows = rows.filter((r) => r.city === city);
-  const ranked = topN(cityRows, "occupancy", 6, true);
-  const best = ranked[0] || cityRows[0] || {};
   const forecastAsked = /(forecast|90 day|future|summer|season|peak)/i.test(prompt);
   const revenueAsked = /(revenue|income|earning|yield)/i.test(prompt);
   const vizRequest = visualizationRequest(prompt);
   const mapMode = wantsRegionMap(prompt);
+  const forecastRows = forecastAsked ? await loadProphetForecast(city) : [];
+  const forecastRanked = forecastRows.length ? aggregateForecastAreas(forecastRows, cityRows) : [];
+
+  if (forecastAsked && forecastRanked.length) {
+    const rankedForecasts = forecastRanked.slice(0, 6);
+    const bestForecast = rankedForecasts[0];
+    const months = [...new Set(forecastRows.map((row) => row.month).filter(Boolean))].sort();
+    const forecastWindow = months.length ? `${monthLabel(months[0])}-${monthLabel(months[months.length - 1])}` : "12 months";
+    const sourceFile = forecastFileForCity(city);
+    const forecastRankingChart = makeViz(`${city} 12-month Prophet demand scenario by area`, rankedForecasts.map((r) => ({
+      label: r.area,
+      value: r.forecastAvg,
+      display: fmtDays(r.forecastAvg),
+      forecastAvgDisplay: fmtDays(r.forecastAvg),
+    })), "Forecast occupied nights", "forecastAvg", {
+      kind: "horizontal-bar",
+      metricNote: "Ranking bar: best for choosing areas. Higher bars indicate stronger average monthly occupied-night demand in the committed Prophet scenario output.",
+    });
+    const lineChart = forecastLineChart(city, bestForecast);
+    const mapChart = mapMode ? makeRegionMap(`${city} map: strongest Prophet demand forecast`, city, forecastRanked, "forecastAvg", "Forecast occupied nights", fmtDays, {
+      tone: "opportunity",
+      lowerIsBetter: false,
+      legendLow: "lower demand",
+      legendHigh: "higher demand",
+      metricNote: "Map: use this to compare where the forecast demand scenario is strongest. Athens currently uses centroid overlays because exact neighbourhood boundary polygons are not committed.",
+    }) : [];
+    const relationshipChart = vizRequest.relationship || revenueAsked
+      ? makeBubbleScatter(`${city} forecast demand versus revenue`, forecastRanked.slice(0, 10), {
+        xKey: "revenue",
+        yKey: "forecastAvg",
+        sizeKey: "listings",
+        xLabel: "Average revenue",
+        yLabel: "Forecast occupied nights",
+        metricNote: "Bubble chart: best for demand-revenue trade-offs. Higher revenue and higher forecast occupied nights together are more attractive; bubble size shows listing evidence.",
+      })
+      : [];
+    const chart = [
+      ...mapChart,
+      ...lineChart,
+      ...(relationshipChart.length ? relationshipChart : forecastRankingChart),
+    ];
+    return {
+      intent: "demand",
+      title: `${city} Prophet demand forecast`,
+      recommendation: `${shortArea(bestForecast.area)} has the strongest committed Prophet demand scenario for ${city}, so it should lead the forecast-based shortlist.`,
+      facts: [
+        `${shortArea(bestForecast.area)} averages ${fmtDays(bestForecast.forecastAvg)} across the ${forecastWindow} window, where higher means stronger expected monthly demand.`,
+        `Its peak month is ${bestForecast.peakMonth} at ${fmtDays(bestForecast.forecastPeak)}, which helps time pricing and acquisition review around seasonal demand.`,
+        "The forecast is a scenario-based Prophet demand proxy built from annual occupancy, assumed short-term-rental seasonality, and review-growth momentum.",
+      ],
+      kpis: [
+        { label: "Top forecast area", value: shortArea(bestForecast.area) },
+        { label: "Avg forecast demand", value: fmtDays(bestForecast.forecastAvg) },
+        { label: "Peak month", value: bestForecast.peakMonth },
+        { label: "Forecast window", value: forecastWindow },
+      ],
+      visualizations: chart,
+      details: sourceDetails(
+        [sourceFile, FILES.neighbourhoodStats],
+        "Load the committed Prophet forecast CSV for the detected city, aggregate forecast occupied nights by neighbourhood, then combine it with neighbourhood summary fields for map, ranking, and trade-off visuals. The Prophet output is used only as a scenario demand screen, not as a guaranteed booking forecast.",
+        [
+          "The Prophet files are scenario-based proxies, not forecasts trained on observed booking/calendar time series.",
+          "Forecast intervals in the notebook were below the target coverage, so use this as a demand screen before property-level diligence.",
+          "The result does not include acquisition cost, financing, tax, or final licensing checks.",
+        ],
+        rankedForecasts.map((r) => `${shortArea(r.area)}: average forecast ${fmtDays(r.forecastAvg)}, peak ${fmtDays(r.forecastPeak)} in ${r.peakMonth}, ${fmtInt(r.listings)} listings`),
+        metricGuides(["forecastOccupiedNights", "averageRevenue", "occupancy", "listings"])
+      ),
+    };
+  }
+
+  const ranked = topN(cityRows, "occupancy", 6, true);
+  const best = ranked[0] || cityRows[0] || {};
   const occupancyRankingChart = makeViz(`${city} occupancy by neighbourhood`, ranked.map((r) => ({
     label: r.area,
     value: r.occupancy,
@@ -1572,19 +1785,19 @@ async function demandAnalysis(prompt) {
     facts: [
       `${shortArea(best.area)} has average occupancy of ${fmtPct(best.occupancy)} in the neighbourhood summary output.`,
       `Average annual revenue in ${shortArea(best.area)} is around ${fmtEuro(best.revenue)}.`,
-      "The current deployed data supports demand ranking; full Prophet time-series forecasting remains a next-stage model layer.",
+      "For explicit forecast prompts, ARIA now uses the committed Prophet scenario forecast files; this demand view is the current occupancy proxy.",
     ],
     kpis: [
       { label: "Top demand area", value: shortArea(best.area) },
       { label: "Avg occupancy", value: fmtPct(best.occupancy) },
       { label: "Avg revenue", value: fmtEuro(best.revenue) },
-      { label: forecastAsked ? "Forecast status" : "City", value: forecastAsked ? "Proxy only" : city },
+      { label: "City", value: city },
     ],
     visualizations: chart,
     details: sourceDetails(
       [FILES.neighbourhoodStats],
-      "Use prepared neighbourhood-level occupancy and revenue fields as a demand proxy. If the user asks for a forecast, the chart remains grounded in current prepared data because no committed Prophet forecast output is available in the deployed repository yet.",
-      ["This is not yet a live Prophet forecast; it is a grounded demand proxy from the prepared project dataset."],
+      "Use prepared neighbourhood-level occupancy and revenue fields as a current demand proxy. Explicit forecast prompts use the committed Prophet forecast CSVs instead.",
+      ["This current-demand view is not the Prophet scenario forecast; ask a forecast-oriented prompt to use the committed Prophet output."],
       ranked.map((r) => `${shortArea(r.area)}: occupancy ${fmtPct(r.occupancy)}, average revenue ${fmtEuro(r.revenue)}`),
       metricGuides(["occupancy", "averageRevenue", "medianNightlyPrice", "listings"])
     ),
@@ -1758,7 +1971,8 @@ function deterministicAnswer(analysis) {
     `Reasoning done by ARIA:\n- This recommendation is grounded in the project dataset, not a generic travel ranking.\n${factLines}\n\n` +
     `Key evidence:\n${metricLines}\n\n` +
     `Visualizations to review:\nUse the generated chart or map to compare the strongest areas, risk signals, or pricing gaps visually before making a decision.\n\n` +
-    `Possible limitations:\nUse this as a starting shortlist, not as a final purchase decision. A stronger signal means the area deserves earlier due diligence, but each apartment still needs property-level checks. For compliance prompts, ARIA provides analyst triage rather than legal advice until the RAG layer is connected.`
+    `Possible limitations:\nUse this as a starting shortlist, not as a final purchase decision. A stronger signal means the area deserves earlier due diligence, but each apartment still needs property-level checks. For compliance prompts, ARIA provides analyst triage rather than legal advice until the RAG layer is connected.\n\n` +
+    `Next actions:\n- Shortlist the strongest areas or listings above and open the chart or map to compare them side by side.\n- Verify actual purchase or listing prices, local licensing limits, and demand before committing.\n- Ask ARIA a follow-up to drill into the specific area, price gap, risk, or forecast that matters most to your decision.`
   );
 }
 

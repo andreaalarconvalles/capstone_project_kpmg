@@ -9,8 +9,8 @@ This file summarizes the current model artifacts used by the ARIA capstone proje
 | `models/xgb_paris_v1.json` | XGBoost regressor | Paris | Complete | Predict fair nightly price and identify underpricing gap |
 | `models/xgb_athens_v1.json` | XGBoost regressor | Athens | Complete | Predict fair nightly price and identify underpricing gap |
 | `models/lgb_athens_risk_v1.txt` | LightGBM classifier | Athens | Complete | Estimate host/listing risk probability |
-| `models/prophet_paris_v1.pkl` | Prophet forecast model | Paris | Planned / artifact policy needed | Demand and occupancy forecasting |
-| `models/prophet_athens_v1.pkl` | Prophet forecast model | Athens | Planned / artifact policy needed | Demand and occupancy forecasting |
+| `models/prophet_paris_v1.pkl` | Prophet scenario forecast model | Paris | Complete / committed | Demand and occupancy forecasting |
+| `models/prophet_athens_v1.pkl` | Prophet scenario forecast model | Athens | Complete / committed | Demand and occupancy forecasting |
 
 ## Current Validated Metrics
 
@@ -22,6 +22,7 @@ This file summarizes the current model artifacts used by the ARIA capstone proje
 | Athens XGBoost pricing | Mean absolute error | about EUR 29.1 | Underpricing interpretation should account for model error. |
 | Athens LightGBM risk | Area Under Receiver Operating Characteristic Curve | 0.8288 | Leakage-corrected model after removing target-derived features. |
 | Athens LightGBM risk | Average precision | 0.8864 | Useful for ranking priority review candidates. |
+| Prophet demand forecasts | Forecast horizon | 12 months | Scenario-based neighbourhood demand proxy from committed forecast CSVs. |
 
 ## Training Data
 
@@ -48,7 +49,9 @@ The Athens risk model intentionally excludes leakage-prone fields used directly 
 
 - Paris combines 2021 Maven data and 2025 Inside Airbnb data, so cross-vintage pricing comparisons should be interpreted carefully.
 - The current Vercel live answer flow uses committed CSV outputs and summary data, not live retraining.
-- The demand layer currently uses prepared neighbourhood proxies in the deployed backend unless a committed Prophet output is available and validated.
+- The live Vercel demand layer uses committed Prophet forecast CSVs for explicit forecast prompts.
+- Prophet outputs are scenario-based demand proxies built from annual occupancy estimates, assumed short-term-rental seasonality, and capped review-growth momentum. They are not guaranteed booking-calendar forecasts.
+- Compliance/RAG notebook outputs are not yet production-connected until JS-readable CSV/JSON handoff artifacts are committed.
 - Model outputs are decision-support signals, not final investment, legal, or lending advice.
 
 ## Artifact Governance
