@@ -96,6 +96,16 @@ export function scoreAnswer(answer, opts = {}) {
   if (opts.outOfScope && !/(outside|boundary|general guidance|not (?:in )?aria|does not (?:have|cover))/i.test(lower))
     deduct(10, "out-of-scope answer does not state the data boundary");
 
+  // 9b. Requested geography discipline.
+  if (opts.requestedCity && opts.forbiddenCity) {
+    const requested = String(opts.requestedCity).toLowerCase();
+    const forbidden = String(opts.forbiddenCity).toLowerCase();
+    const recommendsForbidden = new RegExp(`\\b(recommend|enter|choose|prioriti[sz]e|start with|focus on|target)\\b[^\\n.]{0,120}\\b${forbidden}\\b`, "i").test(a)
+      || new RegExp(`\\b${forbidden}\\b[^\\n.]{0,120}\\b(recommend|better|stronger|first|lead|prioriti[sz]e)\\b`, "i").test(a);
+    const omitsRequested = !lower.includes(requested);
+    if (recommendsForbidden || omitsRequested) deduct(25, `answer does not stay within requested geography: ${opts.requestedCity}`);
+  }
+
   // 10. No invented metric, score, or capability claim (automatic fail).
   if (/(live regulation retrieval is active|quality \d{1,3}\/100|confidence score|evidence-strength)/i.test(a))
     deduct(40, "forbidden/invented claim");
@@ -108,6 +118,7 @@ export function scoreAnswer(answer, opts = {}) {
 const REQUIRED_POLICY_MARKERS = [
   "Lead with the decision",
   "Persona adaptation",
+  "Requested geography discipline",
   "Adaptive length",
   "Explaining numbers",
   "Concept explanations",
@@ -173,6 +184,29 @@ Sources: XGBoost predictions, ARIA risk scores`,
 
 Sources: neighbourhood stats`,
   },
+  {
+    name: "Paris-only forecast recommendation",
+    tier: "analytical",
+    geographic: true,
+    requestedCity: "Paris",
+    forbiddenCity: "Athens",
+    answer: `Direct recommendation: Enter Paris through Bourse first for the next 12 months because it leads ARIA's committed Prophet demand scenario inside Paris.
+
+Reasoning done by ARIA: This answer stays inside the requested Paris market. Bourse combines the strongest forecast occupied nights (the Prophet scenario estimate of occupied nights per month; higher means stronger expected demand) with enough neighbourhood evidence for a small portfolio screen.
+
+Key evidence: Bourse averages 10.4 days/mo in the forecast window, which is the highest Paris demand signal in this scenario. The peak month is June 2026, which helps time pricing and due diligence around seasonal demand.
+
+Visualizations to review: Use the Paris map to inspect where the strongest forecast areas sit, then use the line chart to see Bourse's monthly demand pattern and the ranking chart to compare the top arrondissements.
+
+Possible limitations: This is a scenario-based demand proxy, not guaranteed bookings. Validate licensing, acquisition price, and building-level economics before acting.
+
+Next actions:
+- Shortlist Bourse and the next two Paris arrondissements on the ranking chart.
+- Compare acquisition cost against forecast demand and revenue.
+- Ask ARIA for a Paris pricing-gap view before selecting individual assets.
+
+Sources: Prophet forecast outputs, neighbourhood stats`,
+  },
 ];
 
 const BAD = [
@@ -189,6 +223,23 @@ const BAD = [
     answer: `Direct recommendation: Buy now. Live regulation retrieval is active and confirms full compliance. Quality 100/100.
 
 Sources: ARIA`,
+  },
+  {
+    name: "Paris prompt pivoted to Athens",
+    tier: "analytical",
+    geographic: true,
+    requestedCity: "Paris",
+    forbiddenCity: "Athens",
+    answer: `Direct recommendation: Choose Athens first because it has a stronger opportunity score than Paris.
+
+Reasoning done by ARIA: Athens is less saturated and offers better growth than Paris.
+
+Visualizations to review: Use the Athens map.
+
+Next actions:
+- Start with Zappeio.
+
+Sources: neighbourhood stats`,
   },
 ];
 

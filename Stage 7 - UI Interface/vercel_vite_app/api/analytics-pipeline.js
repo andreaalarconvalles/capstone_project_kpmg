@@ -517,10 +517,17 @@ function weightedAverage(sum, weight) {
 function classifyIntent(prompt, agentId) {
   const p = `${prompt} ${agentId}`.toLowerCase();
   const cityMentions = cityMentionsFromPrompt(prompt);
-  if (/(portfolio|50-unit|fifty-unit)/.test(p) || cityMentions.has("Paris") && cityMentions.has("Athens")) return "portfolio-comparison";
+  const hasSingleCity = cityMentions.size === 1;
+  const asksCrossCityComparison = (
+    (cityMentions.has("Paris") && cityMentions.has("Athens"))
+    || /\b(which city|between cities|paris or athens|athens or paris|city strategy|city comparison|compare cities|compare markets)\b/.test(p)
+  );
+  const asksForecast = /(prophet|forecast|occupancy|tourist|demand|season|90 day|next\s+\d+\s+months|future|summer|peak)/.test(p);
+  if (asksCrossCityComparison) return "portfolio-comparison";
   if (/(underprice|underpriced|fair price|predicted price|pricing gap|price gap|shap|model driver)/.test(p)) return "pricing";
+  if (asksForecast) return "demand";
   if (/(risk|high-risk|declin|vulnerab|priority|churn|warning)/.test(p)) return "risk";
-  if (/(forecast|occupancy|tourist|demand|season|90 day|future|summer|peak)/.test(p)) return "demand";
+  if (/(portfolio|50-unit|fifty-unit)/.test(p) && !hasSingleCity) return "portfolio-comparison";
   if (/(family|safe|safest|live|living|cheap|cheapest|affordable|budget|expensive|costliest|premium|luxury|rent|rental)/.test(p)) return "market-entry";
   if (/(opportunity|saturat|distance zone|segment|heat.?map|short-term rental|market|investment|nightly prices?|median nightly|median price|highest price|highest priced|most expensive|revenue.*saturation|saturation.*revenue)/.test(p)) return "market-entry";
   if (/(map|region|regions|area comparison|compare areas|compare regions|neighbourhoods|neighborhoods|arrondissements|districts|where in|which areas|which regions)/.test(p)) return "market-entry";
