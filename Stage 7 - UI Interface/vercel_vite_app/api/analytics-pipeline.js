@@ -190,8 +190,8 @@ const METRIC_GUIDES = {
   riskProbability: {
     label: "Risk probability",
     meaning: "The model probability that a listing belongs to the high-risk group.",
-    range: "Lowest is 0.00, highest is 1.00; the current high-risk cutoff is 0.70.",
-    good: "Lower is better for safety; above 0.70 should be treated as a review flag.",
+    range: "Lowest is 0%, highest is 100%; the current high-risk cutoff is 70%.",
+    good: "Lower is better for safety; above 70% should be treated as a review flag.",
     optimal: "Use it to prioritize analyst review, not as a final judgement about a host or neighbourhood.",
   },
   priorityOverlap: {
@@ -204,7 +204,7 @@ const METRIC_GUIDES = {
   threshold: {
     label: "Threshold",
     meaning: "The cutoff used to convert a model probability into a high-risk flag.",
-    range: "In this project, 0.70 means a listing is flagged high risk.",
+    range: "In this project, 70% means a listing is flagged high risk.",
     good: "Higher probabilities above the threshold need more attention.",
     optimal: "The threshold is a triage setting: strict enough to focus review, but not a final decision by itself.",
   },
@@ -230,9 +230,9 @@ function kpiHelpFor(label) {
   if (l.includes("occupancy") || l.includes("demand")) return "Booked-night share. Higher usually means stronger demand; around 60-80% is a healthy screen.";
   if (l.includes("listing")) return "Number of listings behind the calculation. More data improves confidence but can also mean more competition.";
   if (l.includes("gap") || l.includes("underpricing")) return "Euro-per-night pricing upside. Positive means the model thinks the current price may be low.";
-  if (l.includes("risk")) return "Risk signal. Lower is safer; above 0.70 probability is treated as high-risk.";
+  if (l.includes("risk")) return "Risk signal. Lower is safer; above 70% probability is treated as high-risk.";
   if (l.includes("priority overlap")) return "Listings that are both high-risk and underpriced. Higher means more urgent review.";
-  if (l.includes("threshold")) return "Model cutoff. In this project, 0.70 or above is flagged for high-risk review.";
+  if (l.includes("threshold")) return "Model cutoff. In this project, 70% or above is flagged for high-risk review.";
   if (l.includes("status") || l.includes("readiness")) return "Readiness indicator. Higher means the workflow is more usable in the current demo.";
   return "";
 }
@@ -844,12 +844,12 @@ async function loadAthensRisk() {
     const text = await fetchCsv(FILES.athensRisk);
     const byArea = new Map();
     const bins = [
-      { label: "0.00-0.20", min: 0, max: 0.2, count: 0 },
-      { label: "0.20-0.40", min: 0.2, max: 0.4, count: 0 },
-      { label: "0.40-0.60", min: 0.4, max: 0.6, count: 0 },
-      { label: "0.60-0.70", min: 0.6, max: 0.7, count: 0 },
-      { label: "0.70-0.85", min: 0.7, max: 0.85, count: 0 },
-      { label: "0.85-1.00", min: 0.85, max: 1.01, count: 0 },
+      { label: "0%-20%", min: 0, max: 0.2, count: 0 },
+      { label: "20%-40%", min: 0.2, max: 0.4, count: 0 },
+      { label: "40%-60%", min: 0.4, max: 0.6, count: 0 },
+      { label: "60%-70%", min: 0.6, max: 0.7, count: 0 },
+      { label: "70%-85%", min: 0.7, max: 0.85, count: 0 },
+      { label: "85%-100%", min: 0.85, max: 1.01, count: 0 },
     ];
     const highIds = new Set();
     let total = 0;
@@ -1501,7 +1501,7 @@ async function riskAnalysis(prompt) {
       { label: "High-risk listings", value: fmtInt(risk.high) },
       { label: "Priority overlap", value: fmtInt(priorityOverlap) },
       { label: priorityMode ? "Priority area" : "Highest-risk area", value: shortArea(priorityMode && priorityBest.area ? priorityBest.area : best.area) },
-      { label: "Threshold", value: "0.70" },
+      { label: "Threshold", value: "70%" },
     ],
     visualizations: chart,
     details: sourceDetails(

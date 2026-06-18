@@ -223,13 +223,13 @@ const SCRIPTS = {
       T("Orchestrator", "composing brief"),
     ],
     blocks: [
-      { type: "text", text: "Across the **14,242 Athens listings**, three central neighbourhoods cross the early-warning threshold (displacement risk score **> 0.70**) on a 12-month horizon. The signal is driven by accelerating STR density in `dist_zone=centre` combined with rising median `price_eur` and falling long-let supply." },
+      { type: "text", text: "Across the **14,242 Athens listings**, three central neighbourhoods cross the early-warning threshold (displacement risk score **> 70%**) on a 12-month horizon. The signal is driven by accelerating STR density in `dist_zone=centre` combined with rising median `price_eur` and falling long-let supply." },
       { type: "map", map: { city: "Athens", title: "Displacement risk by neighbourhood" } },
       { type: "chart", chart: { kind: "riskbar", title: "12-month displacement risk score" } },
-      { type: "text", text: "**Koukaki (0.84)** is the sharpest mover — STR density up 31% year-on-year with a 19% `price_eur` increase. **Exarchia (0.76)** and **Plaka (0.71)** follow. By contrast, outer zones like Kypseli stay below 0.45. These three account for **62% of net new entire-home listings** in the period — the classic precursor to resident displacement. I'd recommend monitoring at monthly cadence and can draft a policy brief for the housing department." },
+      { type: "text", text: "**Koukaki (84.0%)** is the sharpest mover — STR density up 31% year-on-year with a 19% `price_eur` increase. **Exarchia (76.0%)** and **Plaka (71.0%)** follow. By contrast, outer zones like Kypseli stay below 45.0%. These three account for **62% of net new entire-home listings** in the period — the classic precursor to resident displacement. I'd recommend monitoring at monthly cadence and can draft a policy brief for the housing department." },
     ],
     brief: { title: "Displacement Early-Warning Brief — Athens", kpis: [
-      { label: "Neighbourhoods > 0.70", value: "3" }, { label: "Top risk: Koukaki", value: "0.84" },
+      { label: "Neighbourhoods > 70%", value: "3" }, { label: "Top risk: Koukaki", value: "84.0%" },
       { label: "STR density Δ (Koukaki)", value: "+31% YoY" }, { label: "Net new entire-homes", value: "62% in 3 areas" },
     ]},
   },
@@ -468,7 +468,7 @@ SCRIPTS["gentrification::Which Athens listings need attention first because they
     { type: "text", text: "This is the best first action queue for a service team: coach pricing where there is upside, but focus human attention where risk is also elevated." },
   ],
   brief: { title: "Athens Priority Intervention Brief", kpis: [
-    { label: "Priority listings", value: "865" }, { label: "High-risk threshold", value: "0.70" },
+    { label: "Priority listings", value: "865" }, { label: "High-risk threshold", value: "70%" },
     { label: "Use case", value: "Host coaching" }, { label: "City", value: "Athens" },
   ]},
 };
@@ -487,7 +487,7 @@ SCRIPTS["gentrification::Where is host risk highest in Athens?"] = {
     { type: "text", text: "Risk here means prioritisation for review: weak recent review velocity, high availability, host profile weakness, or related observable signs. It should guide analyst attention, not replace human judgement." },
   ],
   brief: { title: "Athens Host-Risk Brief", kpis: [
-    { label: "High-risk listings", value: "4,695" }, { label: "Threshold", value: "0.70" },
+    { label: "High-risk listings", value: "4,695" }, { label: "Threshold", value: "70%" },
     { label: "Top signal", value: "Central areas" }, { label: "Use", value: "Review queue" },
   ]},
 };
@@ -598,10 +598,10 @@ const SCRIPT_MAPS = {
     metricLabel: "Host-risk signal",
     tone: "risk",
     rows: [
-      { regionId: "athens-koukaki", label: "Koukaki", value: 0.84, display: "0.84", lat: 37.9636, lon: 23.7219, explanation: "Highest scripted host-risk concentration." },
-      { regionId: "athens-exarchia", label: "Exarchia", value: 0.76, display: "0.76", lat: 37.9861, lon: 23.7354, explanation: "Second-highest scripted host-risk signal." },
-      { regionId: "athens-plaka", label: "Plaka", value: 0.71, display: "0.71", lat: 37.9725, lon: 23.7309, explanation: "Central tourist area above warning threshold." },
-      { regionId: "athens-pangrati", label: "Pangrati", value: 0.58, display: "0.58", lat: 37.9715, lon: 23.7433, explanation: "Moderate scripted risk signal." },
+      { regionId: "athens-koukaki", label: "Koukaki", value: 0.84, display: "84.0%", lat: 37.9636, lon: 23.7219, explanation: "Highest scripted host-risk concentration." },
+      { regionId: "athens-exarchia", label: "Exarchia", value: 0.76, display: "76.0%", lat: 37.9861, lon: 23.7354, explanation: "Second-highest scripted host-risk signal." },
+      { regionId: "athens-plaka", label: "Plaka", value: 0.71, display: "71.0%", lat: 37.9725, lon: 23.7309, explanation: "Central tourist area above warning threshold." },
+      { regionId: "athens-pangrati", label: "Pangrati", value: 0.58, display: "58.0%", lat: 37.9715, lon: 23.7433, explanation: "Moderate scripted risk signal." },
     ],
   }),
 };
@@ -643,14 +643,14 @@ setScriptBlocks("gentrification::Which Athens listings need attention first beca
   { type: "text", text: "Direct recommendation:\nPrioritize the overlap group first: the 865 Athens listings that are both underpriced and high-risk. This is the strongest action queue because it combines revenue upside with operational warning signs.\n\nReasoning done by ARIA:\nAn underpriced listing may deserve a pricing test, but a high-risk listing may need coaching, quality review, or operational support first. Risk probability (the model's estimated chance that a listing belongs to a decline-risk group) helps decide where a human manager should look before simply raising price." },
   { type: "chart", chart: { ...SCRIPT_MAPS.athensRisk, title: "Athens priority map: high-risk and underpriced areas" } },
   { type: "chart", chart: { kind: "riskbar", title: "Athens risk concentration by neighbourhood" } },
-  { type: "text", text: "Key evidence:\n- Priority overlap: 865 listings.\n- High-risk threshold: 0.70.\n- The use case is host coaching and review, not automated enforcement.\n\nVisualizations to review:\nUse the map to see where intervention pressure is geographically concentrated. Then use the risk chart to compare which neighbourhoods should be reviewed first. Together, the visuals make the queue easier to explain to a non-technical service team.\n\nPossible limitations:\nRisk is a prioritization signal, not a final judgment about a host. ARIA should trigger review and coaching, not replace human assessment.\n\nSources: ARIA risk scores, Athens underpricing outputs" },
+  { type: "text", text: "Key evidence:\n- Priority overlap: 865 listings.\n- High-risk threshold: 70%.\n- The use case is host coaching and review, not automated enforcement.\n\nVisualizations to review:\nUse the map to see where intervention pressure is geographically concentrated. Then use the risk chart to compare which neighbourhoods should be reviewed first. Together, the visuals make the queue easier to explain to a non-technical service team.\n\nPossible limitations:\nRisk is a prioritization signal, not a final judgment about a host. ARIA should trigger review and coaching, not replace human assessment.\n\nSources: ARIA risk scores, Athens underpricing outputs" },
 ]);
 
 setScriptBlocks("gentrification::Where is host risk highest in Athens?", [
   { type: "text", text: "Direct recommendation:\nCentral Athens needs the closest monitoring. The current scripted ARIA risk view flags 4,695 high-risk listings overall, with central neighbourhoods carrying the strongest concentration of warning signals.\n\nReasoning done by ARIA:\nHost risk is not a moral judgment. It is a triage signal that highlights listings where recent activity, quality, availability, or host profile patterns suggest a higher chance of decline or intervention need." },
   { type: "chart", chart: SCRIPT_MAPS.athensRisk },
   { type: "chart", chart: { kind: "riskbar", title: "Athens high-risk signal by neighbourhood" } },
-  { type: "text", text: "Key evidence:\n- High-risk listings: 4,695.\n- Threshold: 0.70.\n- Main interpretation: central areas need earlier review because risk signals are more concentrated there.\n\nVisualizations to review:\nUse the map to understand the spatial concentration of risk, then use the risk chart to compare neighbourhood priority. This is useful for managers because it turns model output into an operational review route.\n\nPossible limitations:\nThe risk score should guide analyst attention, not replace human judgment. It does not prove misconduct, churn, or regulatory breach by itself.\n\nSources: ARIA risk scores, neighbourhood stats" },
+  { type: "text", text: "Key evidence:\n- High-risk listings: 4,695.\n- Threshold: 70%.\n- Main interpretation: central areas need earlier review because risk signals are more concentrated there.\n\nVisualizations to review:\nUse the map to understand the spatial concentration of risk, then use the risk chart to compare neighbourhood priority. This is useful for managers because it turns model output into an operational review route.\n\nPossible limitations:\nThe risk score should guide analyst attention, not replace human judgment. It does not prove misconduct, churn, or regulatory breach by itself.\n\nSources: ARIA risk scores, neighbourhood stats" },
 ]);
 
 setScriptBlocks("market::Compare Paris vs Athens for a small short-term rental portfolio.", [

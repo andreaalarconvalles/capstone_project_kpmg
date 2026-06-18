@@ -12,6 +12,54 @@ const CC = ARIA.c;
 
 /* ---------- shared theme bits ---------- */
 const axisTick = () => ({ fill: CC.muted, fontSize: 11, letterSpacing: 0 });
+const PERCENT_METRIC_RE = /(risk|share|concentration|saturation|occupancy|probability|threshold|\brates?\b)/i;
+
+function percentBase(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return null;
+  if (Math.abs(n) <= 1.5) return n * 100;
+  if (Math.abs(n) <= 100) return n;
+  return null;
+}
+
+function formatPercent(value, digits = 0) {
+  const n = percentBase(value);
+  return n == null ? value : `${n.toFixed(digits)}%`;
+}
+
+function metricLooksPercent({ chart, label, name, dataKey, forcePercent = false }) {
+  if (forcePercent) return true;
+  const text = [label, name, dataKey, chart?.metricLabel, chart?.yLabel, chart?.xLabel]
+    .filter(Boolean)
+    .join(" ");
+  return PERCENT_METRIC_RE.test(text);
+}
+
+function rowDisplayFor(row = {}, dataKey) {
+  if (!dataKey) return "";
+  if (row[`${dataKey}Display`]) return row[`${dataKey}Display`];
+  if ((dataKey === "value" || dataKey === "v") && row.display) return row.display;
+  return "";
+}
+
+function formatValue(value, context = {}) {
+  const display = rowDisplayFor(context.row, context.dataKey);
+  if (display) return { text: display, useSuffix: false };
+  if (metricLooksPercent(context) && percentBase(value) != null) {
+    return { text: formatPercent(value, context.digits ?? 1), useSuffix: false };
+  }
+  const n = Number(value);
+  if (Number.isFinite(n)) return { text: n.toLocaleString(), useSuffix: true };
+  return { text: value, useSuffix: true };
+}
+
+function axisPercentFormatter(context = {}) {
+  return (value) => (
+    metricLooksPercent(context) && percentBase(value) != null
+      ? formatPercent(value, 0)
+      : value
+  );
+}
 
 function compactAxisLabel(value, max = 16) {
   let label = String(value || "");
@@ -37,7 +85,7 @@ function chartDataWithLabels(data, xKey, maxItems = 6, labelKey = xKey) {
   }));
 }
 
-function ChartTip({ active, payload, label, suffix = "", labelKey }) {
+function ChartTip({ active, payload, label, suffix = "", labelKey, chart, forcePercent = false }) {
   if (!active || !payload || !payload.length) return null;
   const labelText = labelKey ? payload[0].payload[labelKey] : label;
   return (
@@ -47,20 +95,33 @@ function ChartTip({ active, payload, label, suffix = "", labelKey }) {
       letterSpacing: -0.15,
     }}>
       {labelText != null && <div style={{ color: CC.muted, marginBottom: 4 }}>{labelText}</div>}
-      {payload.map((p, i) => (
-        <div key={i} style={{ display: "flex", alignItems: "center", gap: 7, marginTop: i ? 3 : 0 }}>
-          <span style={{ width: 8, height: 8, borderRadius: 2, background: p.color || p.fill || CC.ink }} />
-          <span style={{ color: CC.muted }}>{p.name}</span>
-          <span style={{ marginLeft: "auto", fontWeight: 600 }}>{typeof p.value === "number" ? p.value.toLocaleString() : p.value}{suffix}</span>
-        </div>
-      ))}
+      {payload.map((p, i) => {
+        const formatted = formatValue(p.value, {
+          row: p.payload,
+          dataKey: p.dataKey,
+          label: labelText,
+          name: p.name,
+          chart,
+          forcePercent,
+          digits: 1,
+        });
+        return (
+          <div key={i} style={{ display: "flex", alignItems: "center", gap: 7, marginTop: i ? 3 : 0 }}>
+            <span style={{ width: 8, height: 8, borderRadius: 2, background: p.color || p.fill || CC.ink }} />
+            <span style={{ color: CC.muted }}>{p.name}</span>
+            <span style={{ marginLeft: "auto", fontWeight: 600 }}>{formatted.text}{formatted.useSuffix ? suffix : ""}</span>
+          </div>
+        );
+      })}
     </div>
   );
 }
 
-function ScatterTip({ active, payload, xKey, yKey, xLabel, yLabel }) {
+function ScatterTip({ active, payload, xKey, yKey, xLabel, yLabel, chart }) {
   if (!active || !payload || !payload.length) return null;
   const row = payload[0].payload || {};
+  const xValue = formatValue(row[xKey], { row, dataKey: xKey, label: xLabel, chart, digits: 1 });
+  const yValue = formatValue(row[yKey], { row, dataKey: yKey, label: yLabel, chart, digits: 1 });
   return (
     <div style={{
       background: CC.s2, border: `1px solid ${CC.hair}`, borderRadius: 10,
@@ -70,11 +131,11 @@ function ScatterTip({ active, payload, xKey, yKey, xLabel, yLabel }) {
       <div style={{ color: CC.muted, marginBottom: 5 }}>{row.__fullLabel}</div>
       <div style={{ display: "flex", gap: 10 }}>
         <span style={{ color: CC.muted }}>{xLabel}</span>
-        <span style={{ fontWeight: 600 }}>{Number(row[xKey]).toLocaleString()}</span>
+        <span style={{ fontWeight: 600 }}>{xValue.text}</span>
       </div>
       <div style={{ display: "flex", gap: 10, marginTop: 3 }}>
         <span style={{ color: CC.muted }}>{yLabel}</span>
-        <span style={{ fontWeight: 600 }}>{Number(row[yKey]).toLocaleString()}</span>
+        <span style={{ fontWeight: 600 }}>{yValue.text}</span>
       </div>
       {(row.listingsDisplay || row.listings) && <div style={{ color: CC.muted, marginTop: 4 }}>{row.listingsDisplay || row.listings} listings</div>}
     </div>
@@ -241,7 +302,7 @@ function NeighbourhoodMap({ city = "Athens", title, metric = "risk" }) {
                   style={{ pointerEvents: "none", letterSpacing: -0.2 }}>{n.name}</text>
                 <text x={px + cell / 2} y={py + cell / 2 + 12} textAnchor="middle"
                   fontSize="12" fontWeight="600" fill={t > 0.5 ? "#fff" : CC.ink}
-                  style={{ pointerEvents: "none" }}>{metric === "stress" ? n.stress.toFixed(2) : n.risk.toFixed(2)}</text>
+                  style={{ pointerEvents: "none" }}>{metric === "stress" ? n.stress.toFixed(2) : formatPercent(n.risk, 0)}</text>
               </g>
             );
           })}
@@ -254,7 +315,7 @@ function NeighbourhoodMap({ city = "Athens", title, metric = "risk" }) {
           }}>
             <div style={{ fontWeight: 600 }}>{hover.name}</div>
             <div style={{ color: CC.muted, marginTop: 2 }}>
-              {metric === "stress" ? `stress ${hover.stress.toFixed(2)}× capacity` : `risk score ${hover.risk.toFixed(2)}`}
+              {metric === "stress" ? `stress ${hover.stress.toFixed(2)}× capacity` : `risk concentration ${formatPercent(hover.risk, 1)}`}
             </div>
           </div>
         )}
@@ -721,6 +782,8 @@ function ChartBlock({ chart }) {
     const yLabel = chart.yLabel || title || "Value";
     const xLabel = chart.xLabel || "Area";
     const data = chartDataWithLabels(chart.data, xKey, kind === "line" ? 8 : 6);
+    const xPercentTick = axisPercentFormatter({ chart, label: xLabel, dataKey: xKey });
+    const yPercentTick = axisPercentFormatter({ chart, label: yLabel, dataKey: yKey });
     if (kind === "heatmap") {
       return <HeatmapCard chart={chart} />;
     }
@@ -745,8 +808,8 @@ function ChartBlock({ chart }) {
           <BarChart data={histogramData} margin={{ left: 4, right: 16, top: 8, bottom: 14 }} barCategoryGap="12%">
             <CartesianGrid vertical={false} stroke={CC.s2} />
             <XAxis dataKey="__axisLabel" tick={axisTick()} axisLine={false} tickLine={false} interval={0} tickMargin={8} height={36} />
-            <YAxis tick={axisTick()} axisLine={false} tickLine={false} width={42} allowDecimals={false} />
-            <Tooltip cursor={{ fill: "rgba(128,128,128,0.09)" }} content={<ChartTip labelKey="__fullLabel" />} />
+            <YAxis tick={axisTick()} axisLine={false} tickLine={false} width={42} allowDecimals={false} tickFormatter={yPercentTick} />
+            <Tooltip cursor={{ fill: "rgba(128,128,128,0.09)" }} content={<ChartTip labelKey="__fullLabel" chart={chart} />} />
             <Bar dataKey={yKey} name={yLabel} radius={[5, 5, 0, 0]} isAnimationActive>
               {histogramData.map((_, i) => <Cell key={i} fill={i >= histogramData.length - 2 ? CC.violet : `${CC.violet}88`} />)}
             </Bar>
@@ -761,10 +824,10 @@ function ChartBlock({ chart }) {
         <ChartCard title={title || "Trade-off analysis"} note={chart.metricNote} height={272}>
           <ScatterChart data={scatterData} margin={{ left: 4, right: 18, top: 8, bottom: 10 }}>
             <CartesianGrid stroke={CC.s2} />
-            <XAxis type="number" dataKey={xKey} name={xLabel} tick={axisTick()} axisLine={false} tickLine={false} width={42} />
-            <YAxis type="number" dataKey={yKey} name={yLabel} tick={axisTick()} axisLine={false} tickLine={false} width={42} />
+            <XAxis type="number" dataKey={xKey} name={xLabel} tick={axisTick()} axisLine={false} tickLine={false} width={42} tickFormatter={xPercentTick} />
+            <YAxis type="number" dataKey={yKey} name={yLabel} tick={axisTick()} axisLine={false} tickLine={false} width={42} tickFormatter={yPercentTick} />
             <ZAxis type="number" dataKey={sizeKey} range={[70, 520]} />
-            <Tooltip cursor={{ stroke: CC.hair }} content={<ScatterTip xKey={xKey} yKey={yKey} xLabel={xLabel} yLabel={yLabel} />} />
+            <Tooltip cursor={{ stroke: CC.hair }} content={<ScatterTip xKey={xKey} yKey={yKey} xLabel={xLabel} yLabel={yLabel} chart={chart} />} />
             <Scatter name={title || "Live analysis"} data={scatterData} fill={CC.violet} fillOpacity={0.78} />
           </ScatterChart>
         </ChartCard>
@@ -776,9 +839,9 @@ function ChartBlock({ chart }) {
         <ChartCard title={title || "Live analysis"} note={chart.metricNote} height={252}>
           <ScatterChart data={scatterData} margin={{ left: 4, right: 18, top: 8, bottom: 10 }}>
             <CartesianGrid stroke={CC.s2} />
-            <XAxis type="number" dataKey={xKey} name={xLabel} tick={axisTick()} axisLine={false} tickLine={false} width={42} />
-            <YAxis type="number" dataKey={yKey} name={yLabel} tick={axisTick()} axisLine={false} tickLine={false} width={42} />
-            <Tooltip cursor={{ stroke: CC.hair }} content={<ScatterTip xKey={xKey} yKey={yKey} xLabel={xLabel} yLabel={yLabel} />} />
+            <XAxis type="number" dataKey={xKey} name={xLabel} tick={axisTick()} axisLine={false} tickLine={false} width={42} tickFormatter={xPercentTick} />
+            <YAxis type="number" dataKey={yKey} name={yLabel} tick={axisTick()} axisLine={false} tickLine={false} width={42} tickFormatter={yPercentTick} />
+            <Tooltip cursor={{ stroke: CC.hair }} content={<ScatterTip xKey={xKey} yKey={yKey} xLabel={xLabel} yLabel={yLabel} chart={chart} />} />
             <Scatter name={title || "Live analysis"} data={scatterData} fill={CC.violet} />
           </ScatterChart>
         </ChartCard>
@@ -789,9 +852,9 @@ function ChartBlock({ chart }) {
         <ChartCard title={title || "Live analysis"} note={chart.metricNote} height={252}>
           <BarChart layout="vertical" data={data} margin={{ left: 8, right: 22, top: 8, bottom: 8 }} barCategoryGap="28%">
             <CartesianGrid horizontal={false} stroke={CC.s2} />
-            <XAxis type="number" tick={axisTick()} axisLine={false} tickLine={false} />
+            <XAxis type="number" tick={axisTick()} axisLine={false} tickLine={false} tickFormatter={yPercentTick} />
             <YAxis type="category" dataKey="__axisLabel" tick={axisTick()} axisLine={false} tickLine={false} width={138} interval={0} />
-            <Tooltip cursor={{ fill: "rgba(128,128,128,0.09)" }} content={<ChartTip labelKey="__fullLabel" />} />
+            <Tooltip cursor={{ fill: "rgba(128,128,128,0.09)" }} content={<ChartTip labelKey="__fullLabel" chart={chart} />} />
             <Bar dataKey={yKey} name={yLabel} radius={[0, 5, 5, 0]} isAnimationActive>
               {data.map((_, i) => <Cell key={i} fill={i === 0 ? CC.violet : `${CC.violet}99`} />)}
             </Bar>
@@ -807,8 +870,8 @@ function ChartBlock({ chart }) {
           <BarChart data={data} margin={{ left: 4, right: 16, top: 8, bottom: 14 }} barCategoryGap="28%">
             <CartesianGrid vertical={false} stroke={CC.s2} />
             <XAxis dataKey="__axisLabel" tick={axisTick()} axisLine={false} tickLine={false} interval={0} tickMargin={8} height={36} />
-            <YAxis tick={axisTick()} axisLine={false} tickLine={false} width={42} />
-            <Tooltip cursor={{ fill: "rgba(128,128,128,0.09)" }} content={<ChartTip labelKey="__fullLabel" />} />
+            <YAxis tick={axisTick()} axisLine={false} tickLine={false} width={42} tickFormatter={yPercentTick} />
+            <Tooltip cursor={{ fill: "rgba(128,128,128,0.09)" }} content={<ChartTip labelKey="__fullLabel" chart={chart} />} />
             {series.map((s, i) => (
               <Bar key={s.key} dataKey={s.key} name={s.name || s.key} radius={[5, 5, 0, 0]} fill={colors[i % colors.length]} isAnimationActive />
             ))}
@@ -822,8 +885,8 @@ function ChartBlock({ chart }) {
           <LineChart data={data} margin={{ left: 4, right: 16, top: 6, bottom: 2 }}>
             <CartesianGrid vertical={false} stroke={CC.s2} />
             <XAxis dataKey="__axisLabel" tick={axisTick()} axisLine={false} tickLine={false} interval={0} tickMargin={8} height={34} />
-            <YAxis tick={axisTick()} axisLine={false} tickLine={false} width={42} />
-            <Tooltip cursor={{ stroke: CC.hair }} content={<ChartTip labelKey="__fullLabel" />} />
+            <YAxis tick={axisTick()} axisLine={false} tickLine={false} width={42} tickFormatter={yPercentTick} />
+            <Tooltip cursor={{ stroke: CC.hair }} content={<ChartTip labelKey="__fullLabel" chart={chart} />} />
             <Line type="monotone" dataKey={yKey} name={yLabel} stroke={CC.violet} strokeWidth={2.5} dot={{ r: 2.5, fill: CC.violet }} />
           </LineChart>
         </ChartCard>
@@ -834,8 +897,8 @@ function ChartBlock({ chart }) {
         <BarChart data={data} margin={{ left: 4, right: 16, top: 8, bottom: 14 }} barCategoryGap="32%">
           <CartesianGrid vertical={false} stroke={CC.s2} />
           <XAxis dataKey="__axisLabel" tick={axisTick()} axisLine={false} tickLine={false} interval={0} tickMargin={8} height={36} />
-          <YAxis tick={axisTick()} axisLine={false} tickLine={false} width={42} />
-          <Tooltip cursor={{ fill: "rgba(128,128,128,0.09)" }} content={<ChartTip labelKey="__fullLabel" />} />
+          <YAxis tick={axisTick()} axisLine={false} tickLine={false} width={42} tickFormatter={yPercentTick} />
+          <Tooltip cursor={{ fill: "rgba(128,128,128,0.09)" }} content={<ChartTip labelKey="__fullLabel" chart={chart} />} />
           <Bar dataKey={yKey} name={yLabel} radius={[5, 5, 0, 0]} isAnimationActive>
             {data.map((_, i) => <Cell key={i} fill={i === 0 ? CC.violet : `${CC.violet}99`} />)}
           </Bar>
@@ -878,7 +941,7 @@ function ChartBlock({ chart }) {
 
   if (kind === "riskbar" || kind === "stress" || kind === "yield" || kind === "supplygap" || kind === "anomaly") {
     const map = {
-      riskbar: { data: DATA.riskbar, color: CC.magenta, suffix: "", dom: [0, 1], ref: 0.7, refLabel: "warn 0.70" },
+      riskbar: { data: DATA.riskbar, color: CC.magenta, suffix: "", dom: [0, 1], ref: 0.7, refLabel: "warning 70%", percent: true },
       stress: { data: DATA.stress, color: CC.orange, suffix: "×", dom: [0, 1.4], ref: 1, refLabel: "capacity 1.0" },
       yield: { data: DATA.yield, color: CC.teal, suffix: "%", dom: [0, 13] },
       supplygap: { data: DATA.supplygap, color: CC.teal, suffix: "", dom: [-0.35, 0.5], ref: 0 },
@@ -889,10 +952,11 @@ function ChartBlock({ chart }) {
         <BarChart data={map.data} margin={{ left: 4, right: 16, top: 8, bottom: 2 }} barCategoryGap="30%">
           <CartesianGrid vertical={false} stroke={CC.s2} />
           <XAxis dataKey="n" tick={axisTick()} axisLine={false} tickLine={false} interval={0} />
-          <YAxis tick={axisTick()} axisLine={false} tickLine={false} width={40} domain={map.dom} />
+          <YAxis tick={axisTick()} axisLine={false} tickLine={false} width={40} domain={map.dom}
+            tickFormatter={map.percent ? axisPercentFormatter({ forcePercent: true }) : undefined} />
           {map.ref != null && <ReferenceLine y={map.ref} stroke="rgba(128,128,128,0.34)" strokeDasharray="4 4"
             label={{ value: map.refLabel, fill: CC.muted, fontSize: 10.5, position: "right" }} />}
-          <Tooltip cursor={{ fill: "rgba(128,128,128,0.09)" }} content={<ChartTip suffix={map.suffix} />} />
+          <Tooltip cursor={{ fill: "rgba(128,128,128,0.09)" }} content={<ChartTip suffix={map.suffix} chart={{ title }} forcePercent={map.percent} />} />
           <Bar dataKey="v" name={title} radius={[5, 5, 0, 0]} isAnimationActive>
             {map.data.map((d, i) => {
               let fill = map.color;
