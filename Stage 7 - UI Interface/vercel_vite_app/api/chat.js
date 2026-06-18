@@ -345,6 +345,32 @@ function isSimplePrompt(analysis) {
   return words <= 12 && !analyticalCue;
 }
 
+function requestedCityForAnalysis(analysis) {
+  return analysis?.conversationContext?.currentCity
+    || analysis?.conversationContext?.priorCity
+    || "";
+}
+
+function answerRecommendsOtherCity(answer, requestedCity) {
+  const city = String(requestedCity || "");
+  const other = city === "Paris" ? "Athens" : city === "Athens" ? "Paris" : "";
+  if (!other) return false;
+  const text = String(answer || "");
+  return new RegExp(`\\b(recommend|enter|choose|prioriti[sz]e|start with|focus on|target)\\b[^\\n.]{0,140}\\b${other}\\b`, "i").test(text)
+    || new RegExp(`\\b${other}\\b[^\\n.]{0,140}\\b(recommend|better|stronger|first|lead|prioriti[sz]e)\\b`, "i").test(text);
+}
+
+function needsStructuredFallback(answer, analysis) {
+  if (isSimplePrompt(analysis)) return false;
+  const text = String(answer || "").trim();
+  if (!text) return true;
+  if (answerRecommendsOtherCity(text, requestedCityForAnalysis(analysis))) return true;
+  const firstLine = text.split("\n").find((line) => line.trim()) || "";
+  const hasDirectRecommendation = /^(\*\*)?\s*direct recommendation\s*:/i.test(firstLine.trim());
+  const sections = text.split(/\n{2,}/).filter((section) => section.trim());
+  return !hasDirectRecommendation || sections.length < 3;
+}
+
 function addContextIfShort(answer, analysis) {
   // Do not pad simple, factual prompts with analytical boilerplate sections.
   if (wordCount(answer) >= 120 || isSimplePrompt(analysis)) return answer;
@@ -464,7 +490,8 @@ export default async function handler(req, res) {
     const rawAnswer = vertex.answer || analysis.fallbackAnswer;
     const fallbackAnswer = sanitizeAnswer(localizePlaceNames(addContextIfShort(analysis.fallbackAnswer, analysis)));
     const primaryAnswer = sanitizeAnswer(localizePlaceNames(addContextIfShort(rawAnswer, analysis)));
-    const completedAnswer = completeAnswerSections(primaryAnswer, fallbackAnswer) || fallbackAnswer;
+    const shapedAnswer = needsStructuredFallback(primaryAnswer, analysis) ? fallbackAnswer : primaryAnswer;
+    const completedAnswer = completeAnswerSections(shapedAnswer, fallbackAnswer) || fallbackAnswer;
     const polishedAnswer = ensureSourcesLine(completedAnswer, analysis);
 
     return json(res, 200, {

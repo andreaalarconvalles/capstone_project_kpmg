@@ -466,6 +466,18 @@ function cityMentionsFromPrompt(prompt) {
   return mentions;
 }
 
+function geographyScopeText(prompt) {
+  return String(prompt || "")
+    .replace(/\bdo\s+not\s+(?:compare|benchmark|contrast)[^.?!]*(?:[.?!]|$)/gi, " ")
+    .replace(/\bwithout\s+(?:comparing|benchmarking|contrasting)[^.?!]*(?:[.?!]|$)/gi, " ")
+    .replace(/\bunless\s+i\s+explicitly\s+ask[^.?!]*(?:[.?!]|$)/gi, " ")
+    .replace(/\bnot\s+(?:paris|athens)\b/gi, " ");
+}
+
+function cityMentionsFromScope(prompt) {
+  return cityMentionsFromPrompt(geographyScopeText(prompt));
+}
+
 function topN(items, scoreKey, n = 6, desc = true) {
   return [...items]
     .filter((d) => Number.isFinite(num(d[scoreKey], NaN)))
@@ -514,13 +526,14 @@ function weightedAverage(sum, weight) {
   return weight ? sum / weight : 0;
 }
 
-function classifyIntent(prompt, agentId) {
+export function classifyIntent(prompt, agentId) {
   const p = `${prompt} ${agentId}`.toLowerCase();
-  const cityMentions = cityMentionsFromPrompt(prompt);
+  const scopeP = `${geographyScopeText(prompt)} ${agentId}`.toLowerCase();
+  const cityMentions = cityMentionsFromScope(prompt);
   const hasSingleCity = cityMentions.size === 1;
   const asksCrossCityComparison = (
     (cityMentions.has("Paris") && cityMentions.has("Athens"))
-    || /\b(which city|between cities|paris or athens|athens or paris|city strategy|city comparison|compare cities|compare markets)\b/.test(p)
+    || /\b(which city|between cities|paris or athens|athens or paris|city strategy|city comparison|compare cities|compare markets)\b/.test(scopeP)
   );
   const asksForecast = /(prophet|forecast|occupancy|tourist|demand|season|90 day|next\s+\d+\s+months|future|summer|peak)/.test(p);
   if (asksCrossCityComparison) return "portfolio-comparison";
@@ -541,7 +554,7 @@ function classifyIntent(prompt, agentId) {
 }
 
 function cityFromPrompt(prompt) {
-  const mentions = cityMentionsFromPrompt(prompt);
+  const mentions = cityMentionsFromScope(prompt);
   if (mentions.has("Paris") && !mentions.has("Athens")) return "Paris";
   if (mentions.has("Athens") && !mentions.has("Paris")) return "Athens";
   return "";
@@ -566,7 +579,7 @@ function normaliseContextMessages(messages = []) {
 
 function lastSingleCity(messages = []) {
   for (let i = messages.length - 1; i >= 0; i -= 1) {
-    const mentions = cityMentionsFromPrompt(messages[i].text);
+    const mentions = cityMentionsFromScope(messages[i].text);
     if (mentions.size === 1) return [...mentions][0];
   }
   return "";
@@ -574,6 +587,7 @@ function lastSingleCity(messages = []) {
 
 function metricFocus(prompt) {
   const p = String(prompt || "");
+  if (/(prophet|forecast|forecasted|occupied nights|next\s+\d+\s+months|seasonality|seasonal|demand scenario)/i.test(p)) return "forecast demand";
   if (/(expensive|costliest|costly|premium|luxury|highest (?:median |nightly |rental |rent )?price|highest priced|most expensive|pricey)/i.test(p)) return "expensive nightly-price ranking";
   if (/(cheap|cheapest|affordable|budget|low price|lowest|least expensive|lowest (?:median |nightly |rental |rent )?price)/i.test(p)) return "affordable nightly-price ranking";
   if (/(saturat|avoid|too high|crowd|overbuilt|worst places|worst areas)/i.test(p)) return "saturation and avoidance";
@@ -1244,7 +1258,7 @@ function makeSegmentHeatmap(title, rows, metricKey, metricLabel, options = {}) {
 }
 
 function wantsRegionMap(prompt) {
-  return /(\bmap\b|region|regions|area comparison|compare areas|compare regions|neighbourhoods|neighborhoods|arrondissements|districts|where in|which areas|which regions)/i.test(prompt);
+  return /(\bmap\b|region|regions|\barea\b|area comparison|compare areas|compare regions|neighbourhoods|neighborhoods|arrondissements|districts|where in|which areas|which regions)/i.test(prompt);
 }
 
 function makeRegionMap(title, city, rows, metricKey, metricLabel, displayFormatter = fmtScore, options = {}) {
@@ -1712,7 +1726,8 @@ async function demandAnalysis(prompt) {
     const chart = [
       ...mapChart,
       ...lineChart,
-      ...(relationshipChart.length ? relationshipChart : forecastRankingChart),
+      ...forecastRankingChart,
+      ...relationshipChart,
     ];
     return {
       intent: "demand",

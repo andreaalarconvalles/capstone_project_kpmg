@@ -198,11 +198,12 @@ Skills are invoked by name (e.g., `/diagnose`, `/grill-me`). The following skill
 **Hard rules:**
 1. If the user names exactly one city, arrondissement, neighbourhood, or district, keep the recommendation, KPIs, charts, maps, risks, next actions, and `Sources` line inside that geography.
 2. Do not pivot from Paris to Athens, or Athens to Paris, just because another market has a stronger score. Only compare or recommend another city when the user explicitly asks for a cross-city comparison or alternative market.
-3. Treat "portfolio", "KPMG client", "small investor", and "next 12 months" as decision-support wording within the requested city unless the prompt clearly asks which city to choose.
-4. If the prompt asks for Prophet, forecast, demand, seasonality, occupancy, or a time window such as "next 12 months", route to the demand/forecast analysis before general risk or market-entry logic.
-5. Open analytical answers with a direct recommendation, then explain ARIA's reasoning, key evidence, visualizations, limitations, next actions, and sources.
-6. Use plain language for non-technical readers. Briefly explain technical terms in brackets the first time they matter, but avoid repeating definitions already explained in the conversation.
-7. End with the backend-supplied `Sources` line. Do not invent sources, row counts, scores, model capabilities, or live RAG/legal retrieval.
+3. Do not treat a negative instruction such as "do not compare Paris with Athens" as a request to compare both cities. It reinforces the Paris-only boundary.
+4. Treat "portfolio", "KPMG client", "small investor", and "next 12 months" as decision-support wording within the requested city unless the prompt clearly asks which city to choose.
+5. If the prompt asks for Prophet, forecast, demand, seasonality, occupancy, or a time window such as "next 12 months", route to the demand/forecast analysis before general risk or market-entry logic.
+6. Open analytical answers with a direct recommendation, then explain ARIA's reasoning, key evidence, visualizations, limitations, next actions, and sources.
+7. Use plain language for non-technical readers. Briefly explain technical terms in brackets the first time they matter, but avoid repeating definitions already explained in the conversation.
+8. End with the backend-supplied `Sources` line. Do not invent sources, row counts, scores, model capabilities, or live RAG/legal retrieval.
 
 **Paris forecast demo standard:** For a Paris-only Prophet prompt, the answer should recommend the best Paris arrondissement/neighbourhood from the forecast output, show a Paris map, compare Paris areas with charts, cite Prophet forecast outputs plus neighbourhood stats, and avoid Athens unless the user explicitly requests a cross-city benchmark.
 
@@ -456,3 +457,4 @@ Remaining roadmap: keep Prophet forecasts wired into the live Vercel demand agen
 - [2026-06-14] Session 54: Added conversation-context support to the Stage 7 live chat path: frontend prompts now include recent thread history, `/api/chat` passes context to analytics and Vertex, follow-up prompts resolve prior city references such as "there", and premium-price questions rank the most expensive areas instead of falling back to generic livability/saturation logic.
 - [2026-06-18] Session 55: Wired committed Prophet scenario forecast CSVs into the live Vercel demand agent, fixed forecast/map intent routing, tightened Athens point-map buffers while noting that exact polygons need boundary GeoJSON, added the project story/readiness section, fixed the response-quality evaluation harness, and prepared the two Prophet forecast CSVs to be stored as normal Git files instead of LFS pointers for raw-GitHub fetching.
 - [2026-06-18] Session 56: Tightened ARIA response discipline after a Paris demo prompt incorrectly pivoted to Athens: added requested-geography rules to the project skill/manual and live response policy, fixed single-city portfolio and Prophet forecast routing, and added an evaluation case that catches Paris-to-Athens recommendation drift.
+- [2026-06-18] Session 57: Fixed the Paris-only demo prompt edge case where "do not compare Paris with Athens" was still counted as a cross-city request; added negative-comparison scope parsing, preserved Prophet demand focus across follow-ups, strengthened structured-answer fallback, and added routing checks to the response-quality harness.

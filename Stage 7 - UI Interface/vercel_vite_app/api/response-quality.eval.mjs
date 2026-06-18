@@ -9,6 +9,7 @@
 // Exit: 0 if all gold answers score >= 97, the policy is complete, and the rubric
 //       correctly flags the bad answers; 1 otherwise.
 
+import { classifyIntent, resolvePromptContext } from "./analytics-pipeline.js";
 import { ARIA_RESPONSE_POLICY } from "./aria-response-policy.js";
 
 const PASS_BAR = 97;
@@ -131,6 +132,34 @@ const REQUIRED_POLICY_MARKERS = [
 function checkPolicyCompleteness() {
   const missing = REQUIRED_POLICY_MARKERS.filter((m) => !ARIA_RESPONSE_POLICY.includes(m));
   return { passed: missing.length === 0, missing };
+}
+
+/* ----------------------------- routing checks ----------------------------- */
+
+const PARIS_ONLY_PROPHET_PROMPT = "For a KPMG client considering a small short-term-rental portfolio in Paris, where should they enter first over the next 12 months? Use ARIA's Prophet demand forecast and neighbourhood data to recommend the best Paris arrondissement or area only. Show the result on a Paris map, compare the top Paris areas with the most useful charts, explain the business reasoning in plain language, include the main risks and next actions, and end with sources. Do not compare Paris with Athens unless I explicitly ask for a cross-city comparison.";
+
+function checkRouting() {
+  const failures = [];
+  const firstContext = resolvePromptContext(PARIS_ONLY_PROPHET_PROMPT, []);
+  const firstIntent = classifyIntent(firstContext.analysisPrompt, "market");
+  if (firstContext.currentCity !== "Paris") {
+    failures.push(`Paris-only prompt resolved city as ${firstContext.currentCity || "none"}`);
+  }
+  if (firstIntent !== "demand") {
+    failures.push(`Paris-only Prophet prompt routed to ${firstIntent}, expected demand`);
+  }
+
+  const followUp = "Why is that Paris area better than the next two options, and what should the client validate before acquiring the first property?";
+  const secondContext = resolvePromptContext(followUp, [
+    { role: "user", text: PARIS_ONLY_PROPHET_PROMPT },
+    { role: "assistant", text: "Direct recommendation: Enter Paris through Bourse first because it leads the Prophet demand scenario. Sources: Prophet forecast outputs, neighbourhood stats" },
+  ]);
+  const secondIntent = classifyIntent(secondContext.analysisPrompt, "market");
+  if (secondIntent !== "demand") {
+    failures.push(`Paris forecast follow-up routed to ${secondIntent}, expected demand`);
+  }
+
+  return { passed: failures.length === 0, failures };
 }
 
 /* ------------------------------- gold answers ------------------------------ */
@@ -257,6 +286,13 @@ function run() {
   if (!policy.passed) {
     ok = false;
     line(`  missing markers: ${policy.missing.join(", ")}`);
+  }
+
+  const routing = checkRouting();
+  line(`\nRouting checks: ${routing.passed ? "PASS" : "FAIL"}`);
+  if (!routing.passed) {
+    ok = false;
+    routing.failures.forEach((failure) => line(`  ${failure}`));
   }
 
   line("\nGold answers (must score >= 97):");

@@ -26,6 +26,7 @@ Persona adaptation:
 Requested geography discipline:
 - If the user names one city, neighbourhood, arrondissement, or district, answer inside that requested geography only.
 - Do not pivot from Paris to Athens, or Athens to Paris, because another market looks stronger, unless the user explicitly asks for a cross-city comparison or alternative market recommendation.
+- Do not treat a negative instruction such as "do not compare Paris with Athens" as a request to compare both cities. Use it as a boundary that reinforces the single requested city.
 - For a single-city prompt that says "portfolio", "client", or "KPMG", treat it as a portfolio decision within that city, not a Paris-vs-Athens comparison.
 - If the analytics pack includes other-city context, use it only as background and keep the recommendation, KPIs, map, charts, next actions, and Sources focused on the requested city.
 
