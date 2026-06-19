@@ -363,45 +363,6 @@ function Thread({ agent, messages, live, scrollRef, onCopy, onRegen, onExport, c
   );
 }
 
-function FullscreenZoomControls({ zoom, onZoomIn, onZoomOut, onZoomReset }) {
-  const percent = Math.round(zoom * 100);
-  const canZoomOut = zoom > FULLSCREEN_ZOOM_MIN;
-  const canZoomIn = zoom < FULLSCREEN_ZOOM_MAX;
-  return (
-    <div aria-label="Fullscreen zoom controls" style={{
-      display: "flex", alignItems: "center", gap: 4, height: 34, padding: 3,
-      borderRadius: 100, background: CA.s1, border: `1px solid ${CA.hair}`, color: CA.ink,
-    }}>
-      <button className="aria-focus" onClick={onZoomOut} disabled={!canZoomOut}
-        title="Zoom out" aria-label="Zoom out"
-        style={{
-          width: 28, height: 28, borderRadius: 100, display: "grid", placeItems: "center",
-          color: canZoomOut ? CA.muted : `${CA.muted}66`,
-        }}>
-        <Icon name="Minus" size={14} />
-      </button>
-      <button className="aria-focus" onClick={onZoomReset}
-        title="Reset zoom to 100%" aria-label="Reset zoom to 100 percent"
-        style={{
-          minWidth: 48, height: 28, borderRadius: 100, padding: "0 9px",
-          display: "grid", placeItems: "center", color: CA.ink,
-          background: percent === 100 ? "transparent" : CA.s2,
-          fontSize: 12, fontWeight: 650,
-        }}>
-        {percent}%
-      </button>
-      <button className="aria-focus" onClick={onZoomIn} disabled={!canZoomIn}
-        title="Zoom in" aria-label="Zoom in"
-        style={{
-          width: 28, height: 28, borderRadius: 100, display: "grid", placeItems: "center",
-          color: canZoomIn ? CA.muted : `${CA.muted}66`,
-        }}>
-        <Icon name="Plus" size={14} />
-      </button>
-    </div>
-  );
-}
-
 function DeleteConversationDialog({ conversation, onCancel, onConfirm }) {
   const cancelRef = useRef(null);
   useEffect(() => {
@@ -942,14 +903,6 @@ function App() {
         {/* top bar */}
         <div className="no-print" style={{ height: 52, flexShrink: 0, display: "flex", alignItems: "center", gap: 10, padding: "0 18px", borderBottom: `1px solid ${CA.hairSoft}` }}>
           <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
-            {isFullscreen && (
-              <FullscreenZoomControls
-                zoom={fullscreenZoom}
-                onZoomIn={zoomIn}
-                onZoomOut={zoomOut}
-                onZoomReset={resetZoom}
-              />
-            )}
             <div ref={themeMenuRef} style={{ flexShrink: 0, position: "relative" }}>
               <button className="aria-focus" onClick={() => setThemeMenuOpen((v) => !v)}
                 title="Change theme"
