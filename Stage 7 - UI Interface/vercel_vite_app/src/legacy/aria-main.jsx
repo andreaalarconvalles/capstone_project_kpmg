@@ -481,6 +481,9 @@ function App() {
   const [collapsed, setCollapsed] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [fullscreenZoom, setFullscreenZoom] = useState(loadFullscreenZoom);
+  const fullscreenZoomRef = useRef(fullscreenZoom);
+  const gestureStartZoomRef = useRef(fullscreenZoom);
+  const zoomEventRef = useRef(null);
   const [agentId, setAgentId] = useState(initialConversationStore.current.agentId);
   const [conversations, setConversations] = useState(() => initialConversationStore.current.conversations);
   const [activeConvId, setActiveConvId] = useState(initialConversationStore.current.activeConvId);
@@ -808,19 +811,55 @@ function App() {
     } catch {
       // Zoom still works for this session if local storage is unavailable.
     }
+    fullscreenZoomRef.current = fullscreenZoom;
   }, [fullscreenZoom]);
 
   useEffect(() => {
     if (!isFullscreen) return undefined;
-    const handleWheel = (e) => {
-      if (!e.ctrlKey) return;
-      const tag = e.target?.tagName;
-      if (["INPUT", "TEXTAREA", "SELECT"].includes(tag)) return;
-      e.preventDefault();
-      setZoom((z) => z + (e.deltaY < 0 ? 0.05 : -0.05));
+    const shouldSkipZoomTarget = (target) => {
+      const tag = target?.tagName;
+      if (["INPUT", "TEXTAREA", "SELECT"].includes(tag)) return true;
+      return !!target?.closest?.("[data-aria-no-pinch-zoom='true']");
     };
-    window.addEventListener("wheel", handleWheel, { passive: false });
-    return () => window.removeEventListener("wheel", handleWheel);
+    const normalizeWheelDelta = (event) => {
+      const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? window.innerHeight : 1;
+      return Number(event.deltaY || 0) * unit;
+    };
+    const handleWheel = (e) => {
+      if (zoomEventRef.current === e) return;
+      zoomEventRef.current = e;
+      if (!(e.ctrlKey || e.metaKey)) return;
+      if (shouldSkipZoomTarget(e.target)) return;
+      if (e.cancelable) e.preventDefault();
+      const deltaY = normalizeWheelDelta(e);
+      if (!Number.isFinite(deltaY) || deltaY === 0) return;
+      setZoom((z) => z * Math.exp(-deltaY * 0.0025));
+    };
+    const handleGestureStart = (e) => {
+      if (shouldSkipZoomTarget(e.target)) return;
+      if (e.cancelable) e.preventDefault();
+      gestureStartZoomRef.current = fullscreenZoomRef.current;
+    };
+    const handleGestureChange = (e) => {
+      if (shouldSkipZoomTarget(e.target)) return;
+      const scale = Number(e.scale);
+      if (!Number.isFinite(scale) || scale <= 0) return;
+      if (e.cancelable) e.preventDefault();
+      setZoom(gestureStartZoomRef.current * scale);
+    };
+    const options = { passive: false, capture: true };
+    window.addEventListener("wheel", handleWheel, options);
+    document.addEventListener("wheel", handleWheel, options);
+    document.addEventListener("gesturestart", handleGestureStart, options);
+    document.addEventListener("gesturechange", handleGestureChange, options);
+    document.addEventListener("gestureend", handleGestureChange, options);
+    return () => {
+      window.removeEventListener("wheel", handleWheel, options);
+      document.removeEventListener("wheel", handleWheel, options);
+      document.removeEventListener("gesturestart", handleGestureStart, options);
+      document.removeEventListener("gesturechange", handleGestureChange, options);
+      document.removeEventListener("gestureend", handleGestureChange, options);
+    };
   }, [isFullscreen, setZoom]);
 
   useEffect(() => {
@@ -968,7 +1007,8 @@ function App() {
           </>
         ) : (
           <EmptyState agent={agent} onChip={(c) => send(c)} composer={landingComposerEl}
-            onSignal={(aid, prompt) => send(prompt, aid)} />
+            onSignal={(aid, prompt) => send(prompt, aid)}
+            contentZoom={isFullscreen ? fullscreenZoom : 1} />
         )}
       </div>
 

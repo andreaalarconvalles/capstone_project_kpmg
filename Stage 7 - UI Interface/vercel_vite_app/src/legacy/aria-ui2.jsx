@@ -528,7 +528,7 @@ function LiveDataStatus() {
 }
 
 /* ---------- Empty state ---------- */
-function EmptyState({ composer, onSignal }) {
+function EmptyState({ composer, onSignal, contentZoom = 1 }) {
   const landingWidth = 1022;
   const [showAllPrompts, setShowAllPrompts] = React.useState(false);
   const scriptedPrompts = [
@@ -544,7 +544,16 @@ function EmptyState({ composer, onSignal }) {
   const visiblePrompts = showAllPrompts ? scriptedPrompts : scriptedPrompts.slice(0, 4);
   const hiddenPromptCount = scriptedPrompts.length - 4;
   return (
-    <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", padding: "26px 24px 36px", overflowY: "auto" }}>
+    <div style={{ flex: 1, overflowY: "auto", overflowX: contentZoom > 1 ? "auto" : "hidden" }}>
+      <div style={{
+        minHeight: "100%",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        padding: "26px 24px 36px",
+        zoom: contentZoom,
+        transformOrigin: "top center",
+      }}>
       <div style={{ width: "100%", maxWidth: 1080, margin: "auto 0" }}>
         {/* identity + greeting */}
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 24 }}>
@@ -603,6 +612,7 @@ function EmptyState({ composer, onSignal }) {
           </div>
           <LandingDashboard onSignal={onSignal} />
         </div>
+      </div>
       </div>
     </div>
   );
