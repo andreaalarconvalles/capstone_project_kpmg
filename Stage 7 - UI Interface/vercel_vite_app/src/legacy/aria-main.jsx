@@ -5,6 +5,24 @@ const { useState, useRef, useEffect, useCallback } = React;
 
 const elapsedFor = (steps) => (steps.length * 0.74 + 0.4).toFixed(1);
 const CONVERSATION_STORAGE_KEY = "aria.conversations.v1";
+const FULLSCREEN_ZOOM_STORAGE_KEY = "aria.fullscreenZoom.v1";
+const FULLSCREEN_ZOOM_MIN = 0.8;
+const FULLSCREEN_ZOOM_MAX = 1.6;
+const FULLSCREEN_ZOOM_STEP = 0.1;
+
+function clampFullscreenZoom(value) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return 1;
+  return Math.min(FULLSCREEN_ZOOM_MAX, Math.max(FULLSCREEN_ZOOM_MIN, Math.round(parsed * 100) / 100));
+}
+
+function loadFullscreenZoom() {
+  try {
+    return clampFullscreenZoom(window.localStorage.getItem(FULLSCREEN_ZOOM_STORAGE_KEY) || 1);
+  } catch {
+    return 1;
+  }
+}
 
 function seedConversations() {
   return SEED_CONVERSATIONS.map((c) => ({ ...c, messages: null }));
@@ -310,13 +328,19 @@ function ActionBtn({ icon, label, onClick }) {
 }
 
 /* ---------- message thread ---------- */
-function Thread({ agent, messages, live, scrollRef, onCopy, onRegen, onExport }) {
+function Thread({ agent, messages, live, scrollRef, onCopy, onRegen, onExport, contentZoom = 1 }) {
   const dens = (ARIA.ui && ARIA.ui.density) || "regular";
   const gap = dens === "compact" ? 16 : dens === "comfy" ? 38 : 26;
   const fs = (ARIA.ui && ARIA.ui.fontSize) || 15;
   return (
-    <div ref={scrollRef} style={{ flex: 1, overflowY: "auto" }}>
-      <div style={{ maxWidth: 768, margin: "0 auto", padding: "26px 24px 30px" }}>
+    <div ref={scrollRef} style={{ flex: 1, overflowY: "auto", overflowX: contentZoom > 1 ? "auto" : "hidden" }}>
+      <div style={{
+        maxWidth: 768,
+        margin: "0 auto",
+        padding: "26px 24px 30px",
+        zoom: contentZoom,
+        transformOrigin: "top center",
+      }}>
         {messages.map((m, i) => (
           <div key={i} style={{ marginBottom: gap }}>
             {m.role === "user" ? (
@@ -334,6 +358,100 @@ function Thread({ agent, messages, live, scrollRef, onCopy, onRegen, onExport })
             <AnswerView m={live.msg} live={true} />
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+function FullscreenZoomControls({ zoom, onZoomIn, onZoomOut, onZoomReset }) {
+  const percent = Math.round(zoom * 100);
+  const canZoomOut = zoom > FULLSCREEN_ZOOM_MIN;
+  const canZoomIn = zoom < FULLSCREEN_ZOOM_MAX;
+  return (
+    <div aria-label="Fullscreen zoom controls" style={{
+      display: "flex", alignItems: "center", gap: 4, height: 34, padding: 3,
+      borderRadius: 100, background: CA.s1, border: `1px solid ${CA.hair}`, color: CA.ink,
+    }}>
+      <button className="aria-focus" onClick={onZoomOut} disabled={!canZoomOut}
+        title="Zoom out" aria-label="Zoom out"
+        style={{
+          width: 28, height: 28, borderRadius: 100, display: "grid", placeItems: "center",
+          color: canZoomOut ? CA.muted : `${CA.muted}66`,
+        }}>
+        <Icon name="Minus" size={14} />
+      </button>
+      <button className="aria-focus" onClick={onZoomReset}
+        title="Reset zoom to 100%" aria-label="Reset zoom to 100 percent"
+        style={{
+          minWidth: 48, height: 28, borderRadius: 100, padding: "0 9px",
+          display: "grid", placeItems: "center", color: CA.ink,
+          background: percent === 100 ? "transparent" : CA.s2,
+          fontSize: 12, fontWeight: 650,
+        }}>
+        {percent}%
+      </button>
+      <button className="aria-focus" onClick={onZoomIn} disabled={!canZoomIn}
+        title="Zoom in" aria-label="Zoom in"
+        style={{
+          width: 28, height: 28, borderRadius: 100, display: "grid", placeItems: "center",
+          color: canZoomIn ? CA.muted : `${CA.muted}66`,
+        }}>
+        <Icon name="Plus" size={14} />
+      </button>
+    </div>
+  );
+}
+
+function DeleteConversationDialog({ conversation, onCancel, onConfirm }) {
+  const cancelRef = useRef(null);
+  useEffect(() => {
+    if (conversation) setTimeout(() => cancelRef.current && cancelRef.current.focus(), 0);
+  }, [conversation]);
+
+  if (!conversation) return null;
+  return (
+    <div className="aria-fadein" role="presentation" onMouseDown={onCancel} style={{
+      position: "fixed", inset: 0, zIndex: 1000, display: "grid", placeItems: "center",
+      padding: 22, background: "rgba(0,0,0,0.28)", backdropFilter: "blur(2px)",
+    }}>
+      <div role="dialog" aria-modal="true" aria-labelledby="delete-chat-title"
+        onMouseDown={(e) => e.stopPropagation()}
+        style={{
+          width: "min(420px, 100%)", background: CA.s1, color: CA.ink,
+          border: `1px solid ${CA.hair}`, borderRadius: 16,
+          boxShadow: "0 24px 70px rgba(0,0,0,0.24)", padding: 18,
+        }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 11, marginBottom: 10 }}>
+          <div style={{
+            width: 34, height: 34, borderRadius: 10, display: "grid", placeItems: "center",
+            background: `${CA.cta}18`, color: CA.cta, flexShrink: 0,
+          }}>
+            <Icon name="Trash2" size={17} />
+          </div>
+          <div>
+            <div id="delete-chat-title" style={{ fontSize: 15.5, fontWeight: 700 }}>Delete Chat?</div>
+            <div style={{ fontSize: 12.5, color: CA.muted, marginTop: 2 }}>Review before removing this conversation.</div>
+          </div>
+        </div>
+        <p style={{ margin: "8px 0 16px", color: CA.muted, fontSize: 13.5, lineHeight: 1.5 }}>
+          Are you sure you want to delete "{conversation.title}"? This cannot be undone.
+        </p>
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+          <button ref={cancelRef} className="aria-focus" onClick={onCancel}
+            style={{
+              height: 36, padding: "0 14px", borderRadius: 10, border: `1px solid ${CA.hair}`,
+              background: CA.canvas, color: CA.ink, fontSize: 13.5, fontWeight: 600,
+            }}>
+            Cancel
+          </button>
+          <button className="aria-focus" onClick={onConfirm}
+            style={{
+              height: 36, padding: "0 14px", borderRadius: 10,
+              background: CA.cta, color: CA.ctaText, fontSize: 13.5, fontWeight: 700,
+            }}>
+            Delete Chat
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -362,9 +480,11 @@ function App() {
 
   const [collapsed, setCollapsed] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [fullscreenZoom, setFullscreenZoom] = useState(loadFullscreenZoom);
   const [agentId, setAgentId] = useState(initialConversationStore.current.agentId);
   const [conversations, setConversations] = useState(() => initialConversationStore.current.conversations);
   const [activeConvId, setActiveConvId] = useState(initialConversationStore.current.activeConvId);
+  const [deleteTargetId, setDeleteTargetId] = useState(null);
   const [search, setSearch] = useState("");
   const [input, setInput] = useState("");
   const [modelId, setModelId] = useState("gemini-2.5-pro");
@@ -381,6 +501,7 @@ function App() {
 
   const agent = AGENT_BY_ID[agentId];
   const activeConv = conversations.find((c) => c.id === activeConvId) || null;
+  const deleteTarget = conversations.find((c) => c.id === deleteTargetId) || null;
   const activeTheme = PALETTES[theme] || PALETTES.airbnb;
   const themeModes = ["airbnb", "kpmgLight", "dark"];
 
@@ -604,10 +725,18 @@ function App() {
   const renameConv = useCallback((id, t) => setConversations((cs) => cs.map((c) => c.id === id ? touchConversation(c, { title: t || "Untitled chat" }) : c)), []);
   const deleteConv = useCallback((id) => {
     const target = conversations.find((c) => c.id === id);
-    if (target && !window.confirm(`Delete "${target.title}"? This cannot be undone.`)) return;
-    setConversations((cs) => cs.filter((c) => c.id !== id));
-    setActiveConvId((a) => a === id ? null : a);
+    if (target) setDeleteTargetId(id);
   }, [conversations]);
+  const cancelDeleteConv = useCallback(() => setDeleteTargetId(null), []);
+  const confirmDeleteConv = useCallback(() => {
+    if (!deleteTargetId) return;
+    cancelRef.current = true;
+    runIdRef.current += 1;
+    setLive((l) => (l && l.convId === deleteTargetId ? null : l));
+    setConversations((cs) => cs.filter((c) => c.id !== deleteTargetId));
+    setActiveConvId((a) => a === deleteTargetId ? null : a);
+    setDeleteTargetId(null);
+  }, [deleteTargetId]);
   const toggleFullscreen = useCallback(() => {
     const doc = document;
     if (doc.fullscreenElement) {
@@ -617,6 +746,12 @@ function App() {
     const root = doc.documentElement;
     root.requestFullscreen && root.requestFullscreen().catch(() => {});
   }, []);
+  const setZoom = useCallback((next) => {
+    setFullscreenZoom((current) => clampFullscreenZoom(typeof next === "function" ? next(current) : next));
+  }, []);
+  const zoomIn = useCallback(() => setZoom((z) => z + FULLSCREEN_ZOOM_STEP), [setZoom]);
+  const zoomOut = useCallback(() => setZoom((z) => z - FULLSCREEN_ZOOM_STEP), [setZoom]);
+  const resetZoom = useCallback(() => setZoom(1), [setZoom]);
 
   const copyMsg = useCallback((m) => {
     const txt = m.blocks.filter((b) => b.type === "text").map((b) => b.text.replace(/\*\*/g, "").replace(/`/g, "")).join("\n\n");
@@ -668,6 +803,27 @@ function App() {
   }, []);
 
   useEffect(() => {
+    try {
+      window.localStorage.setItem(FULLSCREEN_ZOOM_STORAGE_KEY, String(fullscreenZoom));
+    } catch {
+      // Zoom still works for this session if local storage is unavailable.
+    }
+  }, [fullscreenZoom]);
+
+  useEffect(() => {
+    if (!isFullscreen) return undefined;
+    const handleWheel = (e) => {
+      if (!e.ctrlKey) return;
+      const tag = e.target?.tagName;
+      if (["INPUT", "TEXTAREA", "SELECT"].includes(tag)) return;
+      e.preventDefault();
+      setZoom((z) => z + (e.deltaY < 0 ? 0.05 : -0.05));
+    };
+    window.addEventListener("wheel", handleWheel, { passive: false });
+    return () => window.removeEventListener("wheel", handleWheel);
+  }, [isFullscreen, setZoom]);
+
+  useEffect(() => {
     const closeThemeMenu = (e) => {
       if (themeMenuRef.current && !themeMenuRef.current.contains(e.target)) {
         setThemeMenuOpen(false);
@@ -680,6 +836,28 @@ function App() {
   /* keyboard: "/" focuses composer */
   useEffect(() => {
     const h = (e) => {
+      if (deleteTargetId && e.key === "Escape") {
+        e.preventDefault();
+        setDeleteTargetId(null);
+        return;
+      }
+      if (isFullscreen && (e.ctrlKey || e.metaKey)) {
+        if (e.key === "=" || e.key === "+") {
+          e.preventDefault();
+          zoomIn();
+          return;
+        }
+        if (e.key === "-" || e.key === "_") {
+          e.preventDefault();
+          zoomOut();
+          return;
+        }
+        if (e.key === "0") {
+          e.preventDefault();
+          resetZoom();
+          return;
+        }
+      }
       if (e.key === "/" && document.activeElement && !["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement.tagName) && !settingsOpen) {
         e.preventDefault(); taRef.current && taRef.current.focus();
       }
@@ -688,7 +866,7 @@ function App() {
     };
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
-  }, [settingsOpen, themeMenuOpen]);
+  }, [settingsOpen, themeMenuOpen, deleteTargetId, isFullscreen, zoomIn, zoomOut, resetZoom]);
 
   const composerEl = (
     <Composer ref={taRef} agent={agent} agents={AGENTS} onPickAgent={pickAgent} value={input} setValue={setInput}
@@ -724,46 +902,56 @@ function App() {
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
         {/* top bar */}
         <div className="no-print" style={{ height: 52, flexShrink: 0, display: "flex", alignItems: "center", gap: 10, padding: "0 18px", borderBottom: `1px solid ${CA.hairSoft}` }}>
-          <div ref={themeMenuRef} style={{ marginLeft: "auto", flexShrink: 0, position: "relative" }}>
-            <button className="aria-focus" onClick={() => setThemeMenuOpen((v) => !v)}
-              title="Change theme"
-              aria-label={`Change theme. Current theme: ${activeTheme.label}`}
-              aria-haspopup="menu" aria-expanded={themeMenuOpen}
-              style={{
-                display: "flex", alignItems: "center", gap: 7, height: 34, padding: "0 12px", borderRadius: 100,
-                background: CA.s1, color: CA.ink, border: `1px solid ${CA.hair}`,
-                fontSize: 12.5, fontWeight: 500, transition: "background 0.14s, color 0.14s",
-              }}>
-              <Icon name={activeTheme.icon} size={14.5} color={activeTheme.accent} />
-              <span style={{ whiteSpace: "nowrap" }}>{activeTheme.label}</span>
-              <Icon name="ChevronDown" size={14} color={CA.muted}
-                style={{ transform: themeMenuOpen ? "rotate(180deg)" : "none", transition: "transform 0.16s" }} />
-            </button>
-            {themeMenuOpen && (
-              <div className="aria-scalein" role="menu" style={{
-                position: "absolute", top: "calc(100% + 8px)", right: 0, width: 172, padding: 6,
-                background: CA.s1, border: `1px solid ${CA.hair}`, borderRadius: 14,
-                boxShadow: "0 18px 44px rgba(0,0,0,0.18)", zIndex: 50,
-              }}>
-                {themeModes.map((mode) => {
-                  const p = PALETTES[mode];
-                  const on = theme === mode;
-                  return (
-                    <button key={mode} className="aria-focus" role="menuitemradio" aria-checked={on}
-                      onClick={() => { setTheme(mode); setThemeMenuOpen(false); }}
-                      style={{
-                        width: "100%", display: "flex", alignItems: "center", gap: 9, padding: "9px 10px",
-                        borderRadius: 10, background: on ? CA.s2 : "transparent", color: on ? CA.ink : CA.muted,
-                        fontSize: 13, fontWeight: 500, textAlign: "left",
-                      }}>
-                      <Icon name={p.icon} size={15} color={on ? p.accent : CA.muted} />
-                      <span style={{ flex: 1 }}>{p.label}</span>
-                      {on && <Icon name="Check" size={15} color={p.accent} sw={2.4} />}
-                    </button>
-                  );
-                })}
-              </div>
+          <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+            {isFullscreen && (
+              <FullscreenZoomControls
+                zoom={fullscreenZoom}
+                onZoomIn={zoomIn}
+                onZoomOut={zoomOut}
+                onZoomReset={resetZoom}
+              />
             )}
+            <div ref={themeMenuRef} style={{ flexShrink: 0, position: "relative" }}>
+              <button className="aria-focus" onClick={() => setThemeMenuOpen((v) => !v)}
+                title="Change theme"
+                aria-label={`Change theme. Current theme: ${activeTheme.label}`}
+                aria-haspopup="menu" aria-expanded={themeMenuOpen}
+                style={{
+                  display: "flex", alignItems: "center", gap: 7, height: 34, padding: "0 12px", borderRadius: 100,
+                  background: CA.s1, color: CA.ink, border: `1px solid ${CA.hair}`,
+                  fontSize: 12.5, fontWeight: 500, transition: "background 0.14s, color 0.14s",
+                }}>
+                <Icon name={activeTheme.icon} size={14.5} color={activeTheme.accent} />
+                <span style={{ whiteSpace: "nowrap" }}>{activeTheme.label}</span>
+                <Icon name="ChevronDown" size={14} color={CA.muted}
+                  style={{ transform: themeMenuOpen ? "rotate(180deg)" : "none", transition: "transform 0.16s" }} />
+              </button>
+              {themeMenuOpen && (
+                <div className="aria-scalein" role="menu" style={{
+                  position: "absolute", top: "calc(100% + 8px)", right: 0, width: 172, padding: 6,
+                  background: CA.s1, border: `1px solid ${CA.hair}`, borderRadius: 14,
+                  boxShadow: "0 18px 44px rgba(0,0,0,0.18)", zIndex: 50,
+                }}>
+                  {themeModes.map((mode) => {
+                    const p = PALETTES[mode];
+                    const on = theme === mode;
+                    return (
+                      <button key={mode} className="aria-focus" role="menuitemradio" aria-checked={on}
+                        onClick={() => { setTheme(mode); setThemeMenuOpen(false); }}
+                        style={{
+                          width: "100%", display: "flex", alignItems: "center", gap: 9, padding: "9px 10px",
+                          borderRadius: 10, background: on ? CA.s2 : "transparent", color: on ? CA.ink : CA.muted,
+                          fontSize: 13, fontWeight: 500, textAlign: "left",
+                        }}>
+                        <Icon name={p.icon} size={15} color={on ? p.accent : CA.muted} />
+                        <span style={{ flex: 1 }}>{p.label}</span>
+                        {on && <Icon name="Check" size={15} color={p.accent} sw={2.4} />}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -772,7 +960,8 @@ function App() {
             <Thread agent={agent}
               messages={(activeConv && activeConv.messages) || []}
               live={live && live.convId === activeConvId ? live : null}
-              scrollRef={scrollRef} onCopy={copyMsg} onRegen={regenMsg} onExport={exportMsg} />
+              scrollRef={scrollRef} onCopy={copyMsg} onRegen={regenMsg} onExport={exportMsg}
+              contentZoom={isFullscreen ? fullscreenZoom : 1} />
             <div className="no-print" style={{ flexShrink: 0, padding: "8px 24px 16px", background: CA.canvas }}>
               {composerEl}
             </div>
@@ -782,6 +971,12 @@ function App() {
             onSignal={(aid, prompt) => send(prompt, aid)} />
         )}
       </div>
+
+      <DeleteConversationDialog
+        conversation={deleteTarget}
+        onCancel={cancelDeleteConv}
+        onConfirm={confirmDeleteConv}
+      />
 
       <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} settings={settings} setSettings={setSettings} />
 
