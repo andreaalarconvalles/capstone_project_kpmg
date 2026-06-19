@@ -21,10 +21,10 @@ const AGENTS = [
     accent: "#ff385c", emoji: "✨",
     auto: true,
     chips: [
-      "Which Paris arrondissement is best for a new short-term rental investment?",
-      "What price change could improve my Athens listing revenue?",
-      "Where is host risk highest in Athens?",
-      "Compare Paris vs Athens for a small short-term rental portfolio.",
+      "For a KPMG client entering Paris, which arrondissement should be the first acquisition cluster and why?",
+      "For an Athens property manager, which repricing actions unlock revenue while controlling listing risk?",
+      "Where should an Athens operations team deploy host-support resources first?",
+      "Should a small KPMG short-term-rental portfolio launch in Athens, Paris, or a phased strategy across both?",
     ],
   },
   {
@@ -32,8 +32,8 @@ const AGENTS = [
     tagline: "Your personal revenue manager", icon: "Coins",
     accent: "#ff385c", emoji: "💶",
     chips: [
-      "Is my Paris listing underpriced compared with similar listings?",
-      "What price change could improve my Athens listing revenue?",
+      "For a Paris host, what pricing move would recover revenue without damaging bookings?",
+      "For an Athens property manager, which repricing actions unlock revenue while controlling listing risk?",
     ],
   },
   {
@@ -41,8 +41,8 @@ const AGENTS = [
     tagline: "Displacement risk 12–24 months ahead", icon: "Building2",
     accent: "#00a699", emoji: "🏘️",
     chips: [
-      "Which Athens listings need attention first because they are high-risk and underpriced?",
-      "Where is host risk highest in Athens?",
+      "Which Athens listings form the highest-priority intervention queue: high-risk, underpriced, or both?",
+      "Where should an Athens operations team deploy host-support resources first?",
     ],
   },
   {
@@ -50,8 +50,8 @@ const AGENTS = [
     tagline: "AML anomaly & SAR intelligence", icon: "Fingerprint",
     accent: "#8a2d62", emoji: "🕵️",
     chips: [
-      "Where is host risk highest in Athens?",
-      "Which Athens listings need attention first because they are high-risk and underpriced?",
+      "Where should an Athens operations team deploy host-support resources first?",
+      "Which Athens listings form the highest-priority intervention queue: high-risk, underpriced, or both?",
     ],
   },
   {
@@ -59,8 +59,8 @@ const AGENTS = [
     tagline: "Infrastructure load intelligence", icon: "TrainFront",
     accent: "#fc642d", emoji: "🚇",
     chips: [
-      "Which Athens neighbourhoods offer the strongest short-term rental yield?",
-      "Compare Paris vs Athens for a small short-term rental portfolio.",
+      "Which Athens neighbourhoods should an investor underwrite first for yield and why?",
+      "Should a small KPMG short-term-rental portfolio launch in Athens, Paris, or a phased strategy across both?",
     ],
   },
   {
@@ -68,10 +68,10 @@ const AGENTS = [
     tagline: "Site selection & ROI intelligence", icon: "Hammer",
     accent: "#e0116f", emoji: "🏗️",
     chips: [
-      "Which Paris arrondissement is best for a new short-term rental investment?",
-      "Which Paris areas look saturated and should I avoid?",
-      "Which Athens neighbourhoods offer the strongest short-term rental yield?",
-      "Compare Paris vs Athens for a small short-term rental portfolio.",
+      "For a KPMG client entering Paris, which arrondissement should be the first acquisition cluster and why?",
+      "Where should a Paris short-term-rental investor avoid first because saturation or regulation could compress returns?",
+      "Which Athens neighbourhoods should an investor underwrite first for yield and why?",
+      "Should a small KPMG short-term-rental portfolio launch in Athens, Paris, or a phased strategy across both?",
     ],
   },
 ];
@@ -661,6 +661,340 @@ setScriptBlocks("market::Compare Paris vs Athens for a small short-term rental p
   { type: "text", text: "Key evidence:\n- Paris scale: 120,809 listings.\n- Athens depth: 14,242 listings with clearer value-add and risk-prioritization use cases.\n- Recommended portfolio logic: Athens first for focused yield; Paris next for selective scale.\n\nVisualizations to review:\nUse the two maps to compare the geographic logic: Athens supports concentrated neighbourhood selection, while Paris supports a corridor-style expansion view. Use the yield chart to understand why Athens is the first value-add test market.\n\nPossible limitations:\nThis is a short-term-rental portfolio framing, not a complete residential investment model. Final decisions still need purchase prices, licensing, financing, tax, and building-level checks.\n\nSources: neighbourhood stats, ARIA yield ranking, Paris supply-demand opportunity signal" },
 ]);
 
+function registerAdvancedScript(oldAgentId, oldPrompt, newAgentId, newPrompt, brief, blocks) {
+  const oldKey = `${oldAgentId}::${oldPrompt}`;
+  const newKey = `${newAgentId}::${newPrompt}`;
+  const base = SCRIPTS[oldKey];
+  if (!base) return;
+  SCRIPTS[newKey] = {
+    ...base,
+    trace: (base.trace || []).map((step) => ({ ...step })),
+    blocks: [...(base.blocks || [])],
+    brief: {
+      ...(base.brief || {}),
+      ...(brief || {}),
+    },
+  };
+  setScriptBlocks(newKey, blocks);
+}
+
+registerAdvancedScript(
+  "market",
+  "Which Paris arrondissement is best for a new short-term rental investment?",
+  "market",
+  "For a KPMG client entering Paris, which arrondissement should be the first acquisition cluster and why?",
+  {
+    title: "Paris Acquisition Cluster Brief",
+    kpis: [
+      { label: "First cluster", value: "19th", note: "Strongest positive supply-demand gap in the Paris screen." },
+      { label: "Runner-up", value: "20th", note: "Useful expansion area after validating the first cluster." },
+      { label: "Scale path", value: "11th", note: "Secondary area with investable signal and operational adjacency." },
+      { label: "Avoid first", value: "1st-4th", note: "Central districts look more saturated for new entry." },
+    ],
+  },
+  [
+    {
+      type: "text",
+      text:
+        "Direct recommendation:\n" +
+        "For a judge-facing KPMG client case, ARIA should recommend the 19th arrondissement as the first Paris acquisition cluster, then use the 20th and 11th as the next comparison set. The business use case is a disciplined market-entry screen: find areas with enough guest demand to support revenue, but not so much saturation that a new short-term-rental portfolio is forced into aggressive pricing from day one.\n\n" +
+        "Reasoning done by ARIA:\n" +
+        "The 19th has the strongest positive supply-demand gap in the Paris neighbourhood screen. A positive gap means demand-side signals are stronger than local supply pressure, so the area deserves earlier underwriting. The 20th is close behind and can be treated as a practical expansion corridor, while the 11th gives the client a more established inner-city comparison point. This framing lets the investor discuss both upside and execution risk instead of simply choosing the most famous arrondissement.\n\n" +
+        "Key evidence:\n" +
+        "- 19th arrondissement: strongest gap signal at +0.41, indicating the best relative entry balance.\n" +
+        "- 20th arrondissement: second strongest gap at +0.37, useful for pipeline diversification.\n" +
+        "- 11th arrondissement: positive gap at +0.22, but likely more competitive than the outer eastern clusters.\n" +
+        "- 1st-4th arrondissements: negative gap around -0.28, suggesting central demand does not automatically translate into attractive new-entry economics.\n\n" +
+        "Possible limitations:\n" +
+        "This is a neighbourhood-level recommendation, not a purchase decision. The client still needs property-level revenue modelling, acquisition price checks, building restrictions, and Paris short-term-rental compliance review before committing capital.\n\n" +
+        "Next actions:\n" +
+        "Shortlist 5-10 properties in the 19th, compare them against nearby 20th arrondissement assets, and reject any target where licensing, building rules, renovation cost, or guest access weakens the expected return.\n\n" +
+        "Sources: neighbourhood stats, ARIA supply-demand gap screen.",
+    },
+    { type: "chart", chart: { ...SCRIPT_MAPS.parisOpportunity, title: "Paris map: first acquisition cluster and expansion corridor" } },
+    { type: "chart", chart: { kind: "supplygap", title: "Paris acquisition screen: supply-demand gap by arrondissement" } },
+  ]
+);
+
+registerAdvancedScript(
+  "market",
+  "Which Paris areas look saturated and should I avoid?",
+  "market",
+  "Where should a Paris short-term-rental investor avoid first because saturation or regulation could compress returns?",
+  {
+    title: "Paris Avoid-First Brief",
+    kpis: [
+      { label: "Avoid first", value: "1st-4th", note: "Negative supply-demand gap in the Paris screen." },
+      { label: "Main pressure", value: "Saturation", note: "Demand exists, but competition can compress returns." },
+      { label: "Better entry", value: "19th/20th", note: "Outer eastern clusters show stronger relative balance." },
+      { label: "Use case", value: "Capital filter", note: "Use this view to reject crowded acquisition targets early." },
+    ],
+  },
+  [
+    {
+      type: "text",
+      text:
+        "Direct recommendation:\n" +
+        "For a new Paris short-term-rental portfolio, ARIA would avoid leading with the 1st-4th arrondissements unless the client has a specific premium asset, regulatory clarity, and a strong pricing advantage. The business use case is risk control: do not let prestige locations absorb capital before proving that the unit economics can survive saturation and compliance pressure.\n\n" +
+        "Reasoning done by ARIA:\n" +
+        "Central Paris can look attractive because brand recognition and tourist demand are high. However, ARIA's neighbourhood screen flags these areas as more crowded relative to their incremental opportunity. A negative supply-demand gap means the client may face stronger competition, lower differentiation, and more demanding due diligence before a property can outperform.\n\n" +
+        "Key evidence:\n" +
+        "- 1st-4th arrondissements show a negative gap around -0.28, making them less attractive as a first acquisition cluster.\n" +
+        "- The 19th and 20th show stronger positive signals, so they are better first-pass underwriting areas.\n" +
+        "- Saturation risk matters because a high-demand location can still underperform if many similar listings compete for the same guest segment.\n\n" +
+        "Possible limitations:\n" +
+        "This does not mean central Paris is uninvestable. It means central assets need a stronger justification: unique location, premium design, legal eligibility, superior reviews, or a price that compensates for the competitive pressure.\n\n" +
+        "Next actions:\n" +
+        "Use the map as an exclusion layer. Flag central Paris targets for enhanced legal and financial review, and only advance them if the asset-level model beats the eastern Paris benchmark.\n\n" +
+        "Sources: neighbourhood stats, ARIA supply-demand gap screen.",
+    },
+    { type: "chart", chart: { ...SCRIPT_MAPS.parisSaturation, title: "Paris map: saturation pressure and avoid-first zones" } },
+    { type: "chart", chart: { kind: "supplygap", title: "Paris supply-demand gap: attractive versus compressed areas" } },
+  ]
+);
+
+registerAdvancedScript(
+  "host-revenue",
+  "Is my Paris listing underpriced compared with similar listings?",
+  "host-revenue",
+  "For a Paris host, what pricing move would recover revenue without damaging bookings?",
+  {
+    title: "Paris Host Pricing Action Brief",
+    kpis: [
+      { label: "Current price", value: "EUR 118", note: "Observed nightly price for the listing in the script." },
+      { label: "Fair value", value: "EUR 147", note: "XGBoost comparable-listing price estimate." },
+      { label: "Test price", value: "EUR 142", note: "Conservative first move rather than jumping to full fair value." },
+      { label: "Revenue upside", value: "+EUR 6.4k", note: "Estimated annual improvement if demand holds." },
+    ],
+  },
+  [
+    {
+      type: "text",
+      text:
+        "Direct recommendation:\n" +
+        "For a Paris host, ARIA recommends moving from EUR 118 to a controlled test price around EUR 142 per night, rather than immediately jumping to the full model estimate of EUR 147. The business use case is revenue recovery with booking-risk discipline: capture underpricing upside while watching conversion, occupancy, and reviews.\n\n" +
+        "Reasoning done by ARIA:\n" +
+        "The XGBoost pricing model compares the listing with similar properties and estimates that the current price is materially below market. A direct increase to EUR 147 may be justified statistically, but a phased move is easier for a non-technical host to manage because it creates a clean test-and-learn window. If bookings remain stable, the host can continue toward the fair-value estimate.\n\n" +
+        "Key evidence:\n" +
+        "- Current nightly price: EUR 118.\n" +
+        "- Model fair-value estimate: EUR 147.\n" +
+        "- Recommended first test: EUR 142.\n" +
+        "- Estimated annual upside: about EUR 6,400 if demand remains resilient.\n\n" +
+        "Possible limitations:\n" +
+        "The model does not replace calendar management. The host should check seasonality, event dates, cancellation patterns, minimum-stay settings, and competitor prices before making the change permanent.\n\n" +
+        "Next actions:\n" +
+        "Run the EUR 142 price for two weeks, compare booking pace against the previous period, and use the SHAP explanation to confirm which listing features justify the premium.\n\n" +
+        "Sources: XGBoost predictions, SHAP explanations, neighbourhood stats.",
+    },
+    { type: "chart", chart: { kind: "pricing", title: "Paris pricing decision: current, test price, and model fair value" } },
+    { type: "chart", chart: { kind: "shap", title: "Why the model supports a price increase" } },
+  ]
+);
+
+registerAdvancedScript(
+  "host-revenue",
+  "What price change could improve my Athens listing revenue?",
+  "host-revenue",
+  "For an Athens property manager, which repricing actions unlock revenue while controlling listing risk?",
+  {
+    title: "Athens Manager Repricing Brief",
+    kpis: [
+      { label: "Underpriced", value: "2,945", note: "Listings flagged as priced below model-supported value." },
+      { label: "Priority overlap", value: "865", note: "Listings that are both underpriced and high-risk." },
+      { label: "Test band", value: "EUR 25-40", note: "Practical first increase range for selected listings." },
+      { label: "Guardrail", value: "Risk review", note: "Do not raise prices before fixing quality or trust issues." },
+    ],
+  },
+  [
+    {
+      type: "text",
+      text:
+        "Direct recommendation:\n" +
+        "For an Athens property manager, ARIA recommends prioritising repricing on the 865 listings that are both underpriced and high-risk, but only after checking whether the risk signal is fixable. The business use case is operational triage: recover revenue where the price gap is real, while avoiding a price increase on listings that first need quality, host, or trust improvements.\n\n" +
+        "Reasoning done by ARIA:\n" +
+        "Athens has 2,945 listings flagged as underpriced, which is too broad for a manager to action manually. The overlap with high-risk listings creates a sharper work queue. Some listings may be cheap because they have poor guest signals; others may be genuinely under-monetised. ARIA separates those cases so managers can decide whether to reprice, repair, or pause acquisition interest.\n\n" +
+        "Key evidence:\n" +
+        "- Underpriced listings: 2,945.\n" +
+        "- High-risk and underpriced overlap: 865.\n" +
+        "- Recommended first action: test EUR 25-40 increases only on listings with fixable risk drivers.\n" +
+        "- Risk guardrail: review ratings, cancellations, amenities, and host responsiveness before changing price.\n\n" +
+        "Possible limitations:\n" +
+        "A listing can be underpriced for a valid reason. If the risk model is driven by poor reviews, weak amenities, or operational issues, price should not be the first lever.\n\n" +
+        "Next actions:\n" +
+        "Segment the 865-listing queue into reprice-now, fix-first, and exclude groups. Then monitor conversion after each pricing change.\n\n" +
+        "Sources: XGBoost predictions, LightGBM risk scores, neighbourhood stats.",
+    },
+    { type: "chart", chart: { kind: "pricing", title: "Athens repricing decision: model-supported price gap" } },
+    { type: "chart", chart: { ...SCRIPT_MAPS.athensRisk, title: "Athens map: high-risk underpriced intervention areas" } },
+    { type: "chart", chart: { kind: "riskbar", title: "Athens risk concentration by neighbourhood" } },
+  ]
+);
+
+registerAdvancedScript(
+  "market",
+  "Which Athens neighbourhoods offer the strongest short-term rental yield?",
+  "market",
+  "Which Athens neighbourhoods should an investor underwrite first for yield and why?",
+  {
+    title: "Athens Yield Underwriting Brief",
+    kpis: [
+      { label: "Lead area", value: "Pangrati", note: "Highest yield in the scripted Athens screen." },
+      { label: "Yield", value: "11.4%", note: "Modelled short-term-rental yield signal." },
+      { label: "Runner-up", value: "Kypseli", note: "Second strongest yield signal at 10.6%." },
+      { label: "Third option", value: "Mets", note: "Useful comparison area at 9.8%." },
+    ],
+  },
+  [
+    {
+      type: "text",
+      text:
+        "Direct recommendation:\n" +
+        "For an Athens investor, ARIA recommends underwriting Pangrati first, with Kypseli and Mets as the next two comparison areas. The business use case is a yield-led acquisition funnel: identify neighbourhoods where expected rental performance is strong enough to justify deeper property-level due diligence.\n\n" +
+        "Reasoning done by ARIA:\n" +
+        "Pangrati ranks highest in the scripted yield screen at 11.4%, suggesting the most attractive balance between rental revenue and local investment cost. Kypseli follows at 10.6%, while Mets sits at 9.8%. A professional investor should not treat this as a final buy list; it is a prioritised underwriting sequence that helps focus analyst time on the strongest areas first.\n\n" +
+        "Key evidence:\n" +
+        "- Pangrati yield: 11.4%.\n" +
+        "- Kypseli yield: 10.6%.\n" +
+        "- Mets yield: 9.8%.\n" +
+        "- Plaka yield: 7.1%, which may reflect stronger acquisition pressure in a famous central area.\n\n" +
+        "Possible limitations:\n" +
+        "Yield screens depend on acquisition price assumptions and average rental performance. The client still needs building-level checks, renovation estimates, seasonality review, and legal feasibility checks.\n\n" +
+        "Next actions:\n" +
+        "Use the map to form a Pangrati-first search area, then compare candidate apartments against Kypseli and Mets to avoid overpaying for a single neighbourhood story.\n\n" +
+        "Sources: neighbourhood stats, ARIA yield screen.",
+    },
+    { type: "chart", chart: { ...SCRIPT_MAPS.athensYield, title: "Athens map: yield-led underwriting clusters" } },
+    { type: "chart", chart: { kind: "yield", title: "Athens yield ranking: first-pass acquisition areas" } },
+  ]
+);
+
+SCRIPTS["demand::Which Athens neighbourhoods should an investor underwrite first for yield and why?"] =
+  SCRIPTS["market::Which Athens neighbourhoods should an investor underwrite first for yield and why?"];
+
+registerAdvancedScript(
+  "gentrification",
+  "Which Athens listings need attention first because they are high-risk and underpriced?",
+  "gentrification",
+  "Which Athens listings form the highest-priority intervention queue: high-risk, underpriced, or both?",
+  {
+    title: "Athens Intervention Queue Brief",
+    kpis: [
+      { label: "Priority overlap", value: "865", note: "Listings that are both high-risk and underpriced." },
+      { label: "High-risk base", value: "4,695", note: "Listings above the risk threshold." },
+      { label: "Risk cutoff", value: "70%", note: "Operational threshold used for this triage." },
+      { label: "Use case", value: "Coach first", note: "Find listings that need intervention before pricing action." },
+    ],
+  },
+  [
+    {
+      type: "text",
+      text:
+        "Direct recommendation:\n" +
+        "The highest-priority Athens intervention queue is the 865 listings that are both high-risk and underpriced. The business use case is manager triage: these listings may look like revenue opportunities, but they also carry execution risk, so ARIA should route them to review before recommending a price increase or acquisition decision.\n\n" +
+        "Reasoning done by ARIA:\n" +
+        "Underpricing alone can signal upside. High risk alone can signal an operational problem. The overlap is where management attention matters most because the listing may either be a turnaround opportunity or a value trap. ARIA uses the combined view to help a non-technical manager decide which assets deserve immediate human review.\n\n" +
+        "Key evidence:\n" +
+        "- High-risk listings in Athens: 4,695.\n" +
+        "- High-risk threshold: 70%.\n" +
+        "- High-risk and underpriced overlap: 865 listings.\n" +
+        "- Highest neighbourhood risk concentrations include Koukaki, Exarchia, and Plaka.\n\n" +
+        "Possible limitations:\n" +
+        "The risk score is a prioritisation tool, not a legal or operational diagnosis. The team still needs listing-level review to understand whether risk is caused by quality, location, host behaviour, guest mix, or data sparsity.\n\n" +
+        "Next actions:\n" +
+        "Create a three-bucket action list: reprice-now if risk is low or fixable, fix-first if quality issues are visible, and exclude if the risk signal cannot be mitigated.\n\n" +
+        "Sources: LightGBM risk scores, XGBoost predictions, neighbourhood stats.",
+    },
+    { type: "chart", chart: { ...SCRIPT_MAPS.athensRisk, title: "Athens map: high-risk and underpriced priority queue" } },
+    { type: "chart", chart: { kind: "riskbar", title: "Athens priority queue: risk concentration by neighbourhood" } },
+  ]
+);
+
+SCRIPTS["crime::Which Athens listings form the highest-priority intervention queue: high-risk, underpriced, or both?"] =
+  SCRIPTS["gentrification::Which Athens listings form the highest-priority intervention queue: high-risk, underpriced, or both?"];
+
+registerAdvancedScript(
+  "gentrification",
+  "Where is host risk highest in Athens?",
+  "gentrification",
+  "Where should an Athens operations team deploy host-support resources first?",
+  {
+    title: "Athens Host-Support Deployment Brief",
+    kpis: [
+      { label: "Lead risk area", value: "Koukaki", note: "Highest risk concentration in the scripted view." },
+      { label: "Risk signal", value: "84%", note: "Neighbourhood-level concentration score." },
+      { label: "Second area", value: "Exarchia", note: "Second-highest signal at 76%." },
+      { label: "Use case", value: "Field ops", note: "Prioritise coaching, quality checks, and listing audits." },
+    ],
+  },
+  [
+    {
+      type: "text",
+      text:
+        "Direct recommendation:\n" +
+        "An Athens operations team should deploy host-support resources first in Koukaki, then Exarchia and Plaka. The business use case is operational risk reduction: focus coaching, listing audits, and quality checks where the risk concentration is highest before those issues become revenue or reputation problems.\n\n" +
+        "Reasoning done by ARIA:\n" +
+        "Koukaki shows the highest risk concentration at 84%, followed by Exarchia at 76% and Plaka at 71%. These scores point to neighbourhoods where listings may need closer review of guest experience, pricing discipline, host responsiveness, or operational consistency. For a non-technical manager, the map turns model output into a field-service plan.\n\n" +
+        "Key evidence:\n" +
+        "- Koukaki risk concentration: 84%.\n" +
+        "- Exarchia risk concentration: 76%.\n" +
+        "- Plaka risk concentration: 71%.\n" +
+        "- Pangrati is lower at 58%, making it less urgent for the first support wave.\n\n" +
+        "Possible limitations:\n" +
+        "Risk concentration does not identify the root cause by itself. The team should inspect listing pages, review text, cancellations, amenities, and response behaviour before assigning a final action.\n\n" +
+        "Next actions:\n" +
+        "Build a weekly field-ops queue by neighbourhood, audit the top listings in Koukaki first, and track whether interventions reduce future risk scores.\n\n" +
+        "Sources: LightGBM risk scores, neighbourhood stats.",
+    },
+    { type: "chart", chart: { ...SCRIPT_MAPS.athensRisk, title: "Athens map: host-support deployment priorities" } },
+    { type: "chart", chart: { kind: "riskbar", title: "Athens host risk concentration by neighbourhood" } },
+  ]
+);
+
+SCRIPTS["crime::Where should an Athens operations team deploy host-support resources first?"] =
+  SCRIPTS["gentrification::Where should an Athens operations team deploy host-support resources first?"];
+
+registerAdvancedScript(
+  "market",
+  "Compare Paris vs Athens for a small short-term rental portfolio.",
+  "market",
+  "Should a small KPMG short-term-rental portfolio launch in Athens, Paris, or a phased strategy across both?",
+  {
+    title: "Paris-Athens Portfolio Sequencing Brief",
+    kpis: [
+      { label: "Recommended path", value: "Athens first", note: "Use Athens for yield-led proof of concept." },
+      { label: "Scale option", value: "Paris second", note: "Use Paris after validating acquisition and compliance playbook." },
+      { label: "Paris listings", value: "120,809", note: "Large market, but more competitive." },
+      { label: "Athens listings", value: "14,242", note: "Smaller market with clearer entry focus." },
+    ],
+  },
+  [
+    {
+      type: "text",
+      text:
+        "Direct recommendation:\n" +
+        "For a small KPMG short-term-rental portfolio, ARIA recommends a phased strategy: launch the proof of concept in Athens, then use Paris as the scale market once the acquisition, compliance, pricing, and operations playbook is proven. The business use case is capital sequencing: start where the team can learn faster, then expand into the larger but more complex market.\n\n" +
+        "Reasoning done by ARIA:\n" +
+        "Athens offers a smaller and more focused operating environment, with 14,242 listings in the project data compared with 120,809 in Paris. Paris is strategically important because of its market depth, but that scale also means stronger competition and more demanding compliance review. A phased plan lets the client demonstrate returns, refine operating controls, and then approach Paris with a more credible execution model.\n\n" +
+        "Key evidence:\n" +
+        "- Paris listings reviewed: 120,809, indicating depth and liquidity but also intense competition.\n" +
+        "- Athens listings reviewed: 14,242, making it more manageable for a first operating test.\n" +
+        "- Athens yield and risk maps provide clearer first-wave neighbourhood actions.\n" +
+        "- Paris remains valuable as a second-stage market for scale and institutional relevance.\n\n" +
+        "Possible limitations:\n" +
+        "This recommendation is for a small portfolio. A large investor with significant capital, local Paris expertise, and a compliance-ready acquisition pipeline may rationally prioritise Paris first.\n\n" +
+        "Next actions:\n" +
+        "Define a 90-day Athens pilot, set acquisition and pricing guardrails, then prepare a Paris market-entry checklist focused on the 19th, 20th, and 11th arrondissements.\n\n" +
+        "Sources: neighbourhood stats, ARIA yield screen, ARIA supply-demand gap screen.",
+    },
+    { type: "chart", chart: { ...SCRIPT_MAPS.athensYield, title: "Athens map: proof-of-concept yield clusters" } },
+    { type: "chart", chart: { ...SCRIPT_MAPS.parisOpportunity, title: "Paris map: second-stage scale clusters" } },
+    { type: "chart", chart: { kind: "marketCompare", title: "Portfolio sequencing: Athens proof of concept versus Paris scale" } },
+  ]
+);
+
+SCRIPTS["demand::Should a small KPMG short-term-rental portfolio launch in Athens, Paris, or a phased strategy across both?"] =
+  SCRIPTS["market::Should a small KPMG short-term-rental portfolio launch in Athens, Paris, or a phased strategy across both?"];
+
 /* Generic fallback for free-form / unscripted prompts */
 function genericScript(agent, prompt) {
   return {
@@ -686,22 +1020,22 @@ function getScript(agentId, prompt) {
 
 /* ---------- Seeded conversation history ---------- */
 const SEED_CONVERSATIONS = [
-  { id: "c1", agentId: "host-revenue", title: "Underpricing vs neighbourhood", group: "Today",
-    prompt: "Is my Paris listing underpriced compared with similar listings?" },
-  { id: "c2", agentId: "host-revenue", title: "Athens revenue action", group: "Today",
-    prompt: "What price change could improve my Athens listing revenue?" },
-  { id: "c3", agentId: "market", title: "Paris investment area", group: "Today",
-    prompt: "Which Paris arrondissement is best for a new short-term rental investment?" },
-  { id: "c4", agentId: "market", title: "Paris saturation watch", group: "Yesterday",
-    prompt: "Which Paris areas look saturated and should I avoid?" },
-  { id: "c5", agentId: "market", title: "Athens yield ranking", group: "Yesterday",
-    prompt: "Which Athens neighbourhoods offer the strongest short-term rental yield?" },
-  { id: "c6", agentId: "gentrification", title: "High-risk underpriced queue", group: "Previous 7 days",
-    prompt: "Which Athens listings need attention first because they are high-risk and underpriced?" },
-  { id: "c7", agentId: "gentrification", title: "Athens host risk", group: "Previous 7 days",
-    prompt: "Where is host risk highest in Athens?" },
-  { id: "c8", agentId: "market", title: "Paris vs Athens portfolio", group: "Previous 7 days",
-    prompt: "Compare Paris vs Athens for a small short-term rental portfolio." },
+  { id: "c1", agentId: "host-revenue", title: "Paris pricing recovery", group: "Today",
+    prompt: "For a Paris host, what pricing move would recover revenue without damaging bookings?" },
+  { id: "c2", agentId: "host-revenue", title: "Athens repricing triage", group: "Today",
+    prompt: "For an Athens property manager, which repricing actions unlock revenue while controlling listing risk?" },
+  { id: "c3", agentId: "market", title: "Paris acquisition cluster", group: "Today",
+    prompt: "For a KPMG client entering Paris, which arrondissement should be the first acquisition cluster and why?" },
+  { id: "c4", agentId: "market", title: "Paris avoid-first zones", group: "Yesterday",
+    prompt: "Where should a Paris short-term-rental investor avoid first because saturation or regulation could compress returns?" },
+  { id: "c5", agentId: "market", title: "Athens yield underwriting", group: "Yesterday",
+    prompt: "Which Athens neighbourhoods should an investor underwrite first for yield and why?" },
+  { id: "c6", agentId: "gentrification", title: "Athens intervention queue", group: "Previous 7 days",
+    prompt: "Which Athens listings form the highest-priority intervention queue: high-risk, underpriced, or both?" },
+  { id: "c7", agentId: "gentrification", title: "Athens field-ops deployment", group: "Previous 7 days",
+    prompt: "Where should an Athens operations team deploy host-support resources first?" },
+  { id: "c8", agentId: "market", title: "Paris-Athens sequencing", group: "Previous 7 days",
+    prompt: "Should a small KPMG short-term-rental portfolio launch in Athens, Paris, or a phased strategy across both?" },
 ];
 
 /* ---------- Theme palettes ----------
