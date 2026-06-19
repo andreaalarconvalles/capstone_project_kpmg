@@ -645,10 +645,15 @@ function App() {
   }, [live, activeConvId, conversations, runStream, runLive]);
   const exportMsg = useCallback((m, event) => exportBrief(AGENT_BY_ID[m.agentId], m.prompt, m, event), []);
   const canExportConversation = !!activeConv?.messages?.some((m) => m.role === "assistant" && m.done !== false);
+  const canExportPrompt = canExportConversation;
   const exportConversation = useCallback(() => {
     if (!activeConv || !canExportConversation) return;
     exportConversationBrief(activeConv);
   }, [activeConv, canExportConversation]);
+  const exportPrompt = useCallback(() => {
+    if (!activeConv || !canExportPrompt) return;
+    exportConversationPrompt(activeConv, { agent, modelId });
+  }, [activeConv, canExportPrompt, agent, modelId]);
 
   /* autoscroll while streaming */
   useEffect(() => {
@@ -689,13 +694,15 @@ function App() {
     <Composer ref={taRef} agent={agent} agents={AGENTS} onPickAgent={pickAgent} value={input} setValue={setInput}
       onSend={() => send()} streaming={!!live} onStop={stopStream}
       modelId={modelId} setModelId={setModelId}
-      onExportConversation={exportConversation} canExportConversation={canExportConversation && !live} />
+      onExportConversation={exportConversation} canExportConversation={canExportConversation && !live}
+      onExportPrompt={exportPrompt} canExportPrompt={canExportPrompt && !live} />
   );
   const landingComposerEl = (
     <Composer ref={taRef} agent={agent} agents={AGENTS} onPickAgent={pickAgent} value={input} setValue={setInput}
       onSend={() => send()} streaming={!!live} onStop={stopStream}
       modelId={modelId} setModelId={setModelId}
       onExportConversation={exportConversation} canExportConversation={canExportConversation && !live}
+      onExportPrompt={exportPrompt} canExportPrompt={canExportPrompt && !live}
       maxWidth={1022} />
   );
 

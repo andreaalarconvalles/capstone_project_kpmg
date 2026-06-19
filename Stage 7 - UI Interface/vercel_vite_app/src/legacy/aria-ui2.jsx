@@ -184,6 +184,7 @@ function AgentPicker({ agentId, agents, onPick }) {
 const Composer = React.forwardRef(function Composer({
   agent, agents, onPickAgent, value, setValue, onSend, streaming, onStop, modelId, setModelId,
   onExportConversation, canExportConversation = false,
+  onExportPrompt, canExportPrompt = false,
   maxWidth = 768,
 }, ref) {
   const taRef = ref || React.useRef(null);
@@ -290,6 +291,21 @@ const Composer = React.forwardRef(function Composer({
             onMouseLeave={(e) => { if (canExportConversation) e.currentTarget.style.background = C2.s2; }}>
             <Icon name="Download" size={14.5} color="currentColor" />
             Chat brief
+          </button>
+          <button className="aria-focus" onClick={onExportPrompt} disabled={!canExportPrompt}
+            title={canExportPrompt ? "Download a reusable Markdown prompt from this conversation" : "Run at least one analysis to generate a reusable prompt"}
+            style={{
+              display: "flex", alignItems: "center", gap: 6, padding: "6px 10px", borderRadius: 100,
+              background: canExportPrompt ? C2.s2 : "transparent",
+              border: canExportPrompt ? `1px solid ${C2.hair}` : `1px solid transparent`,
+              color: canExportPrompt ? C2.ink : C2.muted,
+              fontSize: 12.5, fontWeight: 500, cursor: canExportPrompt ? "pointer" : "default",
+              opacity: canExportPrompt ? 1 : 0.48, transition: "background 0.12s, opacity 0.12s",
+            }}
+            onMouseEnter={(e) => { if (canExportPrompt) e.currentTarget.style.background = C2.s1; }}
+            onMouseLeave={(e) => { if (canExportPrompt) e.currentTarget.style.background = C2.s2; }}>
+            <Icon name="FileText" size={14.5} color="currentColor" />
+            Prompt.md
           </button>
           {engine.ml && (
             <div className="aria-scalein" style={{
@@ -716,6 +732,106 @@ function buildConversationTurns(messages = []) {
   return turns;
 }
 
+function promptMarkdownText(value) {
+  return plainBriefText(value)
+    .replace(/\r\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function promptMarkdownFence(value) {
+  const text = String(value ?? "").replace(/```/g, "'''").trim();
+  return `\`\`\`text\n${text || "Not provided."}\n\`\`\``;
+}
+
+function promptMarkdownList(items = []) {
+  const clean = items.map(promptMarkdownText).filter(Boolean);
+  return clean.length ? clean.map((item) => `- ${item}`).join("\n") : "- Not provided.";
+}
+
+function compactPromptNumber(value) {
+  if (typeof value === "number") return Number.isFinite(value) ? Number(value.toFixed(3)) : "";
+  return value ?? "";
+}
+
+function chartPromptSummary(chart) {
+  if (!chart) return "";
+  const rows = Array.isArray(chart.data) ? chart.data : [];
+  const sampleRows = rows.slice(0, 6).map((row) => {
+    if (!row || typeof row !== "object") return String(row ?? "");
+    return Object.entries(row)
+      .filter(([key]) => !["lat", "lon", "coordinateSource"].includes(key))
+      .slice(0, 6)
+      .map(([key, value]) => `${key}: ${compactPromptNumber(value)}`)
+      .join(", ");
+  }).filter(Boolean);
+  return [
+    `Chart: ${chart.title || "Untitled visual"}`,
+    chart.metricNote ? `Interpretation note: ${promptMarkdownText(chart.metricNote)}` : "",
+    chart.type ? `Type: ${chart.type}` : "",
+    chart.xKey && chart.yKey ? `Variables: ${chart.xKey} vs ${chart.yKey}` : "",
+    sampleRows.length ? `Sample data: ${sampleRows.join(" | ")}` : "",
+  ].filter(Boolean).join("\n");
+}
+
+function answerPromptEvidence(answer = {}) {
+  const blocks = Array.isArray(answer.blocks) ? answer.blocks : [];
+  const lines = [];
+  const textBlocks = blocks.filter((block) => block.type === "text").map((block) => promptMarkdownText(block.text)).filter(Boolean);
+  const kpis = blocks.find((block) => block.type === "kpis")?.kpis || answer.brief?.kpis || [];
+  const chartBlocks = blocks.filter((block) => block.type === "chart" && block.chart);
+  const details = blocks.find((block) => block.type === "details")?.details || {};
+  if (textBlocks.length) lines.push(`Answer narrative:\n${textBlocks.join("\n\n")}`);
+  if (kpis.length) lines.push(`KPI cards:\n${kpis.slice(0, 8).map((kpi) => `- ${promptMarkdownText(kpi.label)}: ${promptMarkdownText(kpi.value)}${kpi.help ? ` (${promptMarkdownText(kpi.help)})` : ""}`).join("\n")}`);
+  if (chartBlocks.length) lines.push(`Generated visualizations:\n${chartBlocks.map((block) => chartPromptSummary(block.chart)).filter(Boolean).join("\n\n")}`);
+  if (details.sourceFiles?.length) lines.push(`Source files:\n${promptMarkdownList(details.sourceFiles)}`);
+  if (details.limitations?.length) lines.push(`Limitations noted:\n${promptMarkdownList(details.limitations)}`);
+  return lines.join("\n\n") || "No completed ARIA answer content was available.";
+}
+
+function safePromptFilePart(value) {
+  return String(value || "aria-conversation")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 64) || "aria-conversation";
+}
+
+function downloadMarkdown(filename, markdown) {
+  const blob = new Blob([markdown], { type: "text/markdown;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 500);
+}
+
+function buildConversationPromptMarkdown(conversation, options = {}) {
+  const turns = buildConversationTurns(conversation?.messages || []);
+  if (!turns.length) return "";
+  const activeAgent = options.agent || AGENT_BY_ID[conversation?.agentId] || AGENTS[0];
+  const model = MODEL_BY_ID[options.modelId] || MODEL_BY_ID["gemini-2.5-pro"] || { name: options.modelId || "Selected model" };
+  const generated = new Date().toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" });
+  const latestTurn = turns[turns.length - 1];
+  const context = turns.map((turn, index) => {
+    const answer = turn.answer || {};
+    const agent = AGENT_BY_ID[answer.agentId] || activeAgent;
+    return `## Conversation Turn ${index + 1}\n\n### User request\n${promptMarkdownFence(turn.prompt)}\n\n### ARIA answer context (${agent.name})\n${answerPromptEvidence(answer)}`;
+  }).join("\n\n");
+
+  return `# ARIA Reusable Professional Prompt\n\nGenerated: ${generated}\nConversation: ${conversation?.title || "Current ARIA chat"}\nActive agent: ${activeAgent.name}\nSelected model: ${model.name || options.modelId || "Selected model"}\n\n## Reusable Prompt\n\nCopy the prompt below into ARIA or another analyst LLM when you want to reproduce and refine this conversation's output style.\n\n${promptMarkdownFence(`You are ARIA, KPMG's short-term-rental intelligence analyst for the IE Business School capstone project. Use the conversation context below as the grounding record. Produce a professional, client-ready answer for a non-technical investor, manager, or business stakeholder.\n\nPrimary task: Respond to the latest user request while preserving the project evidence, model outputs, source discipline, and visualization logic already used in this conversation.\n\nLatest user request:\n${latestTurn.prompt}\n\nResponse structure:\n1. Direct recommendation first.\n2. Reasoning done by ARIA, in plain language.\n3. Key evidence from the available ARIA model outputs and project data.\n4. Visualizations to review, including maps for geographic prompts and only charts whose variables make analytical sense.\n5. Possible limitations and decision risks.\n6. Concrete next actions.\n7. End with a Sources line.\n\nHard rules:\n- Stay within the requested city, asset, or decision scope unless the user explicitly asks for a cross-city comparison.\n- Ground claims in ARIA project evidence: XGBoost pricing outputs, SHAP explanations, LightGBM risk scores, Prophet forecast outputs, RAG compliance notes, and neighbourhood/listing statistics when available.\n- Do not invent exact figures, model scores, legal advice, or property-level facts that are not present in the context.\n- Explain technical terms briefly in brackets the first time they matter.\n- Prefer 400-800 words for complex business prompts and shorter direct answers for simple prompts.\n- Use a formal, professional tone suitable for KPMG stakeholders.\n- If data is missing, say what is missing and give a cautious general recommendation.\n\nVisualization QA rules:\n- Include a map whenever the request is geographic and coordinates or neighbourhood data are available.\n- Use the chart type that best matches the question: ranking bars for top areas, line charts for forecasts, scatter/bubble charts only when both axes have enough spread and do not overlap, and KPI cards only for the most important numbers.\n- Do not duplicate the same chart in follow-up answers unless the user asks to revisit it; reference the previous visual instead.\n- Before presenting a chart, check whether the variables create a readable and meaningful comparison. If values overlap tightly, switch to a ranking bar, table, or KPI comparison.\n- Every visual should have a clear title, metric explanation, and decision purpose.\n\nSources format:\nSources: ARIA risk scores, neighbourhood stats, XGBoost predictions, SHAP model explanations, Prophet forecast outputs, RAG compliance notes - include only the sources actually used.`)}\n\n## Conversation Context\n\n${context}\n\n## Final Instruction\n\nUse the latest request and the conversation context above to generate the most refined ARIA response possible. Keep the answer scoped, grounded, visual-first where appropriate, and useful for decision-making.\n`;
+}
+
+function exportConversationPrompt(conversation, options = {}) {
+  const markdown = buildConversationPromptMarkdown(conversation, options);
+  if (!markdown) return;
+  const date = new Date().toISOString().slice(0, 10);
+  const filePart = safePromptFilePart(conversation?.title || "aria-conversation");
+  downloadMarkdown(`aria-reusable-prompt-${filePart}-${date}.md`, markdown);
+}
 function exportBrief(agent, prompt, message, event) {
   const win = window.open("", "_blank", "width=980,height=1100");
   if (!win) return;
@@ -965,4 +1081,4 @@ function exportConversationBrief(conversation) {
   win.document.close();
 }
 
-Object.assign(window, { ModelPicker, AgentPicker, Composer, EmptyState, SettingsModal, exportBrief, exportConversationBrief });
+Object.assign(window, { ModelPicker, AgentPicker, Composer, EmptyState, SettingsModal, exportBrief, exportConversationBrief, exportConversationPrompt, buildConversationPromptMarkdown });
