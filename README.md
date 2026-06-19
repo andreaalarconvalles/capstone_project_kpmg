@@ -35,6 +35,14 @@ Current live status:
 - Conservative in Vercel: compliance prompts are analyst triage from committed RAG CSV/JSON outputs, not final legal advice and not live ChromaDB retrieval at request time.
 - Notebook evidence: LangGraph demonstrates the multi-agent orchestration architecture; Vercel productionizes a compatible web demo flow.
 
+Current answer-quality standard:
+- Responses lead with a direct recommendation, then explain ARIA's reasoning, key evidence, visualizations, limitations, next actions, and sources.
+- The live chat path sends recent conversation context to `/api/chat`, so follow-up prompts can resolve phrases such as "there", "those areas", and "same city" without repeating the previous answer.
+- Single-city prompts stay inside the requested city. ARIA should not pivot from Paris to Athens, or Athens to Paris, unless the user explicitly asks for a cross-city comparison.
+- Geographic prompts should return maps when usable coordinates or area-level data are available. Scatter and bubble charts are sanity-checked first; if points would overlap or collapse into one cluster, ARIA should use a clearer ranking, trend, map, or detail table.
+- The UI includes `Chat Brief` export for a full conversation brief and `Project Brief` export for a reusable Markdown analyst instruction grounded in the current conversation.
+- Response quality is regression-tested with `Stage 7 - UI Interface/vercel_vite_app/api/response-quality.eval.mjs`; representative answers are expected to score at least 97/100.
+
 ---
 
 ## System Architecture
@@ -276,7 +284,9 @@ A fully executed 9-node LangGraph `StateGraph` wiring all five specialist agents
 
 **Location:** `Stage 7 - UI Interface/vercel_vite_app/`
 
-ChatGPT-style multi-agent interface deployed live on Vercel. Auto Agent routing across 5 KPMG agents. Features: 8 scripted demo prompts, KPI cards, Recharts visuals, Leaflet maps, LangGraph-style reasoning traces, PDF brief export, persistent localStorage conversations, Gemini 2.5 Pro default with Claude Sonnet/Opus options.
+ChatGPT-style multi-agent interface deployed live on Vercel. Auto Agent routing across 5 KPMG agents. Features: 8 scripted demo prompts, KPI cards, Recharts visuals, Leaflet maps, LangGraph-style reasoning traces, persistent localStorage conversations, `Chat Brief` PDF-style export, `Project Brief` Markdown export, and a default Gemini 2.5 Pro model path with Gemini and Claude Vertex options.
+
+The live backend (`api/chat.js` + `api/analytics-pipeline.js`) builds a verified analytics pack before calling Vertex AI. It resolves follow-up context, respects requested geography, selects visuals by intent, adds KPI explanations, attaches source files, and falls back to deterministic answer templates when the model output is incomplete or not structured enough for a business user.
 
 **Live:** [capstone-project-kpmg-git-main-lukatcheishvilis-projects.vercel.app](https://capstone-project-kpmg-git-main-lukatcheishvilis-projects.vercel.app/)
 
@@ -309,6 +319,12 @@ Gyodi & Nawaro — download 4 files: `athens_weekdays.csv`, `athens_weekends.csv
 | `athens_risk_scores_v1.csv` | 3 | `risk_probability` (0–1), `risk_band`, `high_risk_flag` |
 | `prophet_paris_forecast_v1.csv` | 4 | 12-month occupancy forecast — Paris |
 | `prophet_athens_forecast_v1.csv` | 4 | 12-month occupancy forecast — Athens |
+| `rag_unlicensed_report_v1.csv` | 5 | JS-readable RAG compliance handoff for unlicensed-listing triage |
+| `rag_compliance_index_v1.json` | 5 | Compliance source index consumed by the Vercel analyst-triage path |
+| `aria_rag_session_log.json` | 5 | RAG notebook session evidence for compliance prompts |
+| `aria_session_log.json` | 6 | LangGraph orchestration session evidence |
+| `aria_routing_eval.csv` | 6 | Persona-routing evaluation evidence |
+| `aria_investor_brief.pdf` | 6 | Generated investor-brief artifact from the orchestration notebook |
 
 **Priority target list (865 listings):** Cross-reference of `athens_underpricing_v1.csv` and `athens_risk_scores_v1.csv` on `listing_id`. Underpriced AND declining — €1.43M revenue opportunity.
 

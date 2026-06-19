@@ -11,7 +11,7 @@
 
 - **Cities:** Paris (120,809 listings: 63,520 Maven 2021 + 57,289 IAB 2025) · Athens (14,242 listings) · Total 135,051
 - **Master dataset:** `aria_mega_dataset_v4_1_final.csv` — 135,051 listings × 96 columns
-- **Models:** XGBoost price prediction (Paris + Athens) · LightGBM risk classification (Athens)
+- **Models and evidence layers:** XGBoost price prediction (Paris + Athens), LightGBM risk classification (Athens), Prophet scenario demand forecasts, RAG compliance handoff outputs, and LangGraph orchestration evidence
 - **Stack:** Python · Jupyter · XGBoost · LightGBM · Prophet · LangGraph · ChromaDB · Streamlit · Vite React · Vercel Functions · Vertex AI Gemini/Claude partner models · Leaflet/OpenStreetMap · SHAP · Optuna · Pandas · Seaborn · ReportLab
 - **GitHub repo:** https://github.com/lukatcheishvili/capstone_project_kpmg
 
@@ -92,7 +92,7 @@ The format for session log entries:
 
 ### Rule 4 — Keep Phase Status Current in README
 
-**Whenever any phase progresses, update the `## Project Phases & Team Assignments` table in `README.md` immediately.**
+**Whenever any phase progresses, update the `## Project Phases & Status` table in `README.md` immediately.**
 
 The status column uses four values only:
 - `✅ Done` — output files committed and verified
@@ -164,18 +164,24 @@ This table is the single source of truth for what the team has shipped and what 
 - [2026-06-13] Canonical agent memory rename: renamed the operating manual from `CLAUDE.md` to `agent.md`, refreshed documentation references, and added this handoff context for future LLM/agent sessions.
 - [2026-06-14] Stage 7 UX/accessibility polish: fixed the AI model picker clipping with viewport-aware portal positioning, constrained scrolling, and mobile sheet behavior; removed Microsoft Edge Visual Search from the ARIA logo by rendering the wordmark as a CSS mask instead of an image; added listbox/dialog/control accessibility improvements and pushed commit `388d77e` to `main`.
 - [2026-06-14] Stage 7 conversational context fix: live `/api/chat` prompts now include recent browser conversation history, resolve follow-up wording such as "there" to the prior city, preserve the current question's requested metric, and explicitly handle premium/most-expensive area rankings.
+- [2026-06-18] Response-quality hardening: wired committed Prophet forecast outputs and RAG compliance handoff files into the live backend, strengthened requested-geography discipline, added follow-up handling for Paris Prophet comparisons, prevented repeated visual packs in follow-ups, and expanded the response-quality evaluation harness.
+- [2026-06-18] Visualization sanity rules: scatter and bubble charts are now rejected when x/y values are too clustered or overlapping; ARIA should switch to ranking bars, line charts, maps, KPI comparisons, or detail tables when those are clearer.
+- [2026-06-19] Scripted demo upgrade: updated the scripted business-case responses to be more judge-ready, with recommendation-first answers, sources, maps/charts, limitations, and next actions; response-quality evaluation passed with gold answers at 100/100.
+- [2026-06-19] Export naming polish: renamed the reusable Markdown prompt export to `Project Brief`, changed its file prefix to `aria-project-brief-...md`, and capitalized the toolbar labels `Chat Brief` and `Project Brief`.
+- [2026-06-19] Documentation refresh: updated `README.md` and this `agent.md` to reflect the current Vercel/Vertex behavior, Project Brief export, response-quality guardrails, committed RAG/Prophet/LangGraph handoff artifacts, and remaining documentation handoff notes.
 
 ### In Progress
 
-- Phase 7 — Live agent strengthening — Vercel backend now grounds prompts in committed neighbourhood stats, XGBoost pricing, SHAP, LightGBM risk, Prophet forecast, and RAG compliance handoff outputs; continue polishing response quality, map clarity, and evaluation harness coverage.
+- Phase 7 — Live agent strengthening — Vercel backend grounds prompts in committed neighbourhood stats, XGBoost pricing, SHAP, LightGBM risk, Prophet forecast, RAG compliance handoff outputs, and LangGraph evidence; continue polishing response quality, map clarity, and demo-specific scripted prompts.
 - Phase 5 — RAG production handoff — JS-readable CSV/JSON artifacts are committed and wired for analyst triage; Vercel must still avoid claiming final legal advice or live ChromaDB retrieval.
 - Phase 6 — Orchestration story — LangGraph notebook plus committed routing/session artifacts document the research orchestration layer; Vercel remains the production demo implementation.
-- Phase 7 — UI demo (Member 5) — Vercel React app is live and actively polished; legacy Streamlit dashboard remains optional/future.
-- Documentation + Presentation (Member 6) — mentor summary and README documentation are in progress.
+- Phase 7 — UI demo (Member 5) — Vercel React app is live, with `Chat Brief` and `Project Brief` exports; legacy Streamlit dashboard remains optional/future.
+- Documentation + Presentation (Member 6) — final KPMG presentation and methodology storytelling remain in progress.
 
 ### Backlog
 
 - Add exact Athens neighbourhood boundary GeoJSON if the map should highlight true polygons instead of centroid buffers.
+- Keep scripted prompt copy synchronized across `src/legacy/aria-data.jsx` and the hardcoded `scriptedPrompts` list in `src/legacy/aria-ui2.jsx` whenever demo prompt wording changes.
 - Phase 7 — Optional Streamlit 3-tab analyst dashboard (investor, host, developer)
 - KPMG final presentation and methodology document
 
@@ -382,6 +388,10 @@ The active UI/backend code lives in `Stage 7 - UI Interface/vercel_vite_app/`. T
 
 Keep the scripted prompt experience polished as the demo fallback. Typed custom prompts should use grounded live data when Vertex authentication is configured, with the workflow folded by default, no internal quality score displayed, no raw snake_case labels, no repeated KPI cards, and readable sectioned answers.
 
+When changing scripted prompt wording, update both `src/legacy/aria-data.jsx` and the hardcoded `scriptedPrompts` list in `src/legacy/aria-ui2.jsx`. Otherwise the landing cards, seeded chats, and scripted response registry can drift apart.
+
+The response-quality harness is `Stage 7 - UI Interface/vercel_vite_app/api/response-quality.eval.mjs`. Run it before shipping answer-policy, analytics, scripted-response, or visualization changes. Gold answers should pass at 97/100 or above, and bad-answer fixtures should remain below the pass bar.
+
 The active Vercel UI now uses a viewport-aware AI model picker. It should remain visible inside the browser viewport, scroll when the model list is taller than available space, and behave like a bottom sheet on narrow mobile widths. The ARIA wordmark is intentionally rendered as a masked span rather than an image so Microsoft Edge does not show the Visual Search overlay on hover.
 
 The live chat path should preserve conversation context. The frontend sends recent thread messages to `/api/chat`; the backend resolves follow-up prompts before analytics routing. Example: after a Paris saturation/map question, "which are the most expensive areas to live there?" should stay in Paris and switch to the current premium-price metric rather than returning a fresh generic/livability answer.
@@ -393,6 +403,8 @@ Map and region-comparison prompts must use real map behavior or a clearly labele
 Charts must be readable before they are useful. Scatter and bubble visuals should only appear when both axes have enough spread and distinct values to separate the areas; otherwise the agent should return a clearer ranking, trend, map, or detail table.
 
 Conversation history is expected to persist in the browser and survive refreshes. Do not remove this behavior unless the user explicitly asks for a stateless demo.
+
+The composer has two export paths: `Chat Brief` for a full conversation PDF-style brief, and `Project Brief` for a reusable Markdown analyst instruction that captures the latest conversation context and ARIA response rules. Project Brief downloads should keep the `aria-project-brief-...md` filename prefix.
 
 Secrets stay out of Git. `.env` is local and ignored. Vercel production secrets belong in Vercel Environment Variables, especially the server-side Google service-account credential.
 
@@ -463,3 +475,6 @@ Remaining roadmap: keep the live Vercel agent grounded in committed model output
 - [2026-06-18] Session 59: Fixed duplicated visuals in Paris Prophet follow-ups: the first answer keeps the full map/chart pack, while follow-up comparison prompts now return one focused top-three chart, refresh KPI cards for the follow-up, and tell the user to refer back to the earlier map/trend instead of rendering them again.
 - [2026-06-18] Session 60: Added chart sanity rules for ARIA visuals so scatter and bubble charts are dropped when x/y values are too clustered or overlapping; documented the rule in the live response policy and project agent skill guidance.
 - [2026-06-18] Session 61: Reviewed GitHub stage artifacts and strengthened ARIA model grounding: wired committed RAG compliance handoff outputs into the live backend, added methodology/stage response routing, converted small raw-GitHub source CSVs out of LFS, and expanded the response-quality harness with model-grounding checks that pass at the 97/100 bar.
+- [2026-06-19] Session 62: Upgraded scripted demo responses into stronger business-case outputs for judges, with direct recommendations, maps/charts, evidence, limitations, next actions, and response-quality evaluation passing at 100/100 on gold cases.
+- [2026-06-19] Session 63: Renamed the reusable Markdown prompt export to `Project Brief`, changed its download prefix to `aria-project-brief-...md`, and polished the toolbar labels to `Chat Brief` and `Project Brief`.
+- [2026-06-19] Session 64: Reviewed the repo and refreshed `README.md` plus `agent.md` so documentation reflects the current Vercel/Vertex architecture, Project Brief export, conversation context, visualization sanity rules, committed RAG/Prophet/LangGraph artifacts, and remaining handoff notes.
