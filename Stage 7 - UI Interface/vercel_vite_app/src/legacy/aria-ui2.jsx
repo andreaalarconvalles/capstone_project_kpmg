@@ -290,7 +290,7 @@ const Composer = React.forwardRef(function Composer({
             onMouseEnter={(e) => { if (canExportConversation) e.currentTarget.style.background = C2.s1; }}
             onMouseLeave={(e) => { if (canExportConversation) e.currentTarget.style.background = C2.s2; }}>
             <Icon name="Download" size={14.5} color="currentColor" />
-            Chat brief
+            Chat Brief
           </button>
           <button className="aria-focus" onClick={onExportPrompt} disabled={!canExportPrompt}
             title={canExportPrompt ? "Download a reusable project brief from this conversation" : "Run at least one analysis to generate a project brief"}
@@ -305,7 +305,7 @@ const Composer = React.forwardRef(function Composer({
             onMouseEnter={(e) => { if (canExportPrompt) e.currentTarget.style.background = C2.s1; }}
             onMouseLeave={(e) => { if (canExportPrompt) e.currentTarget.style.background = C2.s2; }}>
             <Icon name="FileText" size={14.5} color="currentColor" />
-            Project brief
+            Project Brief
           </button>
           {engine.ml && (
             <div className="aria-scalein" style={{
