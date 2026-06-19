@@ -16,7 +16,7 @@ const COMMON_CONTEXT = `
 Project: ARIA (Agentic Real-estate Intelligence Advisor), IE Business School x KPMG Spain Corporate Capstone 2026.
 Dataset: ${DATASET_FACTS.totalListings} listings x ${DATASET_FACTS.totalColumns} columns.
 Paris: ${DATASET_FACTS.parisListings} listings. Athens: ${DATASET_FACTS.athensListings} listings.
-Models: XGBoost pricing models for Paris and Athens; LightGBM host/listing risk model for Athens; SHAP explanations.
+Models: XGBoost pricing models for Paris and Athens; LightGBM host/listing risk model for Athens; Prophet scenario forecasts for Paris and Athens; SHAP explanations; committed RAG compliance handoff outputs.
 Important limitation: the project is short-term-rental and Airbnb-style market intelligence. It is not a full residential property transaction database.
 Current validated Athens outputs: ${DATASET_FACTS.underpricedAthens} underpriced listings, ${DATASET_FACTS.highRiskAthens} high-risk listings, ${DATASET_FACTS.priorityOverlap} listings that are both underpriced and high-risk.
 Model quality: Athens XGBoost R squared ${DATASET_FACTS.athensPricingR2}, Paris XGBoost R squared ${DATASET_FACTS.parisPricingR2}, Athens price mean absolute error ${DATASET_FACTS.athensPricingMae}, LightGBM risk Area Under Receiver Operating Characteristic Curve ${DATASET_FACTS.riskAuc}.
@@ -93,40 +93,41 @@ Risk context:
   compliance: {
     intent: "compliance and regulation triage",
     sources: [
-      "data/processed/aria_mega_dataset_v4_1_final.csv",
-      "rag/README.md",
-      "docs/MENTOR_MEETING_SUMMARY.md",
+      "data/outputs/rag_unlicensed_report_v1.csv",
+      "data/outputs/rag_compliance_index_v1.json",
+      "data/outputs/aria_rag_session_log.json",
     ],
     kpis: [
       { label: "Unlicensed Athens listings", value: "137" },
-      { label: "Future phase", value: "RAG compliance" },
+      { label: "High-risk unlicensed", value: "27" },
+      { label: "Regularisable", value: "110" },
       { label: "Dataset rows", value: DATASET_FACTS.totalListings },
-      { label: "Columns", value: DATASET_FACTS.totalColumns },
     ],
     context: `
 Compliance context:
-- The project identified 137 unlicensed Athens listings as the target group for the future retrieval-augmented generation compliance agent.
-- The current product demo does not yet retrieve legal documents live.
-- If asked about regulation, explain what the data can flag and state that final legal interpretation requires the planned regulation retrieval layer.
+- The committed RAG handoff identifies 137 unlicensed Athens listings, including 27 high-risk, 89 medium-risk, and 21 low-risk cases.
+- The Vercel backend can use these committed CSV/JSON handoff outputs for analyst triage.
+- It does not perform live ChromaDB retrieval at request time, so final legal interpretation still requires local counsel.
 `,
   },
   demand: {
     intent: "tourism demand and occupancy forecasting",
     sources: [
-      "docs/MENTOR_MEETING_SUMMARY.md",
-      "README.md",
+      "data/outputs/prophet_paris_forecast_v1.csv",
+      "data/outputs/prophet_athens_forecast_v1.csv",
+      "eda/ARIA_Prophet_v2.ipynb",
     ],
     kpis: [
-      { label: "Planned model", value: "Prophet" },
-      { label: "Forecast window", value: "90 days" },
+      { label: "Committed model", value: "Prophet" },
+      { label: "Forecast window", value: "12 months" },
       { label: "Cities", value: "Paris + Athens" },
       { label: "Dataset rows", value: DATASET_FACTS.totalListings },
     ],
     context: `
 Demand context:
-- Prophet forecasting is planned as the demand layer.
-- The next engineering step is to reshape listing-level data into monthly or weekly time-series by neighbourhood.
-- For now, demand answers should be framed as project roadmap or demo-level reasoning unless the question matches a scripted answer.
+- Prophet scenario forecast CSVs are committed for Paris and Athens and consumed by the live Vercel demand agent for forecast prompts.
+- The forecasts estimate monthly occupied-night demand by neighbourhood across a 12-month window.
+- Present them as scenario-based demand proxies, not guaranteed booking-calendar forecasts.
 `,
   },
 };

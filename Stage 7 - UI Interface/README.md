@@ -148,7 +148,8 @@ python -m http.server 8000
 
 The Claude options use the Vertex AI Anthropic partner-model route in `/api/chat`, while the
 Gemini options use the Google `generateContent` route. The model picker also exposes the
-project's own ML engines: **XGBoost Pricing v1**, **LightGBM Risk v1**, and **Prophet Forecast**.
+project's own analytical engines: **XGBoost Pricing v1**, **LightGBM Risk v1**, **Prophet Forecast**,
+and committed **RAG Compliance** handoff outputs for analyst triage.
 
 The backend response contract is structured: `answer`, `intent`, `kpis`, `visualizations`,
 `details`, and `sources`. The UI renders the answer first, centers the KPI cards, selects the

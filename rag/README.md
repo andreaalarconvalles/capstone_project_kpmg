@@ -11,7 +11,7 @@ Do not commit the ChromaDB index — add rag/chroma_db/ to .gitignore before com
 Does not touch any model files from Phases 2–4.
 
 Current deployed status:
-- The Vercel demo can answer compliance-style prompts as data triage, but it does not yet perform live legal document retrieval.
-- `/api/chat` clearly labels compliance output as analyst triage and avoids final legal advice until this RAG layer is connected.
+- The Vercel demo can answer compliance-style prompts using committed RAG handoff files: `data/outputs/rag_unlicensed_report_v1.csv`, `data/outputs/rag_compliance_index_v1.json`, and `data/outputs/aria_rag_session_log.json`.
+- `/api/chat` clearly labels compliance output as analyst triage and avoids final legal advice. It does not perform live ChromaDB retrieval at request time.
 - The future RAG implementation should store only source/legal text and code in git; generated ChromaDB index files must remain local or in managed storage.
-- When this layer is connected, the UI should keep the same consumer-friendly response shape: direct answer, up to 4 non-duplicated KPI cards, one relevant visualization if useful, and expandable methodology/sources/caveats.
+- Compliance answers should keep the same consumer-friendly response shape: direct answer, up to 4 non-duplicated KPI cards, one relevant visualization if useful, and expandable methodology/sources/caveats.

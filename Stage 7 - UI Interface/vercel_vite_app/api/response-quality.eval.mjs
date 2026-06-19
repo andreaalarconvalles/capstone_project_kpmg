@@ -192,6 +192,59 @@ async function checkVisualSanity() {
   return { passed: failures.length === 0, failures };
 }
 
+async function checkModelGrounding() {
+  const failures = [];
+  const cases = [
+    {
+      name: "pricing uses XGBoost and SHAP outputs",
+      prompt: "Is my Paris listing underpriced compared with similar listings? Explain the model drivers.",
+      expectedIntent: "pricing",
+      requiredSources: ["paris_predictions_v1.csv", "shap_paris_v1.csv"],
+    },
+    {
+      name: "risk uses LightGBM risk and underpricing outputs",
+      prompt: "Which Athens listings need attention first because they are high-risk and underpriced?",
+      expectedIntent: "risk",
+      requiredSources: ["athens_risk_scores_v1.csv", "athens_underpricing_v1.csv"],
+    },
+    {
+      name: "forecast uses committed Prophet outputs",
+      prompt: PARIS_ONLY_PROPHET_PROMPT,
+      expectedIntent: "demand",
+      requiredSources: ["prophet_paris_forecast_v1.csv", "neighbourhood_stats_combined_v4.csv"],
+    },
+    {
+      name: "compliance uses RAG handoff outputs",
+      prompt: "Is it legal to run an Airbnb in central Athens now? Use ARIA compliance evidence and show the triage risk.",
+      expectedIntent: "compliance",
+      requiredSources: ["rag_unlicensed_report_v1.csv", "rag_compliance_index_v1.json", "aria_rag_session_log.json"],
+    },
+    {
+      name: "methodology uses project model and orchestration evidence",
+      prompt: "Review the project stages. Which ML models does ARIA use, how is the agent grounded, and how was performance evaluated?",
+      expectedIntent: "methodology",
+      requiredSources: ["MODEL_CARD.md", "aria_session_log.json", "aria_routing_eval.csv", "aria_rag_session_log.json"],
+    },
+  ];
+
+  for (const test of cases) {
+    const analysis = await buildGroundedAnalysis({ prompt: test.prompt, agentId: "market" });
+    const sources = (analysis.sources || []).join(" | ").toLowerCase();
+    if (analysis.intent !== test.expectedIntent) {
+      failures.push(`${test.name}: routed to ${analysis.intent}, expected ${test.expectedIntent}.`);
+    }
+    if (!analysis.quality?.passed || analysis.quality.score < PASS_BAR) {
+      failures.push(`${test.name}: deterministic fallback scored ${analysis.quality?.score ?? "n/a"}, expected >= ${PASS_BAR}.`);
+    }
+    for (const source of test.requiredSources) {
+      if (!sources.includes(source.toLowerCase())) {
+        failures.push(`${test.name}: missing source ${source}.`);
+      }
+    }
+  }
+  return { passed: failures.length === 0, failures };
+}
+
 /* ------------------------------- gold answers ------------------------------ */
 
 const GOLD = [
@@ -379,6 +432,13 @@ async function run() {
   if (!visualSanity.passed) {
     ok = false;
     visualSanity.failures.forEach((failure) => line(`  ${failure}`));
+  }
+
+  const modelGrounding = await checkModelGrounding();
+  line(`\nModel grounding checks: ${modelGrounding.passed ? "PASS" : "FAIL"}`);
+  if (!modelGrounding.passed) {
+    ok = false;
+    modelGrounding.failures.forEach((failure) => line(`  ${failure}`));
   }
 
   line("\nGold answers (must score >= 97):");

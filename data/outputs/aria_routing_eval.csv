@@ -1,3 +1,13 @@
-version https://git-lfs.github.com/spec/v1
-oid sha256:55957cb1d9ed5467cbaf865ad2ad90ba301f951d1f23aefbe0eaf5669c095108
-size 1605
+query,exp_persona,got_persona,persona_ok,exp_intents,got_intents,recall,precision,perfect
+Which Athens neighbourhood has the best yield for EUR 3,investor,investor,True,"['pricing', 'risk']","['pricing', 'risk']",1.0,1.0,True
+Compare Paris and Athens for EUR 800k STR with AMA comp,investor,investor,True,"['pricing', 'compliance']","['pricing', 'compliance']",1.0,1.0,True
+Projected Athens occupancy for next 12 months?,investor,investor,True,['forecast'],['forecast'],1.0,1.0,True
+Is it legal to run an Airbnb in central Athens now?,investor,investor,True,['compliance'],['compliance'],1.0,1.0,True
+My Athens listing has had no bookings in 30 days. What ,host,host,True,"['pricing', 'coach']","['pricing', 'coach']",1.0,1.0,True
+Am I underpriced? My Athens listing is at EUR 65/night.,host,host,True,['pricing'],['pricing'],1.0,1.0,True
+How can I improve my review score to reduce exit risk?,host,host,True,"['risk', 'coach']","['risk', 'coach']",1.0,1.0,True
+What changes help me get more bookings in Paris?,host,host,True,"['pricing', 'coach']","['pricing', 'coach']",1.0,1.0,True
+Where in Athens should a developer buy for long-term va,developer,developer,True,"['pricing', 'forecast']","['pricing', 'forecast']",1.0,1.0,True
+Which Paris neighbourhoods have the most underpriced su,developer,developer,True,['pricing'],['pricing'],1.0,1.0,True
+Regulatory risk for new STR properties in central Athen,developer,developer,True,"['compliance', 'risk']","['risk', 'compliance']",1.0,1.0,True
+Show Athens neighbourhoods where at-risk hosts are conc,developer,developer,True,['risk'],['risk'],1.0,1.0,True

@@ -95,6 +95,10 @@ function friendlySourceNames(files = []) {
     if (source.includes("underpricing")) labels.add("Athens underpricing outputs");
     if (source.includes("shap")) labels.add("SHAP model explanations");
     if (source.includes("prophet")) labels.add("Prophet forecast outputs");
+    if (source.includes("rag_unlicensed") || source.includes("rag_compliance") || source.includes("aria_rag")) labels.add("RAG compliance handoff outputs");
+    if (source.includes("aria_routing") || source.includes("aria_session")) labels.add("LangGraph orchestration evidence");
+    if (source.includes("model_card")) labels.add("ARIA model card");
+    if (source.endsWith("readme.md") || source === "readme.md") labels.add("project README");
   }
   return [...labels].join(", ") || "ARIA project data";
 }

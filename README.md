@@ -16,7 +16,7 @@ ARIA targets three primary personas:
 - **Host / property manager** — am I priced correctly, is my listing declining, what should I improve
 - **Real estate developer / PE fund** — where is the supply shock opportunity, what is the entry price
 
-The system combines validated machine learning outputs (XGBoost, LightGBM, Prophet, RAG), a LangGraph orchestration layer, and a live Vercel React chat interface backed by Vertex AI Gemini 2.5 Pro. Auto Agent is the default interaction mode: ARIA reads the user's prompt, selects the right specialist, and runs either the scripted demo answer or the live grounded analysis. It covers 135,051 listings across Paris and Athens. In the deployed Vercel app, live grounded answers currently consume committed neighbourhood statistics, XGBoost pricing outputs, LightGBM risk scores, SHAP summaries, and Prophet scenario forecast CSVs. RAG compliance and LangGraph orchestration remain validated notebook layers until their production handoff artifacts are committed and wired into the backend.
+The system combines validated machine learning outputs (XGBoost, LightGBM, Prophet, RAG), a LangGraph orchestration layer, and a live Vercel React chat interface backed by Vertex AI Gemini 2.5 Pro. Auto Agent is the default interaction mode: ARIA reads the user's prompt, selects the right specialist, and runs either the scripted demo answer or the live grounded analysis. It covers 135,051 listings across Paris and Athens. In the deployed Vercel app, live grounded answers currently consume committed neighbourhood statistics, XGBoost pricing outputs, LightGBM risk scores, SHAP summaries, Prophet scenario forecast CSVs, and committed RAG compliance handoff outputs. LangGraph remains the validated orchestration research layer, with routing/session evidence committed for demo and documentation.
 
 ---
 
@@ -31,8 +31,8 @@ ARIA should be presented as a decision-support system with three layers:
 For the demo, the strongest story is: ARIA does not simply chat about real estate; it routes the question to the right analytical agent, grounds the answer in the project outputs, visualizes the market signal, and explains the recommendation in business language.
 
 Current live status:
-- Live in Vercel: neighbourhood stats, XGBoost pricing, LightGBM risk, SHAP driver summaries, and committed Prophet scenario forecasts.
-- Conservative in Vercel: compliance prompts are analyst triage only until RAG CSV/JSON handoff artifacts are committed.
+- Live in Vercel: neighbourhood stats, XGBoost pricing, LightGBM risk, SHAP driver summaries, committed Prophet scenario forecasts, and committed RAG compliance handoff outputs.
+- Conservative in Vercel: compliance prompts are analyst triage from committed RAG CSV/JSON outputs, not final legal advice and not live ChromaDB retrieval at request time.
 - Notebook evidence: LangGraph demonstrates the multi-agent orchestration architecture; Vercel productionizes a compatible web demo flow.
 
 ---
@@ -132,7 +132,7 @@ capstone_project_kpmg/
 └── .gitignore
 ```
 
-> **Note on `agents/`:** This folder was used as a planning stub during development and has been removed from the repository. Phase 6 orchestration work lives entirely in `eda/ARIA_LangGraph_v1.ipynb` — a fully executed notebook with a 9-node StateGraph, `ARIAState` TypedDict, and MemorySaver checkpointing. The `Stage 7 - UI Interface/vercel_vite_app/api/` backend is the **productionisation layer** (Phase 7), not Phase 6.
+> **Note on `agents/`:** This folder is retained as documentation for the Phase 6 orchestration handoff. The executed Phase 6 orchestration work lives in `eda/ARIA_LangGraph_v1.ipynb` — a fully executed notebook with a 9-node StateGraph, `ARIAState` TypedDict, and MemorySaver checkpointing. The `Stage 7 - UI Interface/vercel_vite_app/api/` backend is the **productionisation layer** (Phase 7), not Phase 6.
 
 ---
 
@@ -146,7 +146,7 @@ All analytical phases are self-contained Jupyter notebooks in `eda/`. Run them i
 | 2 | `ARIA_XGBoost_v1.ipynb` | `paris_predictions_v1.csv`, `athens_predictions_v1.csv`, `athens_underpricing_v1.csv`, `shap_*.csv` | Phase 3, Phase 6 |
 | 3 | `ARIA_LightGBM_v1.ipynb` | `athens_risk_scores_v1.csv` | Phase 6 |
 | 4 | `ARIA_Prophet_v2.ipynb` | `prophet_paris_forecast_v1.csv`, `prophet_athens_forecast_v1.csv`, `prophet_*_v1.pkl` | Phase 6, Phase 7 demand agent |
-| 5 | `ARIA_RAG_v1.ipynb` | Notebook RAG demo outputs; ChromaDB vector index local only (`rag/chroma_db/` is gitignored) | Phase 6 notebook, future Phase 7 RAG handoff |
+| 5 | `ARIA_RAG_v1.ipynb` | `rag_unlicensed_report_v1.csv`, `rag_compliance_index_v1.json`, `aria_rag_session_log.json`; ChromaDB vector index local only (`rag/chroma_db/` is gitignored) | Phase 6 notebook, Phase 7 compliance triage |
 | 6 | `ARIA_LangGraph_v1.ipynb` | Notebook memo/routing evaluation evidence | Phase 7 demo story |
 | 7 | `Stage 7 - UI Interface/` | Live Vercel React app | End users |
 
@@ -245,7 +245,7 @@ Two Prophet scenario forecast outputs (Paris and Athens) estimate monthly occupi
 
 ChromaDB vector index of AMA regulations (Athens) and Loi Le Meur (Paris). Given a listing, the notebook returns the applicable regulation article and compliance status. Primary targets: 137 unlicensed Athens listings (~EUR 1.03M annual revenue).
 
-Production handoff note: the Vercel app does not yet run live legal retrieval. Compliance answers remain analyst triage until the generated RAG report/index are committed as JS-readable CSV/JSON artifacts. ChromaDB index files are local only - `rag/chroma_db/` is gitignored.
+Production handoff note: the Vercel app now consumes committed JS-readable RAG handoff files for compliance triage: `rag_unlicensed_report_v1.csv`, `rag_compliance_index_v1.json`, and `aria_rag_session_log.json`. It does not run live ChromaDB retrieval at request time, and compliance output remains analyst triage rather than final legal advice. ChromaDB index files are local only - `rag/chroma_db/` is gitignored.
 
 ---
 
@@ -268,7 +268,7 @@ A fully executed 9-node LangGraph `StateGraph` wiring all five specialist agents
 - 2 embedded figures (255 KB + 205 KB)
 - 96/96 rubric score
 
-> The `agents/` folder was a planning stub used during development — it has been removed from the repository. The Phase 6 deliverable is this notebook, not that folder.
+> The `agents/` folder is retained as documentation for the orchestration handoff. The Phase 6 deliverable is the executed notebook, not a separate production LangGraph service.
 
 ---
 

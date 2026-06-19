@@ -11,6 +11,8 @@ This file summarizes the current model artifacts used by the ARIA capstone proje
 | `models/lgb_athens_risk_v1.txt` | LightGBM classifier | Athens | Complete | Estimate host/listing risk probability |
 | `models/prophet_paris_v1.pkl` | Prophet scenario forecast model | Paris | Complete / committed | Demand and occupancy forecasting |
 | `models/prophet_athens_v1.pkl` | Prophet scenario forecast model | Athens | Complete / committed | Demand and occupancy forecasting |
+| `data/outputs/rag_unlicensed_report_v1.csv` | RAG compliance handoff output | Athens | Complete / wired for triage | Prioritise unlicensed listing compliance review |
+| `data/outputs/rag_compliance_index_v1.json` | RAG citation/index handoff | Athens + Paris regulations | Complete / wired for triage | Provide compliance document context and citation titles |
 
 ## Current Validated Metrics
 
@@ -23,6 +25,9 @@ This file summarizes the current model artifacts used by the ARIA capstone proje
 | Athens LightGBM risk | Area Under Receiver Operating Characteristic Curve | 0.8288 | Leakage-corrected model after removing target-derived features. |
 | Athens LightGBM risk | Average precision | 0.8864 | Useful for ranking priority review candidates. |
 | Prophet demand forecasts | Forecast horizon | 12 months | Scenario-based neighbourhood demand proxy from committed forecast CSVs. |
+| RAG compliance handoff | Unlicensed Athens listings | 137 | Analyst triage output, not final legal advice. |
+| RAG compliance handoff | High-risk unlicensed listings | 27 | Highest-priority legal/commercial review group. |
+| LangGraph routing evaluation | Persona / intent performance | 100% on 12 notebook test queries | Research orchestration evidence committed in `aria_routing_eval.csv`. |
 
 ## Training Data
 
@@ -51,7 +56,7 @@ The Athens risk model intentionally excludes leakage-prone fields used directly 
 - The current Vercel live answer flow uses committed CSV outputs and summary data, not live retraining.
 - The live Vercel demand layer uses committed Prophet forecast CSVs for explicit forecast prompts.
 - Prophet outputs are scenario-based demand proxies built from annual occupancy estimates, assumed short-term-rental seasonality, and capped review-growth momentum. They are not guaranteed booking-calendar forecasts.
-- Compliance/RAG notebook outputs are not yet production-connected until JS-readable CSV/JSON handoff artifacts are committed.
+- The live Vercel compliance path uses committed RAG CSV/JSON handoff outputs for analyst triage. It does not run live ChromaDB retrieval at request time and does not provide final legal advice.
 - Model outputs are decision-support signals, not final investment, legal, or lending advice.
 
 ## Artifact Governance

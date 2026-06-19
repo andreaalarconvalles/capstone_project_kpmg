@@ -167,16 +167,14 @@ This table is the single source of truth for what the team has shipped and what 
 
 ### In Progress
 
-- Phase 7 — Live agent strengthening — Vercel backend now grounds forecast prompts in committed Prophet scenario forecast CSVs; continue polishing response quality, map clarity, and evaluation harness coverage.
-- Phase 5 — RAG production handoff — notebook is complete, but Vercel should keep compliance as analyst triage until generated RAG CSV/JSON artifacts are committed and wired.
-- Phase 6 — Orchestration story — LangGraph notebook is complete as the research orchestration layer; Vercel remains the production demo implementation.
+- Phase 7 — Live agent strengthening — Vercel backend now grounds prompts in committed neighbourhood stats, XGBoost pricing, SHAP, LightGBM risk, Prophet forecast, and RAG compliance handoff outputs; continue polishing response quality, map clarity, and evaluation harness coverage.
+- Phase 5 — RAG production handoff — JS-readable CSV/JSON artifacts are committed and wired for analyst triage; Vercel must still avoid claiming final legal advice or live ChromaDB retrieval.
+- Phase 6 — Orchestration story — LangGraph notebook plus committed routing/session artifacts document the research orchestration layer; Vercel remains the production demo implementation.
 - Phase 7 — UI demo (Member 5) — Vercel React app is live and actively polished; legacy Streamlit dashboard remains optional/future.
 - Documentation + Presentation (Member 6) — mentor summary and README documentation are in progress.
 
 ### Backlog
 
-- Add JS-readable RAG handoff files: `data/outputs/rag_unlicensed_report_v1.csv` and `data/outputs/rag_compliance_index_v1.json`.
-- Decide whether to commit LangGraph demo artifacts (`aria_investor_brief.pdf`, `aria_session_log.json`, `aria_routing_eval.csv`) or keep Phase 6 as notebook evidence only.
 - Add exact Athens neighbourhood boundary GeoJSON if the map should highlight true polygons instead of centroid buffers.
 - Phase 7 — Optional Streamlit 3-tab analyst dashboard (investor, host, developer)
 - KPMG final presentation and methodology document
@@ -203,7 +201,7 @@ Skills are invoked by name (e.g., `/diagnose`, `/grill-me`). The following skill
 5. If the prompt asks for Prophet, forecast, demand, seasonality, occupancy, or a time window such as "next 12 months", route to the demand/forecast analysis before general risk or market-entry logic.
 6. Open analytical answers with a direct recommendation, then explain ARIA's reasoning, key evidence, visualizations, limitations, next actions, and sources.
 7. Use plain language for non-technical readers. Briefly explain technical terms in brackets the first time they matter, but avoid repeating definitions already explained in the conversation.
-8. End with the backend-supplied `Sources` line. Do not invent sources, row counts, scores, model capabilities, or live RAG/legal retrieval.
+8. End with the backend-supplied `Sources` line. Do not invent sources, row counts, scores, model capabilities, or live legal retrieval.
 9. Run a chart sanity check before returning scatter or bubble visuals. If the x/y variables are too clustered, not distinct enough, or visually overlapping, drop that chart and prefer a map, ranking bar, line chart, or detail table that is easier to read.
 
 **Paris forecast demo standard:** For a Paris-only Prophet prompt, the answer should recommend the best Paris arrondissement/neighbourhood from the forecast output, show a Paris map, compare Paris areas with charts, cite Prophet forecast outputs plus neighbourhood stats, and avoid Athens unless the user explicitly requests a cross-city benchmark.
@@ -398,7 +396,7 @@ Conversation history is expected to persist in the browser and survive refreshes
 
 Secrets stay out of Git. `.env` is local and ignored. Vercel production secrets belong in Vercel Environment Variables, especially the server-side Google service-account credential.
 
-Remaining roadmap: keep Prophet forecasts wired into the live Vercel demand agent, add RAG production handoff artifacts before claiming live legal retrieval, decide whether to commit LangGraph demo outputs, add exact Athens boundary polygons if required, and prepare the final KPMG/mentor presentation materials.
+Remaining roadmap: keep the live Vercel agent grounded in committed model outputs, keep compliance framed as RAG handoff triage rather than live legal retrieval, add exact Athens boundary polygons if required, and prepare the final KPMG/mentor presentation materials.
 
 ---
 
@@ -464,3 +462,4 @@ Remaining roadmap: keep Prophet forecasts wired into the live Vercel demand agen
 - [2026-06-18] Session 58: Fixed the live Paris Prophet follow-up loop so ARIA uses prior chat context instead of repeating the first answer; enriched UI-to-backend context with KPI, visual, and detail rows; added a demand-specific follow-up fallback comparing Bourse with Hotel-de-Ville and Temple; and added response-quality regression coverage for repeated follow-up answers.
 - [2026-06-18] Session 59: Fixed duplicated visuals in Paris Prophet follow-ups: the first answer keeps the full map/chart pack, while follow-up comparison prompts now return one focused top-three chart, refresh KPI cards for the follow-up, and tell the user to refer back to the earlier map/trend instead of rendering them again.
 - [2026-06-18] Session 60: Added chart sanity rules for ARIA visuals so scatter and bubble charts are dropped when x/y values are too clustered or overlapping; documented the rule in the live response policy and project agent skill guidance.
+- [2026-06-18] Session 61: Reviewed GitHub stage artifacts and strengthened ARIA model grounding: wired committed RAG compliance handoff outputs into the live backend, added methodology/stage response routing, converted small raw-GitHub source CSVs out of LFS, and expanded the response-quality harness with model-grounding checks that pass at the 97/100 bar.

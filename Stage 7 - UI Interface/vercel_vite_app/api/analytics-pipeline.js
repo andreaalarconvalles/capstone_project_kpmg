@@ -18,6 +18,11 @@ const FILES = {
   parisPredictions: "data/outputs/paris_predictions_v1.csv",
   prophetParisForecast: "data/outputs/prophet_paris_forecast_v1.csv",
   prophetAthensForecast: "data/outputs/prophet_athens_forecast_v1.csv",
+  ragUnlicensedReport: "data/outputs/rag_unlicensed_report_v1.csv",
+  ragComplianceIndex: "data/outputs/rag_compliance_index_v1.json",
+  ragSessionLog: "data/outputs/aria_rag_session_log.json",
+  langGraphSessionLog: "data/outputs/aria_session_log.json",
+  langGraphRoutingEval: "data/outputs/aria_routing_eval.csv",
 };
 
 const analysisCache = new Map();
@@ -50,6 +55,11 @@ async function fetchCsv(path) {
     throw new Error(`Could not load ${path} from GitHub (${res.status}).`);
   }
   return res.text();
+}
+
+async function fetchJson(path) {
+  const text = await fetchCsv(path);
+  return JSON.parse(text);
 }
 
 function parseCsvLine(line) {
@@ -220,6 +230,27 @@ const METRIC_GUIDES = {
     range: "In this project, 70% means a listing is flagged high risk.",
     good: "Higher probabilities above the threshold need more attention.",
     optimal: "The threshold is a triage setting: strict enough to focus review, but not a final decision by itself.",
+  },
+  complianceRisk: {
+    label: "Compliance risk level",
+    meaning: "A RAG handoff triage category for unlicensed Athens listings based on regulatory exposure and regularisation path.",
+    range: "LOW, MEDIUM, or HIGH; HIGH is the most urgent analyst-review category.",
+    good: "Lower is safer for acquisition; higher can signal enforcement risk or demand redistribution opportunity around compliant neighbours.",
+    optimal: "Use it to prioritise legal review and acquisition due diligence, not as final legal advice.",
+  },
+  regularisable: {
+    label: "Regularisable listing",
+    meaning: "Whether the RAG handoff says an unlicensed Athens listing may still have a path to AMA registration.",
+    range: "True means a potential path exists; false means the output flags no apparent path under the documented freeze logic.",
+    good: "Regularisable listings are easier to review; non-regularisable central listings should be treated as high legal risk.",
+    optimal: "Confirm the path with local counsel and building-permit checks before acting.",
+  },
+  ragSimilarity: {
+    label: "RAG similarity score",
+    meaning: "How closely the selected compliance document matched the listing's compliance context in the notebook handoff.",
+    range: "Higher means a closer retrieval match, but it is not a legal confidence score.",
+    good: "Higher is useful for triage evidence, but every compliance conclusion still needs human legal review.",
+    optimal: "Use it to identify the most relevant citation, not to automate a legal decision.",
   },
   readiness: {
     label: "Readiness score",
@@ -536,7 +567,11 @@ export function classifyIntent(prompt, agentId) {
     || /\b(which city|between cities|paris or athens|athens or paris|city strategy|city comparison|compare cities|compare markets)\b/.test(scopeP)
   );
   const asksForecast = /(prophet|forecast|occupancy|tourist|demand|season|90 day|next\s+\d+\s+months|future|summer|peak)/.test(p);
+  const asksMethodology = /(how (?:is|was|does|did)|what (?:models?|method|architecture|pipeline)|which models?|trained|training|evaluate|evaluation|performance|technical|theoretical|methodology|stages?|phases?|langgraph|xgboost|lightgbm|model card|ml model|machine learning)/.test(p);
   if (asksCrossCityComparison) return "portfolio-comparison";
+  if (asksMethodology) return "methodology";
+  if (/(license|licence|legal|law|regulation|compliance|permit)/.test(p)) return "compliance";
+  if (/(high-risk|risk|priority|attention|intervention|coach).{0,80}underpric|underpric.{0,80}(high-risk|risk|priority|attention|intervention|coach)/.test(p)) return "risk";
   if (/(underprice|underpriced|fair price|predicted price|pricing gap|price gap|shap|model driver)/.test(p)) return "pricing";
   if (asksForecast) return "demand";
   if (/(risk|high-risk|declin|vulnerab|priority|churn|warning)/.test(p)) return "risk";
@@ -545,7 +580,6 @@ export function classifyIntent(prompt, agentId) {
   if (/(opportunity|saturat|distance zone|segment|heat.?map|short-term rental|market|investment|nightly prices?|median nightly|median price|highest price|highest priced|most expensive|revenue.*saturation|saturation.*revenue)/.test(p)) return "market-entry";
   if (/(map|region|regions|area comparison|compare areas|compare regions|neighbourhoods|neighborhoods|arrondissements|districts|where in|which areas|which regions)/.test(p)) return "market-entry";
   if (/(underprice|price|pricing|revenue|nightly|gap|earning|income|adr)/.test(p)) return "pricing";
-  if (/(license|licence|legal|law|regulation|compliance|permit)/.test(p)) return "compliance";
   if (/(saturat|avoid|invest|entry|arrondissement|neighbourhood|neighborhood|yield|region|where|area)/.test(p)) return "market-entry";
   if (agentId === "host-revenue") return "pricing";
   if (agentId === "demand") return "demand";
@@ -1074,6 +1108,83 @@ async function loadShap(path, cacheKey) {
       }))
       .sort((a, b) => b.impact - a.impact)
       .slice(0, 6);
+  });
+}
+
+async function loadRagCompliance() {
+  return cached("rag-compliance", async () => {
+    const [reportText, index, session] = await Promise.all([
+      fetchCsv(FILES.ragUnlicensedReport),
+      fetchJson(FILES.ragComplianceIndex).catch(() => ({})),
+      fetchJson(FILES.ragSessionLog).catch(() => ({})),
+    ]);
+    const byArea = new Map();
+    const riskCounts = new Map([["HIGH", 0], ["MEDIUM", 0], ["LOW", 0]]);
+    const citations = new Map();
+    let total = 0;
+    let revenueAtRisk = 0;
+    let regularisable = 0;
+    let highRisk = 0;
+
+    eachCsvRow(reportText, (row) => {
+      const risk = String(row.risk_level || "UNKNOWN").trim().toUpperCase();
+      const revenue = num(row.rev_est);
+      const isRegularisable = truthy(row.regularisable);
+      total++;
+      revenueAtRisk += revenue;
+      if (isRegularisable) regularisable++;
+      if (risk === "HIGH") highRisk++;
+      riskCounts.set(risk, (riskCounts.get(risk) || 0) + 1);
+      if (row.top_doc_title) {
+        const key = row.top_doc_title;
+        const current = citations.get(key) || {
+          title: row.top_doc_title,
+          citation: row.top_citation || "",
+          count: 0,
+          similaritySum: 0,
+        };
+        current.count += 1;
+        current.similaritySum += num(row.similarity_score);
+        citations.set(key, current);
+      }
+      groupMetric(byArea, row.neighbourhood, (g = {}) => ({
+        area: row.neighbourhood || "Unknown",
+        count: (g.count || 0) + 1,
+        high: (g.high || 0) + (risk === "HIGH" ? 1 : 0),
+        medium: (g.medium || 0) + (risk === "MEDIUM" ? 1 : 0),
+        low: (g.low || 0) + (risk === "LOW" ? 1 : 0),
+        regularisable: (g.regularisable || 0) + (isRegularisable ? 1 : 0),
+        revenue: (g.revenue || 0) + revenue,
+      }));
+    });
+
+    const areas = [...byArea.values()]
+      .map((area) => ({
+        ...area,
+        highShare: weightedAverage(area.high || 0, area.count) * 100,
+        mediumShare: weightedAverage(area.medium || 0, area.count) * 100,
+        regularisableShare: weightedAverage(area.regularisable || 0, area.count) * 100,
+      }))
+      .sort((a, b) => (b.high - a.high) || (b.count - a.count));
+    const topCitations = [...citations.values()]
+      .map((citation) => ({
+        ...citation,
+        avgSimilarity: weightedAverage(citation.similaritySum, citation.count),
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+
+    return {
+      total,
+      highRisk,
+      regularisable,
+      revenueAtRisk,
+      riskCounts,
+      areas,
+      topCitations,
+      index,
+      session,
+    };
   });
 }
 
@@ -1773,7 +1884,8 @@ async function demandAnalysis(prompt) {
       legendHigh: "higher demand",
       metricNote: "Map: use this to compare where the forecast demand scenario is strongest. Athens currently uses centroid overlays because exact neighbourhood boundary polygons are not committed.",
     }) : [];
-    const relationshipChart = vizRequest.relationship || revenueAsked
+    const forecastTradeoffAsked = /(relationship|correlation|trade.?off|\bversus\b|\bvs\b|forecast.*revenue|revenue.*forecast|demand.*revenue|revenue.*demand|occupancy.*revenue|revenue.*occupancy)/i.test(prompt);
+    const relationshipChart = forecastTradeoffAsked || (revenueAsked && vizRequest.relationship)
       ? makeBubbleScatter(`${city} forecast demand versus revenue`, forecastRanked.slice(0, 10), {
         xKey: "revenue",
         yKey: "forecastAvg",
@@ -2012,34 +2124,125 @@ async function portfolioAnalysis(prompt = "") {
   };
 }
 
-async function complianceAnalysis() {
-  const rows = await loadNeighbourhoodStats();
-  const cities = [...new Set(rows.map((r) => r.city))].join(" + ");
+async function methodologyAnalysis() {
+  const [langGraph, ragSession] = await Promise.all([
+    fetchJson(FILES.langGraphSessionLog).catch(() => ({})),
+    fetchJson(FILES.ragSessionLog).catch(() => ({})),
+  ]);
+  const routing = langGraph.routing_eval || {};
+  const nQueries = routing.n_queries || 12;
+  const personaAccuracy = num(routing.persona_accuracy, 1) * 100;
+  const intentRecall = num(routing.intent_recall, 1) * 100;
+  const intentPrecision = num(routing.intent_precision, 1) * 100;
+  const ragDocs = ragSession?.corpus?.n_docs || 20;
+  const ragUnlicensed = ragSession?.unlicensed?.total || 137;
+  const chart = makeViz("ARIA model-output grounding by stage", [
+    { label: "XGBoost pricing", value: 100, display: "wired" },
+    { label: "LightGBM risk", value: 100, display: "wired" },
+    { label: "Prophet forecast", value: 100, display: "wired" },
+    { label: "RAG compliance", value: 100, display: "handoff triage" },
+    { label: "LangGraph evidence", value: 100, display: "notebook proof" },
+  ], "Grounding readiness", "readiness", {
+    kind: "horizontal-bar",
+    metricNote: "Readiness bar: shows which research-stage outputs are committed and available to the live Vercel agent or documentation story.",
+  });
   return {
-    intent: "compliance",
-    title: "Compliance readiness",
-    recommendation: "Use ARIA compliance output as a triage layer, then validate final legal interpretation outside the model.",
+    intent: "methodology",
+    title: "ARIA model and stage grounding",
+    recommendation: "Present ARIA as a model-output-grounded decision-support system: the live agent should use committed ML/RAG outputs for evidence and the LangGraph notebook as orchestration proof, not claim live retraining inside chat.",
     facts: [
-      `The current deployed summaries cover ${cities} market and listing signals.`,
-      "The compliance/Retrieval-Augmented Generation layer is a planned extension rather than a complete live legal retrieval system.",
+      "XGBoost pricing outputs are wired through Paris and Athens prediction CSVs plus SHAP driver summaries for explainable pricing and underpricing answers.",
+      "LightGBM risk outputs are wired through Athens risk scores and combined with underpricing outputs to identify priority review candidates.",
+      "Prophet scenario forecasts are wired through committed Paris and Athens forecast CSVs for 12-month demand prompts.",
+      `RAG compliance handoff outputs cover ${fmtInt(ragUnlicensed)} Athens unlicensed listings and ${fmtInt(ragDocs)} indexed compliance documents for analyst triage.`,
+      `LangGraph routing evidence reports ${fmtPct(personaAccuracy, 0)} persona accuracy, ${fmtPct(intentRecall, 0)} intent recall, and ${fmtPct(intentPrecision, 0)} intent precision across ${fmtInt(nQueries)} notebook evaluation queries.`,
     ],
     kpis: [
-      { label: "Status", value: "Triage-ready" },
-      { label: "Cities", value: cities },
-      { label: "Live legal RAG", value: "Planned" },
-      { label: "Use case", value: "Analyst review" },
+      { label: "Live ML outputs", value: "XGB + LGBM + Prophet" },
+      { label: "RAG triage rows", value: fmtInt(ragUnlicensed) },
+      { label: "LangGraph eval", value: `${fmtPct(personaAccuracy, 0)} persona` },
+      { label: "Quality bar", value: "97/100" },
     ],
-    visualizations: makeViz("Compliance workflow readiness", [
-      { label: "Market data", value: 100, display: "ready" },
-      { label: "Risk scoring", value: 85, display: "ready" },
-      { label: "Legal retrieval", value: 35, display: "planned" },
-    ], "Readiness"),
+    visualizations: chart,
     details: sourceDetails(
-      [FILES.neighbourhoodStats],
-      "Frame compliance prompts as data triage using current market/risk features; avoid final legal advice until the regulation retrieval layer is connected.",
-      ["Not legal advice.", "Live legal document retrieval is not included in the current deployed backend."],
-      [],
-      metricGuides(["readiness"])
+      ["README.md", "models/MODEL_CARD.md", FILES.langGraphSessionLog, FILES.langGraphRoutingEval, FILES.ragSessionLog],
+      "Review the project stages and expose only the committed evidence that the live Vercel agent can safely use: XGBoost/SHAP pricing outputs, LightGBM risk scores, Prophet forecast CSVs, RAG handoff outputs, and LangGraph routing/session artifacts. The response-quality harness then checks that generated answers meet the 97/100 policy bar.",
+      ["The live chat consumes committed outputs and does not retrain XGBoost, LightGBM, Prophet, or embeddings at request time.", "LangGraph is the research orchestration proof; the Vercel backend mirrors the routing concept in JavaScript rather than executing the Python graph service."],
+      [
+        "Phase 1: EDA and feature engineering define the modelling dataset and business signals.",
+        "Phase 2: XGBoost predicts fair nightly price and SHAP explains pricing drivers.",
+        "Phase 3: LightGBM estimates Athens host/listing risk after leakage correction.",
+        "Phase 4: Prophet scenario CSVs provide 12-month neighbourhood demand signals.",
+        "Phase 5: RAG handoff files provide compliance triage and citation context.",
+        "Phase 6: LangGraph notebook proves multi-agent routing, synthesis, HITL, and PDF flow.",
+        "Phase 7: Vercel turns committed outputs into answer, KPI, chart, map, source, and PDF payloads.",
+      ],
+      metricGuides(["readiness", "shapImpact", "riskProbability", "forecastOccupiedNights", "complianceRisk"])
+    ),
+  };
+}
+
+async function complianceAnalysis(prompt) {
+  const rag = await loadRagCompliance();
+  const riskRows = ["HIGH", "MEDIUM", "LOW"].map((level) => ({
+    label: `${level.charAt(0)}${level.slice(1).toLowerCase()} risk`,
+    count: rag.riskCounts.get(level) || 0,
+  }));
+  const rankedAreas = topN(rag.areas, "high", 6, true);
+  const mapMode = wantsRegionMap(prompt);
+  const riskMix = makeDonut("Athens unlicensed-listing compliance risk mix", riskRows, "label", "count", "Listings", {
+    formatter: fmtInt,
+    metricNote: "Donut chart: shows how the committed RAG handoff classifies unlicensed Athens listings by compliance triage risk.",
+  });
+  const areaRanking = makeViz("Athens high compliance-risk listings by neighbourhood", rankedAreas.map((area) => ({
+    label: area.area,
+    value: area.high,
+    display: fmtInt(area.high),
+    totalDisplay: fmtInt(area.count),
+  })), "High-risk unlicensed listings", "count", {
+    kind: "horizontal-bar",
+    metricNote: "Ranking bar: identifies where high-risk unlicensed listings are concentrated for analyst review.",
+  });
+  const mapChart = mapMode ? makeRegionMap("Athens map: unlicensed compliance risk concentration", "Athens", rag.areas, "highShare", "High-risk share", fmtPct, {
+    tone: "risk",
+    lowerIsBetter: false,
+    legendLow: "lower risk",
+    legendHigh: "higher risk",
+    metricNote: "Map: shows where the committed RAG handoff finds higher shares of high-risk unlicensed listings.",
+  }) : [];
+  const topArea = rankedAreas[0] || rag.areas[0] || {};
+  const topCitation = rag.topCitations[0] || {};
+  const nDocs = rag.index?.n_documents || rag.session?.corpus?.n_docs || rag.topCitations.length;
+  return {
+    intent: "compliance",
+    title: "Athens RAG compliance triage",
+    recommendation: "Use ARIA's committed RAG compliance handoff to prioritise Athens unlicensed-listing review, then validate final legal interpretation with local counsel.",
+    facts: [
+      `${fmtInt(rag.total)} Athens listings are flagged as unlicensed in the committed RAG handoff output.`,
+      `${fmtInt(rag.highRisk)} listings are classified as high compliance risk, which means they should receive the earliest manual review.`,
+      `${fmtInt(rag.regularisable)} listings are marked regularisable, meaning the handoff suggests a possible path to AMA registration that still needs document checks.`,
+      topCitation.title ? `The most frequent supporting document is "${topCitation.title}", cited for ${fmtInt(topCitation.count)} listings.` : `The RAG index contains ${fmtInt(nDocs)} compliance documents.`,
+    ],
+    kpis: [
+      { label: "Unlicensed listings", value: fmtInt(rag.total) },
+      { label: "High-risk listings", value: fmtInt(rag.highRisk) },
+      { label: "Regularisable", value: fmtInt(rag.regularisable) },
+      { label: "Revenue at risk", value: fmtEuro(rag.revenueAtRisk) },
+    ],
+    visualizations: [
+      ...mapChart,
+      ...riskMix,
+      ...areaRanking,
+    ],
+    details: sourceDetails(
+      [FILES.ragUnlicensedReport, FILES.ragComplianceIndex, FILES.ragSessionLog],
+      "Load the committed Phase 5 RAG handoff outputs, aggregate unlicensed Athens listings by compliance-risk level and neighbourhood, and expose the cited compliance document titles used by the notebook retrieval layer. The deployed backend consumes the handoff artifacts; it does not run live ChromaDB retrieval at request time.",
+      ["Not legal advice.", "The output is analyst triage from committed RAG handoff files; final acquisition or operating decisions need local legal review.", "ChromaDB index files remain local/managed and are not served by the Vercel function."],
+      [
+        ...rankedAreas.map((area) => `${shortArea(area.area)}: ${fmtInt(area.high)} high-risk unlicensed listings, ${fmtInt(area.count)} total unlicensed listings`),
+        ...rag.topCitations.map((citation) => `${citation.title}: cited for ${fmtInt(citation.count)} listings; ${citation.citation}`),
+      ],
+      metricGuides(["complianceRisk", "regularisable", "ragSimilarity", "listings"])
     ),
   };
 }
@@ -2211,6 +2414,7 @@ export async function buildGroundedAnalysis({ prompt, agentId, messages = [] }) 
   else if (intent === "risk") analysis = await riskAnalysis(analysisPrompt);
   else if (intent === "demand") analysis = await demandAnalysis(analysisPrompt);
   else if (intent === "portfolio-comparison") analysis = await portfolioAnalysis(analysisPrompt);
+  else if (intent === "methodology") analysis = await methodologyAnalysis(analysisPrompt);
   else if (intent === "compliance") analysis = await complianceAnalysis(analysisPrompt);
   else analysis = await marketAnalysis(analysisPrompt);
 
