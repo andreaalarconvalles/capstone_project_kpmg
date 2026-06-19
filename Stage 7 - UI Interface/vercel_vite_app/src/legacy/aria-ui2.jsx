@@ -189,14 +189,31 @@ const Composer = React.forwardRef(function Composer({
 }, ref) {
   const taRef = ref || React.useRef(null);
   const fileRef = React.useRef(null);
+  const speechRef = React.useRef(null);
+  const voiceWantedRef = React.useRef(false);
+  const voiceBaseRef = React.useRef("");
+  const voiceFinalRef = React.useRef("");
   const [attachments, setAttachments] = React.useState([]);
+  const [voiceStatus, setVoiceStatus] = React.useState("idle");
+  const [voiceMessage, setVoiceMessage] = React.useState("");
   const attachmentsRef = React.useRef([]);
   const engine = MODEL_BY_ID[modelId];
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const voiceSupported = !!SpeechRecognition;
   const grow = (el) => { if (!el) return; el.style.height = "auto"; el.style.height = Math.min(el.scrollHeight, 200) + "px"; };
   React.useEffect(() => { attachmentsRef.current = attachments; }, [attachments]);
   React.useEffect(() => () => {
     attachmentsRef.current.forEach((item) => URL.revokeObjectURL(item.url));
+    if (speechRef.current) {
+      voiceWantedRef.current = false;
+      try { speechRef.current.abort(); } catch {}
+    }
   }, []);
+  React.useEffect(() => {
+    if (!voiceMessage || voiceStatus === "listening") return undefined;
+    const timer = setTimeout(() => setVoiceMessage(""), 2600);
+    return () => clearTimeout(timer);
+  }, [voiceMessage, voiceStatus]);
   const addPhotos = (e) => {
     const files = Array.from(e.target.files || []).filter((file) => file.type.startsWith("image/"));
     if (!files.length) return;
@@ -220,8 +237,83 @@ const Composer = React.forwardRef(function Composer({
     attachmentsRef.current.forEach((item) => URL.revokeObjectURL(item.url));
     setAttachments([]);
   };
+  const setPromptFromVoice = (spoken) => {
+    const base = voiceBaseRef.current.trim();
+    const next = [base, spoken.trim()].filter(Boolean).join(base && spoken.trim() ? " " : "");
+    setValue(next);
+    setTimeout(() => grow(taRef.current), 0);
+  };
+  const stopVoice = () => {
+    voiceWantedRef.current = false;
+    if (speechRef.current) {
+      try { speechRef.current.stop(); } catch {}
+    }
+    setVoiceStatus("idle");
+    setVoiceMessage("");
+  };
+  React.useEffect(() => {
+    if (streaming && voiceStatus === "listening") stopVoice();
+  }, [streaming, voiceStatus]);
+  const startVoice = () => {
+    if (!voiceSupported) {
+      setVoiceMessage("Voice input is not supported in this browser.");
+      return;
+    }
+    if (streaming) return;
+    if (voiceStatus === "listening") {
+      stopVoice();
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    speechRef.current = recognition;
+    voiceWantedRef.current = true;
+    voiceBaseRef.current = value;
+    voiceFinalRef.current = "";
+    setVoiceStatus("listening");
+    setVoiceMessage("Listening...");
+
+    recognition.lang = navigator.language || "en-US";
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.maxAlternatives = 1;
+    recognition.onresult = (event) => {
+      let interim = "";
+      let finalText = "";
+      for (let i = event.resultIndex; i < event.results.length; i += 1) {
+        const text = event.results[i][0]?.transcript || "";
+        if (event.results[i].isFinal) finalText += text;
+        else interim += text;
+      }
+      if (finalText.trim()) {
+        voiceFinalRef.current = `${voiceFinalRef.current} ${finalText}`.trim();
+      }
+      setPromptFromVoice(`${voiceFinalRef.current} ${interim}`.trim());
+    };
+    recognition.onerror = (event) => {
+      voiceWantedRef.current = false;
+      const blocked = event.error === "not-allowed" || event.error === "service-not-allowed";
+      setVoiceStatus("idle");
+      setVoiceMessage(blocked ? "Microphone access was blocked." : "Voice input stopped. Try again.");
+    };
+    recognition.onend = () => {
+      if (voiceWantedRef.current) {
+        voiceWantedRef.current = false;
+        setVoiceStatus("idle");
+        setVoiceMessage(voiceFinalRef.current ? "Voice added to prompt." : "");
+      }
+    };
+    try {
+      recognition.start();
+    } catch {
+      voiceWantedRef.current = false;
+      setVoiceStatus("idle");
+      setVoiceMessage("Voice input could not start. Try again.");
+    }
+  };
   const submit = () => {
     if (!value.trim()) return;
+    if (voiceStatus === "listening") stopVoice();
     onSend();
     clearPhotos();
   };
@@ -274,6 +366,37 @@ const Composer = React.forwardRef(function Composer({
             style={{ width: 34, height: 34, borderRadius: 100, display: "grid", placeItems: "center", color: C2.muted, flexShrink: 0 }}>
             <Icon name="Plus" size={19} />
           </button>
+          <button className="aria-focus"
+            title={voiceSupported ? (voiceStatus === "listening" ? "Stop voice input" : "Dictate prompt") : "Voice input is not supported in this browser"}
+            aria-label={voiceStatus === "listening" ? "Stop voice input" : "Dictate prompt"}
+            aria-pressed={voiceStatus === "listening"}
+            disabled={!voiceSupported || streaming}
+            onClick={startVoice}
+            style={{
+              width: 34, height: 34, borderRadius: 100, display: "grid", placeItems: "center", flexShrink: 0,
+              background: voiceStatus === "listening" ? C2.cta : "transparent",
+              color: voiceStatus === "listening" ? C2.ctaText : C2.muted,
+              opacity: voiceSupported && !streaming ? 1 : 0.45,
+              cursor: voiceSupported && !streaming ? "pointer" : "default",
+              position: "relative",
+            }}>
+            <Icon name={voiceStatus === "listening" ? "MicOff" : "Mic"} size={17.5} />
+            {voiceStatus === "listening" && (
+              <span style={{
+                position: "absolute", right: 5, top: 5, width: 6, height: 6, borderRadius: 100,
+                background: C2.ctaText, boxShadow: `0 0 0 3px ${C2.ctaText}33`,
+              }} />
+            )}
+          </button>
+          {voiceMessage && (
+            <span title={voiceMessage} style={{
+              maxWidth: 190, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+              fontSize: 12, color: voiceStatus === "listening" ? C2.cta : C2.muted,
+              fontWeight: voiceStatus === "listening" ? 650 : 500,
+            }}>
+              {voiceMessage}
+            </span>
+          )}
           <AgentPicker agentId={agent.id} agents={agents} onPick={onPickAgent} />
           <span style={{ width: 1, height: 18, background: C2.hair }} />
           <ModelPicker modelId={modelId} onPick={setModelId} />
