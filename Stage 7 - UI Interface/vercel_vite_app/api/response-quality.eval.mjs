@@ -245,6 +245,55 @@ async function checkModelGrounding() {
   return { passed: failures.length === 0, failures };
 }
 
+async function checkFallbackAnswerQuality() {
+  const failures = [];
+  const cases = [
+    {
+      name: "Paris forecast fallback remains decision-ready",
+      prompt: PARIS_ONLY_PROPHET_PROMPT,
+      tier: "analytical",
+      geographic: true,
+      requestedCity: "Paris",
+      forbiddenCity: "Athens",
+    },
+    {
+      name: "risk fallback defines model terms",
+      prompt: "Which Athens listings should a property manager review first because they are both high-risk and underpriced? Explain the business logic and show the priority evidence.",
+      tier: "analytical",
+      geographic: true,
+    },
+    {
+      name: "pricing fallback defines SHAP and underpricing",
+      prompt: "Is my Paris listing underpriced compared with similar listings, and which SHAP drivers explain the gap?",
+      tier: "analytical",
+      geographic: false,
+    },
+    {
+      name: "compliance fallback avoids forbidden confidence language",
+      prompt: "Is it legal to run an Airbnb in central Athens now? Use ARIA compliance evidence and show the triage risk.",
+      tier: "analytical",
+      geographic: true,
+    },
+    {
+      name: "methodology fallback explains model grounding",
+      prompt: "Review the project stages. Which ML models does ARIA use, how is the agent grounded, and how was performance evaluated?",
+      tier: "analytical",
+      geographic: false,
+    },
+  ];
+
+  for (const test of cases) {
+    const analysis = await buildGroundedAnalysis({ prompt: test.prompt, agentId: "market" });
+    const answer = `${analysis.fallbackAnswer}\n\nSources: ${(analysis.sources || []).join(", ")}`;
+    const { score, issues } = scoreAnswer(answer, test);
+    if (score < PASS_BAR) {
+      failures.push(`${test.name}: scored ${score}/100. ${issues.join("; ")}`);
+    }
+  }
+
+  return { passed: failures.length === 0, failures };
+}
+
 /* ------------------------------- gold answers ------------------------------ */
 
 const GOLD = [
@@ -439,6 +488,13 @@ async function run() {
   if (!modelGrounding.passed) {
     ok = false;
     modelGrounding.failures.forEach((failure) => line(`  ${failure}`));
+  }
+
+  const fallbackQuality = await checkFallbackAnswerQuality();
+  line(`\nFallback answer quality checks: ${fallbackQuality.passed ? "PASS" : "FAIL"}`);
+  if (!fallbackQuality.passed) {
+    ok = false;
+    fallbackQuality.failures.forEach((failure) => line(`  ${failure}`));
   }
 
   line("\nGold answers (must score >= 97):");

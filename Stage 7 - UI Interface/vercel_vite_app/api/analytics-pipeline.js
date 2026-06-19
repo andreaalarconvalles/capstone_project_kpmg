@@ -197,8 +197,8 @@ const METRIC_GUIDES = {
     optimal: "Use it as a pricing benchmark, then check demand, reviews, amenities, and seasonality.",
   },
   shapImpact: {
-    label: "Model driver impact",
-    meaning: "A SHAP-based explanation of which variables moved the pricing model most.",
+    label: "SHAP value",
+    meaning: "A model explanation showing which variables moved the pricing model most.",
     range: "Higher impact means the feature mattered more to the model's price estimate.",
     good: "Good drivers are interpretable and business-relevant, such as neighbourhood price level or distance zone.",
     optimal: "Use driver impact to explain why the model made a recommendation, not as a standalone decision score.",
@@ -248,7 +248,7 @@ const METRIC_GUIDES = {
   ragSimilarity: {
     label: "RAG similarity score",
     meaning: "How closely the selected compliance document matched the listing's compliance context in the notebook handoff.",
-    range: "Higher means a closer retrieval match, but it is not a legal confidence score.",
+    range: "Higher means a closer retrieval match, but it is not a legal certainty measure.",
     good: "Higher is useful for triage evidence, but every compliance conclusion still needs human legal review.",
     optimal: "Use it to identify the most relevant citation, not to automate a legal decision.",
   },
@@ -2151,7 +2151,7 @@ async function methodologyAnalysis() {
     title: "ARIA model and stage grounding",
     recommendation: "Present ARIA as a model-output-grounded decision-support system: the live agent should use committed ML/RAG outputs for evidence and the LangGraph notebook as orchestration proof, not claim live retraining inside chat.",
     facts: [
-      "XGBoost pricing outputs are wired through Paris and Athens prediction CSVs plus SHAP driver summaries for explainable pricing and underpricing answers.",
+      "XGBoost pricing outputs are wired through Paris and Athens prediction CSVs plus SHAP values (model explanations showing which variables moved a prediction) for explainable pricing and underpricing answers.",
       "LightGBM risk outputs are wired through Athens risk scores and combined with underpricing outputs to identify priority review candidates.",
       "Prophet scenario forecasts are wired through committed Paris and Athens forecast CSVs for 12-month demand prompts.",
       `RAG compliance handoff outputs cover ${fmtInt(ragUnlicensed)} Athens unlicensed listings and ${fmtInt(ragDocs)} indexed compliance documents for analyst triage.`,
@@ -2383,7 +2383,7 @@ function deterministicAnswer(analysis) {
     .join("\n");
   const metricLines = (analysis.details?.metricGuides || [])
     .slice(0, 3)
-    .map((g) => `- ${g.label}: ${g.meaning} ${g.good}`)
+    .map((g) => `- ${g.label} (${g.meaning} ${g.range}): ${g.good}`)
     .join("\n");
   return localizePlaceNames(
     `Direct recommendation:\n${analysis.recommendation}\n\n` +
