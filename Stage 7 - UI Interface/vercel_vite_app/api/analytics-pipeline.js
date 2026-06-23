@@ -117,7 +117,9 @@ function fmtInt(value) {
 }
 
 function fmtEuro(value) {
-  return `€${Math.round(num(value)).toLocaleString("en-US")}`;
+  const rounded = Math.round(num(value));
+  const prefix = rounded < 0 ? "-€" : "€";
+  return `${prefix}${Math.abs(rounded).toLocaleString("en-US")}`;
 }
 
 function fmtPct(value, digits = 1) {
@@ -267,6 +269,16 @@ function metricGuides(keys) {
 
 function kpiHelpFor(label) {
   const l = String(label || "").toLowerCase();
+  if (l.includes("citation")) return "Source IDs used for this compliance answer.";
+  if (l.includes("ama status")) return "Registration requirement status from the RAG compliance corpus.";
+  if (l.includes("display rule")) return "Whether the AMA number must be visible on platform listings.";
+  if (l.includes("central path")) return "Whether a central Athens unlicensed listing can still obtain a new AMA registration.";
+  if (l.includes("near-zone path")) return "Whether listings outside the freeze zone may still apply after document checks.";
+  if (l.includes("mechanism")) return "How the compliance rule is enforced in the RAG handoff.";
+  if (l.includes("demand effect")) return "Expected booking-demand movement after non-compliant supply is removed.";
+  if (l.includes("primary cap")) return "Short-term-rental night limit for Paris primary residences.";
+  if (l === "registration" || l.includes("siret")) return "Registration requirement highlighted by the Paris compliance corpus.";
+  if (l.includes("avg gap")) return "Average euro-per-night difference between model fair price and current listed price.";
   if (l.includes("opportunity")) return "0-1 score. Higher is better; above 0.70 is a strong shortlist signal.";
   if (l.includes("saturation")) return "0-1 crowding score. Lower is calmer; above 0.60 means a more crowded market.";
   if (l.includes("median nightly") || l.includes("price")) return "Euro nightly rental price, not purchase price. Lower helps affordability; higher needs strong demand.";
@@ -1256,7 +1268,7 @@ function makeHistogram(title, rows, metricKey, metricLabel, options = {}) {
   const data = Array.from({ length: bins }, (_, i) => {
     const lo = min + i * width;
     const hi = i === bins - 1 ? max : min + (i + 1) * width;
-    return { label: `${formatter(lo)}–${formatter(hi)}`, value: 0, count: 0, display: "0 regions" };
+    return { label: `${formatter(lo)}-${formatter(hi)}`, value: 0, count: 0, display: "0 regions" };
   });
   values.forEach((value) => {
     const idx = Math.min(bins - 1, Math.max(0, Math.floor((value - min) / width)));
@@ -1670,6 +1682,8 @@ async function pricingAnalysis(prompt) {
   const vizRequest = visualizationRequest(prompt);
   const mapMode = wantsRegionMap(prompt);
   const cityName = isParis ? "Paris" : "Athens";
+  const bestGap = num(best.avgGap, 0);
+  const hasPositiveAreaGap = bestGap > 0;
   const pricingRankingChart = makeViz(`${cityName} average underpricing gap by area`, ranked.map((r) => ({
     label: r.area,
     value: r.avgGap,
@@ -1725,12 +1739,16 @@ async function pricingAnalysis(prompt) {
   return {
     intent: "pricing",
     title: `${isParis ? "Paris" : "Athens"} pricing opportunity`,
-    recommendation: `${shortArea(best.area)} shows the clearest pricing upside, with an average model gap of ${fmtEuro(best.avgGap)} per night.`,
+    recommendation: hasPositiveAreaGap
+      ? `${shortArea(best.area)} shows the clearest pricing upside, with an average model gap of ${fmtEuro(best.avgGap)} per night.`
+      : `${shortArea(best.area)} is the closest area-level pricing benchmark, but its average gap is ${fmtEuro(best.avgGap)} per night, so review listing-level positive-gap records before calling it underpriced.`,
     facts: [
       isParis
         ? `${fmtInt(pricing.positive)} of ${fmtInt(pricing.total)} Paris listings have a positive predicted price gap.`
         : `${fmtInt(pricing.total)} Athens listings are flagged as underpriced in the project output.`,
-      `The strongest area-level average gap is ${fmtEuro(best.avgGap)} in ${shortArea(best.area)}.`,
+      hasPositiveAreaGap
+        ? `The strongest area-level average gap is ${fmtEuro(best.avgGap)} in ${shortArea(best.area)}.`
+        : `The strongest area-level benchmark is still slightly negative at ${fmtEuro(best.avgGap)} in ${shortArea(best.area)}, so the positive-gap opportunity is listing-specific rather than area-wide.`,
       `The most important model drivers include ${shap.slice(0, 3).map((s) => s.displayFeature).join(", ")}.`,
     ],
     kpis: [
@@ -2196,13 +2214,36 @@ function complianceDocs(rag, ids) {
   return ids.map((id) => byId.get(id)).filter(Boolean);
 }
 
-function complianceSnippet(doc, max = 300) {
-  const text = String(doc?.text || "").replace(/\s+/g, " ").trim();
-  return text.length > max ? `${text.slice(0, max - 1).trim()}...` : text;
+const COMPLIANCE_EVIDENCE_SUMMARIES = new Map([
+  ["ama_001", "AMA registration is mandatory for Greek short-term rentals under Law 4276/2014. Each compliant Athens listing needs a valid AMA number."],
+  ["ama_005", "Greek platform listings must display a valid AMA number. Listings without one can be flagged for removal."],
+  ["ama_006", "New AMA registrations were suspended in central Athens from 31 December 2024."],
+  ["ama_007", "Unlicensed listings in the central Athens freeze zone cannot obtain new AMA registration after the freeze."],
+  ["ama_008", "The freeze covers central Athens areas, while near and mid distance zones remain outside the freeze."],
+  ["ama_009", "The freeze creates a supply cap that can strengthen the position of existing compliant central Athens operators."],
+  ["ama_010", "AMA enforcement uses platform audits and local authority inspections; confirmed violations can lead to removal orders."],
+  ["ama_011", "When unlicensed listings are removed, bookings can shift to surviving compliant listings in the same neighbourhood."],
+  ["ama_014", "Near-zone unlicensed listings may still apply for AMA registration if building and property documents pass checks."],
+  ["ama_016", "Existing AMA registration can act as a competitive moat in central Athens freeze zones."],
+  ["loi_001", "Loi Le Meur limits French primary-residence short-term rentals to 90 nights per calendar year."],
+  ["loi_002", "Paris STR operators need SIRET or business registration in the documented income or non-primary-residence cases."],
+  ["loi_004", "Enforcement began in January 2025; stricter local caps can change the Paris supply outlook for investors."],
+]);
+
+function firstCompleteSentence(text, max = 260) {
+  const clean = String(text || "").replace(/\s+/g, " ").trim();
+  const sentence = clean.split(/(?<=[.!?])\s+/).find(Boolean) || clean;
+  if (sentence.length <= max) return sentence.replace(/\s*[.!?]\s*$/, ".");
+  const truncated = sentence.slice(0, max).replace(/\s+\S*$/, "").trim();
+  return `${truncated}.`;
 }
 
-function complianceEvidenceLines(docs, max = 300) {
-  return docs.map((doc) => `${doc.id} - ${doc.title}: ${complianceSnippet(doc, max)}`);
+function complianceEvidenceSummary(doc) {
+  return COMPLIANCE_EVIDENCE_SUMMARIES.get(doc?.id) || firstCompleteSentence(doc?.text || "", 260);
+}
+
+function complianceEvidenceLines(docs) {
+  return docs.map((doc) => `${doc.id}: ${complianceEvidenceSummary(doc)}`);
 }
 
 function complianceSourceDetails(rag, docs, methodology, extra = [], metricKeys = []) {
@@ -2222,7 +2263,7 @@ function complianceSourceDetails(rag, docs, methodology, extra = [], metricKeys 
       id: doc.id,
       title: doc.title,
       citation: doc.citation,
-      text: complianceSnippet(doc, 420),
+      text: complianceEvidenceSummary(doc),
     })),
     ragDocumentCount: rag.index?.n_documents || rag.session?.corpus?.n_docs || (rag.index?.documents || []).length,
   };
@@ -2232,6 +2273,7 @@ function complianceTopic(prompt) {
   const p = String(prompt || "").toLowerCase();
   if (/\bloi\s+le\s+meur\b|\bsiret\b|\bprimary residences?\b|\b90[-\s]?night\b|\bparis\b.*\b(?:str|short[-\s]?term|registration|residence)\b/.test(p)) return "loi-le-meur";
   if (/\b(enforcement|remove|removal|deactivate|deactivation|platform audit|platform removal)\b/.test(p)) return "enforcement";
+  if (/\b(invest|investment|impact|opportunity|moat|supply|demand|market)\b/.test(p) && /\b(freeze|central athens|ama)\b/.test(p)) return "athens-freeze-investment";
   if (/\b(compare|near[-\s]?zone|near zone|near_1_3km|regulari[sz])\b/.test(p) && /\b(freeze|central athens|dec(?:ember)?\s+2024|ama|unlicensed)\b/.test(p)) return "zone-comparison";
   if (/\b(freeze|frozen|central athens|dec(?:ember)?\s+2024|regulari[sz])\b/.test(p)) return "athens-freeze";
   if (/\b(ama|registration|register|mandatory|license|licence|permit|display)\b/.test(p)) return "ama-registration";
@@ -2246,7 +2288,7 @@ function simpleComplianceAnswer({ direct, evidence, implication, caveat = "This 
   return [
     direct,
     "",
-    `Retrieved source passages:\n${evidence.map((line) => `- ${line}`).join("\n")}`,
+    `Source evidence:\n${evidence.map((line) => `- ${line}`).join("\n")}`,
     "",
     `Business implication:\n${implication}`,
     "",
@@ -2254,13 +2296,11 @@ function simpleComplianceAnswer({ direct, evidence, implication, caveat = "This 
   ].join("\n");
 }
 
-function complianceTemplateAnswer({ direct, evidence, implication, tableRows = [], nextActions = [], visualGuidance = "No unrelated market chart is returned for this legal/compliance prompt. Use the retrieved source passages and compliance table; ask for investment impact only if you want ARIA to add market analytics." }) {
-  const table = tableRows.length
+function complianceTemplateAnswer({ direct, evidence, implication, tableRows = [], nextActions = [], visualGuidance = "Use the source evidence above. No market chart is attached because this is a legal/compliance question." }) {
+  const comparison = tableRows.length
     ? [
-      "Compliance table:",
-      "| Zone / rule | Registration path | Risk | Source |",
-      "| --- | --- | --- | --- |",
-      ...tableRows.map((row) => `| ${row.zone} | ${row.path} | ${row.risk} | ${row.source} |`),
+      "Compliance comparison:",
+      ...tableRows.map((row) => `- ${row.zone}: ${row.path}. Risk: ${row.risk}. Source: ${row.source}.`),
       "These rows are analyst triage categories, not legal determinations.",
       "",
     ].join("\n")
@@ -2268,9 +2308,9 @@ function complianceTemplateAnswer({ direct, evidence, implication, tableRows = [
   return [
     `Direct recommendation:\n${direct}`,
     "",
-    `Retrieved source passages:\n${evidence.map((line) => `- ${line}`).join("\n")}`,
+    `Source evidence:\n${evidence.map((line) => `- ${line}`).join("\n")}`,
     "",
-    table,
+    comparison,
     `Visualizations to review:\n${visualGuidance}`,
     "",
     `Business implication:\n${implication}`,
@@ -2315,6 +2355,58 @@ async function complianceAnalysis(prompt) {
           rag,
           docs,
           "Route AMA and registration prompts to the committed RAG compliance index first, return citation IDs, and suppress investment visuals unless the user asks for market impact.",
+          [],
+          ["complianceRisk", "regularisable"]
+        ),
+        complianceMode: "rag-first",
+        complianceTopic: topic,
+      },
+    };
+  }
+
+  if (topic === "athens-freeze-investment") {
+    const docs = complianceDocs(rag, ["ama_006", "ama_007", "ama_009", "ama_011", "ama_016"]);
+    const evidence = complianceEvidenceLines(docs);
+    const direct = "For investors, the Athens AMA freeze makes existing compliant central listings more defensible, while unlicensed central listings carry high removal risk.";
+    const facts = [
+      "ama_006 defines the central Athens AMA freeze date and scope.",
+      "ama_007 says unlicensed central-zone listings have no new AMA path after the freeze.",
+      "ama_009 and ama_016 frame existing AMA registration as a supply-cap advantage for compliant operators.",
+      "ama_011 says removed unlicensed supply can redirect bookings toward compliant nearby listings.",
+    ];
+    return {
+      intent: "compliance",
+      title: "Athens AMA freeze investment impact",
+      recommendation: direct,
+      facts,
+      kpis: [
+        { label: "Compliant moat", value: "Existing AMA" },
+        { label: "Unlicensed path", value: "No new AMA" },
+        { label: "Demand effect", value: "Redistribution" },
+        { label: "Citation IDs", value: "ama_006, ama_007, ama_009, ama_011, ama_016" },
+      ],
+      visualizations: [],
+      complianceAnswer: complianceTemplateAnswer({
+        direct,
+        evidence,
+        tableRows: [
+          { zone: "Existing compliant central listing", path: "Protected by the registration freeze because new competitors cannot easily enter", risk: "Lower", source: "ama_009, ama_016" },
+          { zone: "Unlicensed central listing", path: "No new AMA path after the freeze and likely enforcement exposure", risk: "High", source: "ama_007" },
+          { zone: "Compliant nearby operator", path: "May receive redistributed bookings if non-compliant supply is removed", risk: "Opportunity", source: "ama_011" },
+        ],
+        visualGuidance: "Use the compliance comparison above as the first investment screen. Ask for a separate market-impact chart only after confirming the asset is already compliant.",
+        implication: "The investable signal is not to buy unlicensed central supply. It is to prioritise already registered central assets or compliant nearby operators that can benefit from a tighter legal supply cap.",
+        nextActions: [
+          "Verify the target property already has a valid AMA if it is in the central freeze zone.",
+          "Treat unlicensed central assets as legal-reject or legal-escalation cases before any valuation work.",
+          "After compliance is confirmed, compare demand, pricing, and underpricing outputs for the compliant shortlist.",
+        ],
+      }),
+      details: {
+        ...complianceSourceDetails(
+          rag,
+          docs,
+          "Route AMA freeze investment-impact prompts to RAG evidence first, then explain the supply-cap and demand-redistribution implication without attaching unrelated market charts.",
           [],
           ["complianceRisk", "regularisable"]
         ),
@@ -2666,6 +2758,60 @@ function deterministicDemandAnswer(analysis) {
   );
 }
 
+function stripFinalPunctuation(text) {
+  return String(text || "").trim().replace(/[.!?]+$/g, "");
+}
+
+function metricGuideLine(guide) {
+  const meaning = stripFinalPunctuation(guide.meaning);
+  const range = stripFinalPunctuation(guide.range);
+  const good = stripFinalPunctuation(guide.good);
+  return `- ${guide.label}: ${meaning}. ${range}. ${good}.`;
+}
+
+function deterministicPricingAnswer(analysis) {
+  const facts = (analysis.facts || []).slice(0, 3);
+  const guides = (analysis.details?.metricGuides || []).slice(0, 3).map(metricGuideLine).join("\n");
+  const topArea = analysis.kpis?.find((kpi) => /top pricing area/i.test(kpi.label))?.value || "the top pricing area";
+  const avgGap = analysis.kpis?.find((kpi) => /avg gap/i.test(kpi.label))?.value || "";
+  const negativeGap = String(avgGap).trim().startsWith("-");
+  const driver = analysis.kpis?.find((kpi) => /main driver/i.test(kpi.label))?.value || "the SHAP drivers";
+  const actions = negativeGap
+    ? [
+      "Drill into listing-level positive-gap records instead of assuming the whole area is underpriced.",
+      "Use the SHAP driver chart to check whether the pricing gap is explained by location, capacity, bedrooms, or review quality.",
+      "Validate current nightly prices against comparable live listings before changing price.",
+    ]
+    : [
+      `Review listings in ${topArea} first because the model gap suggests pricing upside.`,
+      "Use the SHAP driver chart to understand which features support the price move.",
+      "Adjust prices gradually and monitor booking pace after each change.",
+    ];
+
+  return localizePlaceNames(
+    `Direct recommendation:\n${analysis.recommendation}\n\n` +
+    `Reasoning done by ARIA:\n- ARIA compares XGBoost fair-price estimates with current nightly prices.\n- ${facts[0] || "The pricing output identifies listings with positive model gaps."}\n- ${facts[2] || `The most important driver is ${driver}.`}\n\n` +
+    `Key evidence:\n${guides}\n\n` +
+    `Visualizations to review:\nUse the returned pricing chart${visualizationSummary(analysis) ? ` (${visualizationSummary(analysis)})` : ""} to review the price-gap ranking or SHAP driver importance. For SHAP, longer bars mean the feature moved the model more.\n\n` +
+    `Possible limitations:\nSmall euro-per-night gaps are directional, not automatic price moves. A specific listing ID would allow a more precise listing-level recommendation.\n\n` +
+    `Next actions:\n${actions.map((action) => `- ${action}`).join("\n")}`
+  );
+}
+
+function deterministicRiskAnswer(analysis) {
+  const facts = (analysis.facts || []).slice(0, 3);
+  const guides = (analysis.details?.metricGuides || []).slice(0, 3).map(metricGuideLine).join("\n");
+  const priorityArea = analysis.kpis?.find((kpi) => /priority area|highest-risk area/i.test(kpi.label))?.value || "the top Athens area";
+  return localizePlaceNames(
+    `Direct recommendation:\n${analysis.recommendation}\n\n` +
+    `Reasoning done by ARIA:\n- ARIA combines LightGBM risk flags with the Athens underpricing output to form an action queue.\n- ${facts[0] || "The risk output identifies listings above the high-risk threshold."}\n- ${facts[1] || "The overlap with underpricing marks listings that deserve manager review first."}\n\n` +
+    `Key evidence:\n${guides}\n\n` +
+    `Visualizations to review:\nUse the returned priority chart${visualizationSummary(analysis) ? ` (${visualizationSummary(analysis)})` : ""} to see where the highest count of review targets sits. Longer bars mean more listings need attention.\n\n` +
+    `Possible limitations:\nRisk is a prioritisation signal, not a final judgement about a host or property. Review the individual listing, price, reviews, and licensing context before acting.\n\n` +
+    `Next actions:\n- Start with ${priorityArea} and open the underlying listing queue.\n- Separate pricing fixes from legal or quality issues before contacting hosts.\n- Recheck the highest-risk listings after any price or listing-quality intervention.`
+  );
+}
+
 function deterministicAnswer(analysis) {
   if (analysis.intent === "compliance" && analysis.details?.complianceMode === "rag-first" && analysis.complianceAnswer) {
     return localizePlaceNames(analysis.complianceAnswer);
@@ -2673,13 +2819,15 @@ function deterministicAnswer(analysis) {
   if (analysis.intent === "demand" && /prophet/i.test(analysis.title || "")) {
     return deterministicDemandAnswer(analysis);
   }
+  if (analysis.intent === "pricing") return deterministicPricingAnswer(analysis);
+  if (analysis.intent === "risk") return deterministicRiskAnswer(analysis);
   const factLines = analysis.facts
     .slice(0, 3)
     .map((fact) => `- ${fact}`)
     .join("\n");
   const metricLines = (analysis.details?.metricGuides || [])
     .slice(0, 3)
-    .map((g) => `- ${g.label} (${g.meaning} ${g.range}): ${g.good}`)
+    .map(metricGuideLine)
     .join("\n");
   return localizePlaceNames(
     `Direct recommendation:\n${analysis.recommendation}\n\n` +

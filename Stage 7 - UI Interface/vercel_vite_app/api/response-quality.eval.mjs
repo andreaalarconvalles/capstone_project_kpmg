@@ -66,8 +66,8 @@ export function scoreAnswer(answer, opts = {}) {
   for (const term of JARGON_TERMS) {
     const idx = lower.indexOf(term);
     if (idx >= 0) {
-      const window = a.slice(idx, idx + term.length + 90);
-      if (!/\(/.test(window)) {
+      const window = a.slice(idx, idx + term.length + 120);
+      if (!/(\(|:|\bis\b|\bmeans\b|\bmeaning\b)/i.test(window)) {
         deduct(12, `term not defined on first use: ${term}`);
         break;
       }
@@ -88,6 +88,11 @@ export function scoreAnswer(answer, opts = {}) {
 
   // 7. Clean final Sources line.
   if (!/\n?sources:\s*\S+/i.test(a)) deduct(8, "missing or empty Sources line");
+
+  // 7b. No raw formatting artifacts from templates, markdown tables, or source IDs.
+  if (/[—–]|\|\s*-{3,}\s*\||\.\):|€-|\b(?:Ama|Loi)\s+\d{3}\b/.test(a)) {
+    deduct(18, "contains awkward formatting artifact");
+  }
 
   // 8. Not a dense single paragraph.
   const sections = a.split(/\n{2,}/).filter((s) => s.trim());
@@ -300,8 +305,16 @@ async function checkComplianceSpecificity() {
       name: "central versus near-zone comparison",
       prompt: "Compare central Athens freeze risk with near-zone regularisation options and cite relevant source passages.",
       requiredIds: ["ama_006", "ama_007", "ama_008", "ama_014"],
-      mustContain: ["Compliance table", "Central Athens", "Near zone", "ama_007", "ama_014"],
-      forbidden: ["Zappeio", "opportunity ranking"],
+      mustContain: ["Compliance comparison", "Central Athens", "Near zone", "ama_007", "ama_014"],
+      forbidden: ["Zappeio", "opportunity ranking", "| ---", ".):", "—", "Airbnb..."],
+      expectNoVisuals: true,
+    },
+    {
+      name: "Athens AMA freeze investment impact",
+      prompt: "What is the investment impact of the Athens AMA freeze?",
+      requiredIds: ["ama_006", "ama_007", "ama_009", "ama_011", "ama_016"],
+      mustContain: ["investors", "compliant central", "supply", "ama_009", "ama_016"],
+      forbidden: ["| ---", ".):", "—", "Airbnb..."],
       expectNoVisuals: true,
     },
   ];
@@ -324,7 +337,7 @@ async function checkComplianceSpecificity() {
       }
     }
     for (const phrase of test.forbidden) {
-      if (new RegExp(`\\b${phrase}\\b`, "i").test(answer)) {
+      if (answer.toLowerCase().includes(String(phrase).toLowerCase())) {
         failures.push(`${test.name}: answer includes forbidden phrase "${phrase}".`);
       }
     }
@@ -336,6 +349,39 @@ async function checkComplianceSpecificity() {
     }
   }
 
+  return { passed: failures.length === 0, failures };
+}
+
+async function checkOutputFormatting() {
+  const failures = [];
+  const prompts = [
+    "Is AMA registration mandatory for Athens short-term rentals?",
+    "Can an unlicensed central Athens listing regularize after the Dec 2024 freeze?",
+    "What happens when enforcement removes unlicensed Athens listings?",
+    "What does Loi Le Meur change for Paris primary residences?",
+    "Compare central Athens freeze risk with near-zone regularisation options and cite relevant source passages.",
+    "What is the investment impact of the Athens AMA freeze?",
+    "Which Athens listings should a property manager review first because they are both high-risk and underpriced?",
+    "Is my Paris listing underpriced compared with similar listings, and which SHAP drivers explain the gap?",
+  ];
+  const forbidden = [
+    { pattern: /[—–]/, label: "em/en dash" },
+    { pattern: /\|\s*-{3,}\s*\|/, label: "Markdown table separator" },
+    { pattern: /\.\):/, label: "stitched metric punctuation" },
+    { pattern: /€-/, label: "misordered negative euro value" },
+    { pattern: /\b(?:Ama|Loi)\s+\d{3}\b/, label: "humanized citation ID" },
+    { pattern: /\bAirbnb\.\.\./i, label: "truncated Airbnb fragment" },
+  ];
+
+  for (const prompt of prompts) {
+    const analysis = await buildGroundedAnalysis({ prompt, agentId: "market" });
+    const answer = analysis.fallbackAnswer || "";
+    for (const item of forbidden) {
+      if (item.pattern.test(answer)) {
+        failures.push(`${prompt}: contains ${item.label}.`);
+      }
+    }
+  }
   return { passed: failures.length === 0, failures };
 }
 
@@ -395,13 +441,13 @@ const GOLD = [
     name: "investor / area comparison",
     tier: "analytical",
     geographic: true,
-    answer: `Direct recommendation: Enter Athens' Near-centre zone first — it offers the strongest return for the least competition in ARIA's data.
+    answer: `Direct recommendation: Enter Athens' Near-centre zone first because it offers the strongest return for the least competition in ARIA's data.
 
 Reasoning done by ARIA: This is grounded in the prepared Athens dataset, not a generic travel ranking. The Near-centre zone pairs a high opportunity score (a 0-1 combined market signal where higher means stronger investment potential) with moderate competition, which is the balance investors want for an entry point.
 
 Key evidence: The Near-centre opportunity score is high at 0.82, which is well above the 0.70 strong-shortlist mark. Its saturation (how crowded an area looks in the rental data; lower is calmer) sits around 0.45, meaning the market is busy but not overcrowded.
 
-Visualizations to review: Use the returned opportunity map to compare zones by colour — darker areas score higher — before committing.
+Visualizations to review: Use the returned opportunity map to compare zones by colour; darker areas score higher and deserve review before committing.
 
 Possible limitations: Treat this as a shortlist, not a purchase decision. Each apartment still needs price, licensing, and condition checks.
 
@@ -416,7 +462,7 @@ Sources: ARIA opportunity scores, neighbourhood stats`,
     name: "host / pricing",
     tier: "analytical",
     geographic: false,
-    answer: `Direct recommendation: Raise this listing's nightly price — ARIA estimates it is leaving money on the table.
+    answer: `Direct recommendation: Raise this listing's nightly price because ARIA estimates it is leaving money on the table.
 
 Reasoning done by ARIA: The model compared this listing to similar Athens listings and found the current price below its fair-price estimate.
 
@@ -589,6 +635,13 @@ async function run() {
   if (!complianceSpecificity.passed) {
     ok = false;
     complianceSpecificity.failures.forEach((failure) => line(`  ${failure}`));
+  }
+
+  const outputFormatting = await checkOutputFormatting();
+  line(`\nOutput formatting checks: ${outputFormatting.passed ? "PASS" : "FAIL"}`);
+  if (!outputFormatting.passed) {
+    ok = false;
+    outputFormatting.failures.forEach((failure) => line(`  ${failure}`));
   }
 
   const fallbackQuality = await checkFallbackAnswerQuality();

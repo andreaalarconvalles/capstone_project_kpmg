@@ -267,6 +267,7 @@ function wordCount(text) {
 
 function humanizeSnakeCase(text) {
   return String(text || "").replace(/\b[a-z]+(?:_[a-z0-9]+)+\b/g, (match) => {
+    if (/^(ama|loi)_\d+$/i.test(match)) return match.toLowerCase();
     const label = match
       .replace(/_/g, " ")
       .replace(/\beur\b/gi, "")
@@ -275,6 +276,14 @@ function humanizeSnakeCase(text) {
       .trim();
     return label.charAt(0).toUpperCase() + label.slice(1);
   });
+}
+
+function cleanAnswerFormatting(text) {
+  return String(text || "")
+    .replace(/[—–]/g, "-")
+    .replace(/^\s*\|?\s*:?-{3,}:?\s*(?:\|\s*:?-{3,}:?\s*)+\|?\s*$/gm, "")
+    .replace(/\.\):/g, "):")
+    .replace(/\n{3,}/g, "\n\n");
 }
 
 function sanitizeAnswer(text) {
@@ -286,7 +295,7 @@ function sanitizeAnswer(text) {
   const sourcesMatch = balanced.match(/\n\nSources:[\s\S]*$/i);
   const sourcesTail = sourcesMatch ? sourcesMatch[0] : "";
   const body = sourcesTail ? balanced.slice(0, balanced.length - sourcesTail.length) : balanced;
-  return humanizeSnakeCase(body) + sourcesTail;
+  return cleanAnswerFormatting(humanizeSnakeCase(body) + sourcesTail);
 }
 
 function endsWithDanglingPhrase(text) {
