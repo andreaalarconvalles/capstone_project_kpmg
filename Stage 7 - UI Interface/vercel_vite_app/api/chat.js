@@ -103,11 +103,17 @@ function friendlySourceNames(files = []) {
   return [...labels].join(", ") || "ARIA project data";
 }
 
+function sourceLineForAnalysis(analysis) {
+  const sources = friendlySourceNames(analysis.sources || analysis.details?.sourceFiles || []);
+  const citationIds = [...new Set(analysis.details?.citationIds || [])].filter(Boolean);
+  return citationIds.length ? `${citationIds.join(", ")}; ${sources}` : sources;
+}
+
 function ensureSourcesLine(answer, analysis) {
   const clean = String(answer || "")
     .replace(/\n{1,3}Sources:\s*[^\n]+(?:\n*)$/i, "")
     .trim();
-  const sources = friendlySourceNames(analysis.sources || analysis.details?.sourceFiles || []);
+  const sources = sourceLineForAnalysis(analysis);
   return `${clean}\n\nSources: ${sources}`;
 }
 
@@ -223,7 +229,7 @@ function personaGuidance({ agentId, agentName, analysis }) {
 }
 
 function buildSystemPrompt({ agentId, agentName, agentTagline, analysis }) {
-  const sourcesLine = `Sources: ${friendlySourceNames(analysis.sources || analysis.details?.sourceFiles || [])}`;
+  const sourcesLine = `Sources: ${sourceLineForAnalysis(analysis)}`;
   return `
 You are ${agentName}, ${agentTagline}, inside the ARIA capstone demo.
 
@@ -366,6 +372,13 @@ function answerRecommendsOtherCity(answer, requestedCity) {
 }
 
 function needsStructuredFallback(answer, analysis) {
+  if (analysis.intent === "compliance") {
+    const text = String(answer || "");
+    const requiredIds = analysis.details?.citationIds || [];
+    if (requiredIds.some((id) => !new RegExp(`\\b${id}\\b`, "i").test(text))) return true;
+    if (analysis.details?.complianceTopic === "loi-le-meur" && /\b(athens|rigillis|zappeio|kolonaki)\b/i.test(text)) return true;
+    return false;
+  }
   if (isSimplePrompt(analysis)) return false;
   const text = String(answer || "").trim();
   if (!text) return true;
@@ -380,6 +393,7 @@ function needsStructuredFallback(answer, analysis) {
 }
 
 function addContextIfShort(answer, analysis) {
+  if (analysis.intent === "compliance") return answer;
   // Do not pad simple, factual prompts with analytical boilerplate sections.
   if (wordCount(answer) >= 120 || isSimplePrompt(analysis)) return answer;
   const facts = (analysis.facts || [])
@@ -482,6 +496,25 @@ export default async function handler(req, res) {
     return json(res, 502, {
       error: error.message || "Could not load live GitHub data for the ARIA analysis.",
       stage: "github-data-agent",
+    });
+  }
+
+  if (analysis.intent === "compliance" && analysis.details?.complianceMode === "rag-first") {
+    const fallbackAnswer = sanitizeAnswer(localizePlaceNames(addContextIfShort(analysis.fallbackAnswer, analysis)));
+    const completedAnswer = completeAnswerSections(fallbackAnswer, fallbackAnswer) || fallbackAnswer;
+    const polishedAnswer = ensureSourcesLine(completedAnswer, analysis);
+    return json(res, 200, {
+      answer: polishedAnswer,
+      intent: analysis.intent,
+      sources: analysis.sources,
+      kpis: analysis.kpis,
+      visualizations: analysis.visualizations,
+      details: analysis.details,
+      projectId,
+      location,
+      model,
+      resolvedPrompt: analysis.resolvedPrompt,
+      contextResolution: analysis.conversationContext?.summary,
     });
   }
 
