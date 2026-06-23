@@ -1,0 +1,197 @@
+{
+  "version": 1,
+  "description": "ARIA reproducibility contracts for committed data/model outputs.",
+  "csv_outputs": [
+    {
+      "path": "data/outputs/paris_predictions_v1.csv",
+      "description": "Phase 2 Paris XGBoost prediction output",
+      "exact_rows": 63520,
+      "min_columns": 90,
+      "required_columns": ["listing_id", "city", "neighbourhood", "latitude", "longitude", "dist_zone", "price_eur", "predicted_price_eur", "actual_price_eur", "prediction_gap_eur"],
+      "unique_columns": ["listing_id"],
+      "constant_values": {"city": ["paris"]},
+      "required_non_empty_columns": ["listing_id", "city", "neighbourhood", "price_eur", "predicted_price_eur"],
+      "numeric_ranges": {
+        "price_eur": {"min": 0},
+        "predicted_price_eur": {"min": 0},
+        "actual_price_eur": {"min": 0},
+        "latitude": {"min": 48, "max": 49},
+        "longitude": {"min": 2, "max": 3}
+      }
+    },
+    {
+      "path": "data/outputs/athens_predictions_v1.csv",
+      "description": "Phase 2 Athens XGBoost prediction output",
+      "exact_rows": 14242,
+      "min_columns": 90,
+      "required_columns": ["listing_id", "city", "neighbourhood", "latitude", "longitude", "dist_zone", "price_eur", "predicted_price_eur", "actual_price_eur", "underpricing_gap_eur", "is_underpriced"],
+      "unique_columns": ["listing_id"],
+      "constant_values": {"city": ["athens"]},
+      "required_non_empty_columns": ["listing_id", "city", "neighbourhood", "price_eur", "predicted_price_eur"],
+      "numeric_ranges": {
+        "price_eur": {"min": 0},
+        "predicted_price_eur": {"min": 0},
+        "actual_price_eur": {"min": 0},
+        "latitude": {"min": 37, "max": 39},
+        "longitude": {"min": 23, "max": 24}
+      }
+    },
+    {
+      "path": "data/outputs/athens_underpricing_v1.csv",
+      "description": "Phase 2 Athens underpricing shortlist",
+      "exact_rows": 2945,
+      "min_columns": 90,
+      "required_columns": ["listing_id", "city", "neighbourhood", "price_eur", "predicted_price_eur", "actual_price_eur", "underpricing_gap_eur", "is_underpriced"],
+      "unique_columns": ["listing_id"],
+      "constant_values": {"city": ["athens"], "is_underpriced": ["True", "true", "1"]},
+      "numeric_ranges": {
+        "price_eur": {"min": 0},
+        "predicted_price_eur": {"min": 0},
+        "underpricing_gap_eur": {"min": 15}
+      }
+    },
+    {
+      "path": "data/outputs/athens_risk_scores_v1.csv",
+      "description": "Phase 3 LightGBM Athens risk scores",
+      "exact_rows": 14242,
+      "required_columns": ["listing_id", "neighbourhood", "risk_probability", "high_risk_flag", "risk_band"],
+      "unique_columns": ["listing_id"],
+      "allowed_values": {"high_risk_flag": ["0", "1"], "risk_band": ["Low", "Moderate", "High"]},
+      "numeric_ranges": {"risk_probability": {"min": 0, "max": 1}}
+    },
+    {
+      "path": "data/outputs/prophet_paris_forecast_v1.csv",
+      "description": "Phase 4 Paris Prophet scenario forecast",
+      "exact_rows": 312,
+      "required_columns": ["ds", "city", "neighbourhood", "forecast_month", "is_scenario_proxy", "yhat", "yhat_lower", "yhat_upper", "n_listings", "methodology_note"],
+      "constant_values": {"city": ["paris"], "is_scenario_proxy": ["True", "true", "1"]},
+      "numeric_ranges": {"yhat": {"min": 0}, "yhat_lower": {"min": 0}, "yhat_upper": {"min": 0}, "n_listings": {"min": 1}},
+      "ordered_numeric_columns": [["yhat_lower", "yhat", "yhat_upper"]]
+    },
+    {
+      "path": "data/outputs/prophet_athens_forecast_v1.csv",
+      "description": "Phase 4 Athens Prophet scenario forecast",
+      "exact_rows": 528,
+      "required_columns": ["ds", "city", "neighbourhood", "forecast_month", "is_scenario_proxy", "yhat", "yhat_lower", "yhat_upper", "n_listings", "methodology_note"],
+      "constant_values": {"city": ["athens"], "is_scenario_proxy": ["True", "true", "1"]},
+      "numeric_ranges": {"yhat": {"min": 0}, "yhat_lower": {"min": 0}, "yhat_upper": {"min": 0}, "n_listings": {"min": 1}},
+      "ordered_numeric_columns": [["yhat_lower", "yhat", "yhat_upper"]]
+    },
+    {
+      "path": "data/outputs/rag_unlicensed_report_v1.csv",
+      "description": "Phase 5 RAG compliance triage handoff",
+      "exact_rows": 137,
+      "required_columns": ["listing_id", "neighbourhood", "dist_zone", "price_eur", "occ_days", "rev_est", "compliance_status", "risk_level", "risk_reason", "regularisable", "investor_recommendation", "top_citation", "top_doc_title", "similarity_score"],
+      "unique_columns": ["listing_id"],
+      "constant_values": {"compliance_status": ["UNLICENSED"]},
+      "allowed_values": {"risk_level": ["LOW", "MEDIUM", "HIGH"], "regularisable": ["True", "False", "true", "false", "1", "0"]},
+      "numeric_ranges": {"price_eur": {"min": 0}, "occ_days": {"min": 0}, "rev_est": {"min": 0}, "similarity_score": {"min": 0, "max": 1}}
+    },
+    {
+      "path": "data/outputs/aria_routing_eval.csv",
+      "description": "Phase 6 LangGraph routing evaluation",
+      "exact_rows": 12,
+      "required_columns": ["query", "exp_persona", "got_persona", "persona_ok", "exp_intents", "got_intents", "recall", "precision", "perfect"],
+      "constant_values": {"persona_ok": ["True", "true", "1"], "perfect": ["True", "true", "1"]},
+      "numeric_ranges": {"recall": {"min": 1, "max": 1}, "precision": {"min": 1, "max": 1}}
+    },
+    {
+      "path": "data/outputs/shap_paris_v1.csv",
+      "description": "Phase 2 Paris SHAP matrix",
+      "exact_rows": 12704,
+      "required_columns": ["person_capacity", "bedrooms", "amenity_count", "dist_km", "review_score_composite", "neighbourhood_median_price", "listing_index"],
+      "unique_columns": ["listing_index"]
+    },
+    {
+      "path": "data/outputs/shap_athens_v1.csv",
+      "description": "Phase 2 Athens SHAP matrix",
+      "exact_rows": 2849,
+      "required_columns": ["person_capacity", "bedrooms", "amenity_count", "dist_km", "review_score_composite", "neighbourhood_median_price", "listing_index"],
+      "unique_columns": ["listing_index"]
+    }
+  ],
+  "json_outputs": [
+    {
+      "path": "data/outputs/rag_compliance_index_v1.json",
+      "description": "Phase 5 compliance source corpus",
+      "required_keys": ["generated", "n_documents", "categories", "documents"],
+      "value_checks": [{"path": "n_documents", "equals": 20}],
+      "list_checks": [{"path": "documents", "exact_length": 20, "unique_key": "id", "required_keys": ["id", "category", "title", "text", "citation"]}],
+      "contains_all": {"categories": ["AMA_ENFORCEMENT", "AMA_REGISTRATION", "AMA_FREEZE", "AMA_COMPLIANCE", "LOI_LE_MEUR"]}
+    },
+    {
+      "path": "data/outputs/aria_rag_session_log.json",
+      "description": "Phase 5 RAG session evidence",
+      "required_keys": ["phase", "notebook", "completed", "corpus", "unlicensed", "output_contract"],
+      "value_checks": [{"path": "corpus.n_docs", "equals": 20}, {"path": "unlicensed.total", "equals": 137}]
+    },
+    {
+      "path": "data/outputs/aria_prophet_session_log.json",
+      "description": "Phase 4 Prophet session evidence",
+      "required_keys": ["phase", "notebook", "completed", "models", "forecast_summaries", "output_contract"],
+      "value_checks": [{"path": "models.athens.training_months", "equals": 57}, {"path": "models.paris.training_months", "equals": 57}]
+    },
+    {
+      "path": "data/outputs/aria_session_log.json",
+      "description": "Phase 6 LangGraph session evidence",
+      "required_keys": ["phase", "notebook", "completed", "graph_nodes", "state_fields", "routing_eval", "pdf_generated", "join_key"],
+      "value_checks": [{"path": "routing_eval.n_queries", "equals": 12}, {"path": "routing_eval.perfect_match_pct", "equals": 1.0}, {"path": "join_key", "equals": "listing_id"}]
+    }
+  ],
+  "model_artifacts": [
+    {
+      "path": "models/xgb_paris_v1.json",
+      "description": "Paris XGBoost model artifact",
+      "kind": "json",
+      "min_bytes": 1000000,
+      "required_keys": ["learner", "version"]
+    },
+    {
+      "path": "models/xgb_athens_v1.json",
+      "description": "Athens XGBoost model artifact",
+      "kind": "json",
+      "min_bytes": 1000000,
+      "required_keys": ["learner", "version"]
+    },
+    {
+      "path": "models/lgb_athens_risk_v1.txt",
+      "description": "Athens LightGBM model artifact",
+      "kind": "text",
+      "min_bytes": 100000,
+      "required_text": ["objective=binary", "feature_names=", "Tree=0"]
+    },
+    {
+      "path": "models/prophet_paris_v1.pkl",
+      "description": "Paris Prophet model artifact",
+      "kind": "binary",
+      "min_bytes": 10000
+    },
+    {
+      "path": "models/prophet_athens_v1.pkl",
+      "description": "Athens Prophet model artifact",
+      "kind": "binary",
+      "min_bytes": 10000
+    },
+    {
+      "path": "models/MODEL_CARD.md",
+      "description": "Model governance card",
+      "kind": "text",
+      "min_bytes": 1000,
+      "required_text": ["Model Inventory", "Current Validated Metrics", "Known Limitations", "Artifact Governance"]
+    }
+  ],
+  "dependency_files": [
+    {
+      "path": "requirements.txt",
+      "description": "Root analytical Python requirements",
+      "kind": "text",
+      "required_text": ["pandas", "xgboost", "lightgbm", "prophet", "chromadb", "shap"]
+    },
+    {
+      "path": "Stage 7 - UI Interface/vercel_vite_app/package-lock.json",
+      "description": "Frontend npm lockfile",
+      "kind": "package_lock",
+      "package_json": "Stage 7 - UI Interface/vercel_vite_app/package.json"
+    }
+  ]
+}

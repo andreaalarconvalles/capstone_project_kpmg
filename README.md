@@ -65,7 +65,7 @@ LangGraph Orchestrator ←──────────────────
 │  → €1.43M revenue opportunity identified              │
 ├───────────────────────────────────────────────────────┤
 │ Agent 4: RAG Compliance        (Phase 5 — COMPLETE)   │
-│  → ChromaDB index of AMA + Loi Le Meur regulations    │
+│  → Local ChromaDB utility for AMA + Loi Le Meur rules │
 │  → 137 unlicensed Athens listings as primary targets  │
 ├───────────────────────────────────────────────────────┤
 │ Agent 5: LLM Listing Coach     (Phase 6 — COMPLETE)   │
@@ -119,7 +119,7 @@ capstone_project_kpmg/
 │   ├── lgb_athens_risk_v1.txt
 │   ├── prophet_paris_v1.pkl
 │   └── prophet_athens_v1.pkl
-├── rag/                               # Phase 5 — ChromaDB index + RAG agent
+├── rag/                               # Phase 5 — local ChromaDB utility + RAG agent
 ├── Stage 7 - UI Interface/            # Phase 7 — Vercel React UI and API backend
 │   └── vercel_vite_app/
 │       ├── api/
@@ -163,6 +163,31 @@ All analytical phases are self-contained Jupyter notebooks in `eda/`. Run them i
 Phase 6 (`ARIA_LangGraph_v1.ipynb`) is the **orchestration research layer** — a fully executed LangGraph StateGraph that wires all specialist agents together, runs human-in-the-loop approval, generates a structured investor memo, and evaluates 12-query persona routing with 100% accuracy. It is the academic and technical core of ARIA's multi-agent architecture.
 
 Phase 7 (`Stage 7 - UI Interface/vercel_vite_app/`) is the **productionisation layer** — a live Vercel React interface backed by server-side Vertex AI. It exposes the same analytical outputs to end users through a chat UI, scripted demo prompts, KPI cards, Leaflet maps, and PDF brief export. The Vercel `api/` backend serves the committed CSV outputs and is Phase 7's implementation of the front-end demo; it is not a replacement for Phase 6.
+
+---
+
+## Reproducibility Checks
+
+Install the analytical Python environment:
+
+```powershell
+python -m pip install -r requirements.txt
+```
+
+Install the locked Vercel frontend dependencies:
+
+```powershell
+cd "Stage 7 - UI Interface/vercel_vite_app"
+npm ci
+```
+
+Validate the committed data/model evidence base with one command from the repository root:
+
+```powershell
+python scripts/validate_outputs.py
+```
+
+This command checks the schema, row counts, key numeric ranges, routing evidence, RAG corpus contract, model artifact presence, `requirements.txt`, and the frontend `package-lock.json`. The same check runs in GitHub Actions as `Output contract validation`.
 
 ---
 
@@ -251,9 +276,9 @@ Two Prophet scenario forecast outputs (Paris and Athens) estimate monthly occupi
 
 **Notebook:** `ARIA_RAG_v1.ipynb` · **Location:** `rag/`
 
-ChromaDB vector index of AMA regulations (Athens) and Loi Le Meur (Paris). Given a listing, the notebook returns the applicable regulation article and compliance status. Primary targets: 137 unlicensed Athens listings (~EUR 1.03M annual revenue).
+ChromaDB-ready corpus and local retrieval utility for AMA regulations (Athens) and Loi Le Meur (Paris). Given a listing or compliance query, the Phase 5 assets return the applicable regulation passage and compliance status. Primary targets: 137 unlicensed Athens listings (~EUR 1.03M annual revenue).
 
-Production handoff note: the Vercel app now consumes committed JS-readable RAG handoff files for compliance triage: `rag_unlicensed_report_v1.csv`, `rag_compliance_index_v1.json`, and `aria_rag_session_log.json`. It does not run live ChromaDB retrieval at request time, and compliance output remains analyst triage rather than final legal advice. ChromaDB index files are local only - `rag/chroma_db/` is gitignored.
+Production handoff note: the Vercel app now consumes committed JS-readable RAG handoff files for compliance triage: `rag_unlicensed_report_v1.csv`, `rag_compliance_index_v1.json`, and `aria_rag_session_log.json`. It does not run live ChromaDB retrieval at request time, and compliance output remains analyst triage rather than final legal advice. The reproducible local ChromaDB utility is `rag/chromadb_retriever.py`; generated index files are local only - `rag/chroma_db/` is gitignored.
 
 ---
 
