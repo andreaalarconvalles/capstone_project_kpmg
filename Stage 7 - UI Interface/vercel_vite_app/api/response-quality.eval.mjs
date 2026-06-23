@@ -136,6 +136,7 @@ const REQUIRED_POLICY_MARKERS = [
   "Explaining numbers",
   "Concept explanations",
   "Visual behavior",
+  "Compliance-first routing",
   "Out-of-scope questions",
   "Citations and sources",
   "Hard rules",
@@ -149,6 +150,14 @@ function checkPolicyCompleteness() {
 /* ----------------------------- routing checks ----------------------------- */
 
 const PARIS_ONLY_PROPHET_PROMPT = "For a KPMG client considering a small short-term-rental portfolio in Paris, where should they enter first over the next 12 months? Use ARIA's Prophet demand forecast and neighbourhood data to recommend the best Paris arrondissement or area only. Show the result on a Paris map, compare the top Paris areas with the most useful charts, explain the business reasoning in plain language, include the main risks and next actions, and end with sources. Do not compare Paris with Athens unless I explicitly ask for a cross-city comparison.";
+
+const COMPLIANCE_ROUTING_PROMPTS = [
+  "Is AMA registration mandatory for Athens short-term rentals?",
+  "Can an unlicensed central Athens listing regularize after the Dec 2024 freeze?",
+  "What happens when enforcement removes unlicensed Athens listings?",
+  "What does Loi Le Meur change for Paris primary residences?",
+  "Compare central Athens freeze risk with near-zone regularisation options and cite relevant source passages.",
+];
 
 function checkRouting() {
   const failures = [];
@@ -169,6 +178,13 @@ function checkRouting() {
   const secondIntent = classifyIntent(secondContext.analysisPrompt, "market");
   if (secondIntent !== "demand") {
     failures.push(`Paris forecast follow-up routed to ${secondIntent}, expected demand`);
+  }
+
+  for (const prompt of COMPLIANCE_ROUTING_PROMPTS) {
+    const intent = classifyIntent(prompt, "market");
+    if (intent !== "compliance") {
+      failures.push(`Compliance prompt routed to ${intent}, expected compliance: ${prompt}`);
+    }
   }
 
   return { passed: failures.length === 0, failures };
@@ -242,6 +258,84 @@ async function checkModelGrounding() {
       }
     }
   }
+  return { passed: failures.length === 0, failures };
+}
+
+async function checkComplianceSpecificity() {
+  const failures = [];
+  const cases = [
+    {
+      name: "AMA direct answer",
+      prompt: "Is AMA registration mandatory for Athens short-term rentals?",
+      requiredIds: ["ama_001", "ama_005"],
+      mustContain: ["Yes", "AMA registration", "mandatory", "display"],
+      forbidden: ["Zappeio", "opportunity ranking"],
+      expectNoVisuals: true,
+    },
+    {
+      name: "central Athens freeze answer",
+      prompt: "Can an unlicensed central Athens listing regularize after the Dec 2024 freeze?",
+      requiredIds: ["ama_006", "ama_007", "ama_008", "ama_014"],
+      mustContain: ["no clear regularisation path", "central Athens", "near-zone"],
+      forbidden: ["Zappeio", "Rigillis"],
+      expectNoVisuals: true,
+    },
+    {
+      name: "enforcement answer",
+      prompt: "What happens when enforcement removes unlicensed Athens listings?",
+      requiredIds: ["ama_010", "ama_011"],
+      mustContain: ["removes unlicensed Athens listings", "redistribute", "compliant"],
+      forbidden: ["Zappeio", "opportunity ranking"],
+      expectNoVisuals: true,
+    },
+    {
+      name: "Loi Le Meur answer",
+      prompt: "What does Loi Le Meur change for Paris primary residences?",
+      requiredIds: ["loi_001", "loi_002", "loi_004"],
+      mustContain: ["Paris", "90 nights", "SIRET", "2025"],
+      forbidden: ["Athens", "Rigillis", "Zappeio"],
+      expectNoVisuals: true,
+    },
+    {
+      name: "central versus near-zone comparison",
+      prompt: "Compare central Athens freeze risk with near-zone regularisation options and cite relevant source passages.",
+      requiredIds: ["ama_006", "ama_007", "ama_008", "ama_014"],
+      mustContain: ["Compliance table", "Central Athens", "Near zone", "ama_007", "ama_014"],
+      forbidden: ["Zappeio", "opportunity ranking"],
+      expectNoVisuals: true,
+    },
+  ];
+
+  for (const test of cases) {
+    const analysis = await buildGroundedAnalysis({ prompt: test.prompt, agentId: "market" });
+    const ids = analysis.details?.citationIds || [];
+    const answer = analysis.fallbackAnswer || "";
+    if (analysis.intent !== "compliance") {
+      failures.push(`${test.name}: routed to ${analysis.intent}, expected compliance.`);
+    }
+    for (const id of test.requiredIds) {
+      if (!ids.includes(id) || !new RegExp(`\\b${id}\\b`, "i").test(answer)) {
+        failures.push(`${test.name}: missing citation ${id}.`);
+      }
+    }
+    for (const phrase of test.mustContain) {
+      if (!answer.toLowerCase().includes(String(phrase).toLowerCase())) {
+        failures.push(`${test.name}: answer missing phrase "${phrase}".`);
+      }
+    }
+    for (const phrase of test.forbidden) {
+      if (new RegExp(`\\b${phrase}\\b`, "i").test(answer)) {
+        failures.push(`${test.name}: answer includes forbidden phrase "${phrase}".`);
+      }
+    }
+    if (test.expectNoVisuals && (analysis.visualizations || []).length) {
+      failures.push(`${test.name}: expected no unrelated visuals, got ${analysis.visualizations.map((v) => v.title || v.kind).join("; ")}.`);
+    }
+    if (!analysis.quality?.passed || analysis.quality.score < PASS_BAR) {
+      failures.push(`${test.name}: deterministic fallback scored ${analysis.quality?.score ?? "n/a"}, expected >= ${PASS_BAR}.`);
+    }
+  }
+
   return { passed: failures.length === 0, failures };
 }
 
@@ -488,6 +582,13 @@ async function run() {
   if (!modelGrounding.passed) {
     ok = false;
     modelGrounding.failures.forEach((failure) => line(`  ${failure}`));
+  }
+
+  const complianceSpecificity = await checkComplianceSpecificity();
+  line(`\nCompliance specificity checks: ${complianceSpecificity.passed ? "PASS" : "FAIL"}`);
+  if (!complianceSpecificity.passed) {
+    ok = false;
+    complianceSpecificity.failures.forEach((failure) => line(`  ${failure}`));
   }
 
   const fallbackQuality = await checkFallbackAnswerQuality();

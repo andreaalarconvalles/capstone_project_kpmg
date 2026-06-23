@@ -557,6 +557,14 @@ function weightedAverage(sum, weight) {
   return weight ? sum / weight : 0;
 }
 
+function isComplianceIntentPrompt(text) {
+  const p = String(text || "").toLowerCase();
+  const directCompliance = /\b(ama|aade|siret|loi\s+le\s+meur|registration|registrations|register|registered|license|licence|licensing|legal|law|regulation|regulatory|compliance|permit|unlicensed|unlicenced|regulari[sz](?:e|es|ed|ing|ation|able)|freeze|frozen|enforcement|primary residence|primary residences|90[-\s]?night|str law|short[-\s]?term rental law)\b/.test(p);
+  const removalCompliance = /\b(remove|removal|deactivate|deactivation|platform audit|platform removal)\b/.test(p)
+    && /\b(unlicensed|unlicenced|ama|compliance|listing|listings|platform)\b/.test(p);
+  return directCompliance || removalCompliance;
+}
+
 export function classifyIntent(prompt, agentId) {
   const p = `${prompt} ${agentId}`.toLowerCase();
   const scopeP = `${geographyScopeText(prompt)} ${agentId}`.toLowerCase();
@@ -568,9 +576,10 @@ export function classifyIntent(prompt, agentId) {
   );
   const asksForecast = /(prophet|forecast|occupancy|tourist|demand|season|90 day|next\s+\d+\s+months|future|summer|peak)/.test(p);
   const asksMethodology = /(how (?:is|was|does|did)|what (?:models?|method|architecture|pipeline)|which models?|trained|training|evaluate|evaluation|performance|technical|theoretical|methodology|stages?|phases?|langgraph|xgboost|lightgbm|model card|ml model|machine learning)/.test(p);
+  const asksCompliance = isComplianceIntentPrompt(p);
   if (asksCrossCityComparison) return "portfolio-comparison";
+  if (asksCompliance) return "compliance";
   if (asksMethodology) return "methodology";
-  if (/(license|licence|legal|law|regulation|compliance|permit)/.test(p)) return "compliance";
   if (/(high-risk|risk|priority|attention|intervention|coach).{0,80}underpric|underpric.{0,80}(high-risk|risk|priority|attention|intervention|coach)/.test(p)) return "risk";
   if (/(underprice|underpriced|fair price|predicted price|pricing gap|price gap|shap|model driver)/.test(p)) return "pricing";
   if (asksForecast) return "demand";
@@ -2182,8 +2191,275 @@ async function methodologyAnalysis() {
   };
 }
 
+function complianceDocs(rag, ids) {
+  const byId = new Map((rag.index?.documents || []).map((doc) => [doc.id, doc]));
+  return ids.map((id) => byId.get(id)).filter(Boolean);
+}
+
+function complianceSnippet(doc, max = 300) {
+  const text = String(doc?.text || "").replace(/\s+/g, " ").trim();
+  return text.length > max ? `${text.slice(0, max - 1).trim()}...` : text;
+}
+
+function complianceEvidenceLines(docs, max = 300) {
+  return docs.map((doc) => `${doc.id} - ${doc.title}: ${complianceSnippet(doc, max)}`);
+}
+
+function complianceSourceDetails(rag, docs, methodology, extra = [], metricKeys = []) {
+  return {
+    ...sourceDetails(
+      [FILES.ragUnlicensedReport, FILES.ragComplianceIndex, FILES.ragSessionLog],
+      methodology,
+      ["Analyst triage only, not final legal advice.", "The answer uses committed RAG compliance handoff outputs; validate final interpretation with local counsel or the relevant authority.", "ChromaDB index files remain local/managed and are not served by the Vercel function."],
+      [
+        ...complianceEvidenceLines(docs),
+        ...extra,
+      ],
+      metricGuides(metricKeys)
+    ),
+    citationIds: docs.map((doc) => doc.id),
+    sourcePassages: docs.map((doc) => ({
+      id: doc.id,
+      title: doc.title,
+      citation: doc.citation,
+      text: complianceSnippet(doc, 420),
+    })),
+    ragDocumentCount: rag.index?.n_documents || rag.session?.corpus?.n_docs || (rag.index?.documents || []).length,
+  };
+}
+
+function complianceTopic(prompt) {
+  const p = String(prompt || "").toLowerCase();
+  if (/\bloi\s+le\s+meur\b|\bsiret\b|\bprimary residences?\b|\b90[-\s]?night\b|\bparis\b.*\b(?:str|short[-\s]?term|registration|residence)\b/.test(p)) return "loi-le-meur";
+  if (/\b(enforcement|remove|removal|deactivate|deactivation|platform audit|platform removal)\b/.test(p)) return "enforcement";
+  if (/\b(compare|near[-\s]?zone|near zone|near_1_3km|regulari[sz])\b/.test(p) && /\b(freeze|central athens|dec(?:ember)?\s+2024|ama|unlicensed)\b/.test(p)) return "zone-comparison";
+  if (/\b(freeze|frozen|central athens|dec(?:ember)?\s+2024|regulari[sz])\b/.test(p)) return "athens-freeze";
+  if (/\b(ama|registration|register|mandatory|license|licence|permit|display)\b/.test(p)) return "ama-registration";
+  return "portfolio-triage";
+}
+
+function wantsComplianceAnalysis(prompt) {
+  return /\b(show|triage|evidence|review|compare|cite|source|passages?|risk|explain|recommend|strategy|decision|investor|portfolio)\b/i.test(String(prompt || ""));
+}
+
+function simpleComplianceAnswer({ direct, evidence, implication, caveat = "This is analyst triage from ARIA's committed RAG handoff, not final legal advice; verify the operating decision with local counsel or the relevant authority." }) {
+  return [
+    direct,
+    "",
+    `Retrieved source passages:\n${evidence.map((line) => `- ${line}`).join("\n")}`,
+    "",
+    `Business implication:\n${implication}`,
+    "",
+    `Caveat:\n${caveat}`,
+  ].join("\n");
+}
+
+function complianceTemplateAnswer({ direct, evidence, implication, tableRows = [], nextActions = [], visualGuidance = "No unrelated market chart is returned for this legal/compliance prompt. Use the retrieved source passages and compliance table; ask for investment impact only if you want ARIA to add market analytics." }) {
+  const table = tableRows.length
+    ? [
+      "Compliance table:",
+      "| Zone / rule | Registration path | Risk | Source |",
+      "| --- | --- | --- | --- |",
+      ...tableRows.map((row) => `| ${row.zone} | ${row.path} | ${row.risk} | ${row.source} |`),
+      "These rows are analyst triage categories, not legal determinations.",
+      "",
+    ].join("\n")
+    : "";
+  return [
+    `Direct recommendation:\n${direct}`,
+    "",
+    `Retrieved source passages:\n${evidence.map((line) => `- ${line}`).join("\n")}`,
+    "",
+    table,
+    `Visualizations to review:\n${visualGuidance}`,
+    "",
+    `Business implication:\n${implication}`,
+    "",
+    "Caveat:\nARIA is using compliance evidence for analyst triage, not giving final legal advice.",
+    "",
+    `Next actions:\n${nextActions.map((action) => `- ${action}`).join("\n")}`,
+  ].filter(Boolean).join("\n");
+}
+
 async function complianceAnalysis(prompt) {
   const rag = await loadRagCompliance();
+  const topic = complianceTopic(prompt);
+  const baseSources = [FILES.ragUnlicensedReport, FILES.ragComplianceIndex, FILES.ragSessionLog];
+
+  if (topic === "ama-registration") {
+    const docs = complianceDocs(rag, ["ama_001", "ama_005"]);
+    const evidence = complianceEvidenceLines(docs, 220);
+    const direct = "Yes. Athens short-term-rental operators must obtain an AMA registration number and display that AMA number on platform listings.";
+    const facts = [
+      "ama_001 says AMA registration is mandatory for Greek short-term-rental properties under Law 4276/2014.",
+      "ama_005 says Greek platform listings must display a valid AMA number and listings without one can be flagged for removal.",
+    ];
+    return {
+      intent: "compliance",
+      title: "AMA registration requirement",
+      recommendation: direct,
+      facts,
+      kpis: [
+        { label: "AMA status", value: "Mandatory" },
+        { label: "Display rule", value: "Required" },
+        { label: "Citation IDs", value: "ama_001, ama_005" },
+      ],
+      visualizations: [],
+      complianceAnswer: simpleComplianceAnswer({
+        direct,
+        evidence,
+        implication: "Treat any Athens short-term-rental listing without a verifiable AMA as non-compliant until the owner can prove registration and platform display.",
+      }),
+      details: {
+        ...complianceSourceDetails(
+          rag,
+          docs,
+          "Route AMA and registration prompts to the committed RAG compliance index first, return citation IDs, and suppress investment visuals unless the user asks for market impact.",
+          [],
+          ["complianceRisk", "regularisable"]
+        ),
+        complianceMode: "rag-first",
+        complianceTopic: topic,
+      },
+    };
+  }
+
+  if (topic === "athens-freeze" || topic === "zone-comparison") {
+    const docs = complianceDocs(rag, ["ama_006", "ama_007", "ama_008", "ama_014"]);
+    const evidence = complianceEvidenceLines(docs, 220);
+    const direct = topic === "zone-comparison"
+      ? "Central Athens unlicensed listings should be treated as no-new-AMA-path/high risk, while near-zone listings remain reviewable if property documents satisfy AMA requirements."
+      : "An unlicensed central Athens listing has no clear regularisation path after the 31 December 2024 AMA freeze if it sits inside the central freeze zone.";
+    const facts = [
+      "ama_006 defines the central Athens AMA registration freeze effective 31 December 2024.",
+      "ama_007 says unlicensed central-zone listings cannot obtain new AMA registration after the freeze.",
+      "ama_008 defines the central freeze geography and says near/mid zones are outside the freeze.",
+      "ama_014 says near_1_3km unlicensed listings have a theoretical AMA regularisation path if building and property documents pass checks.",
+    ];
+    const detailedFreeze = topic === "zone-comparison" || wantsComplianceAnalysis(prompt);
+    const answer = detailedFreeze
+      ? complianceTemplateAnswer({
+        direct,
+        evidence,
+        tableRows: [
+          { zone: "Central Athens freeze zone", path: "No new AMA path for unlicensed listings under the Dec 2024 freeze", risk: "High", source: "ama_007" },
+          { zone: "Near zone outside freeze", path: "Potential AMA path after building-permit and property-document checks", risk: "Medium", source: "ama_014" },
+        ],
+        implication: "For acquisition screening, central unlicensed assets should move to legal reject/manual-escalation unless they already held AMA before the freeze. Near-zone assets can stay in the diligence queue, but only after document checks.",
+        nextActions: [
+          "Confirm whether the target address is inside the central freeze zone.",
+          "Ask for existing AMA proof dated before 31 December 2024 if the listing is central.",
+          "For near-zone listings, verify building permit status before assuming regularisation is possible.",
+        ],
+      })
+      : simpleComplianceAnswer({
+        direct,
+        evidence,
+        implication: "Central unlicensed listings carry high legal/removal risk; near-zone listings are different because the RAG source set still leaves a possible document-led regularisation path.",
+      });
+    return {
+      intent: "compliance",
+      title: topic === "zone-comparison" ? "Central Athens freeze versus near-zone regularisation" : "Central Athens AMA freeze",
+      recommendation: direct,
+      facts,
+      kpis: [
+        { label: "Central path", value: "No new AMA" },
+        { label: "Near-zone path", value: "Possible" },
+        { label: "Citation IDs", value: "ama_006, ama_007, ama_008, ama_014" },
+      ],
+      visualizations: [],
+      complianceAnswer: answer,
+      details: {
+        ...complianceSourceDetails(
+          rag,
+          docs,
+          "Route freeze and regularisation prompts to the RAG compliance index, compare central-zone and near-zone evidence, and suppress market opportunity charts unless the user explicitly asks for investment impact.",
+          [],
+          ["complianceRisk", "regularisable"]
+        ),
+        complianceMode: "rag-first",
+        complianceTopic: topic,
+      },
+    };
+  }
+
+  if (topic === "enforcement") {
+    const docs = complianceDocs(rag, ["ama_010", "ama_011"]);
+    const evidence = complianceEvidenceLines(docs, 220);
+    const direct = "When enforcement removes unlicensed Athens listings, non-compliant supply falls and guest demand can redistribute to surviving compliant operators.";
+    const facts = [
+      "ama_010 describes enforcement through platform audits, local inspection, removal orders, and platform removal obligations.",
+      "ama_011 says demand served by removed unlicensed listings can redistribute to compliant listings in the same neighbourhood.",
+    ];
+    return {
+      intent: "compliance",
+      title: "AMA enforcement and supply redistribution",
+      recommendation: direct,
+      facts,
+      kpis: [
+        { label: "Mechanism", value: "Audit/removal" },
+        { label: "Demand effect", value: "Redistribution" },
+        { label: "Citation IDs", value: "ama_010, ama_011" },
+      ],
+      visualizations: [],
+      complianceAnswer: simpleComplianceAnswer({
+        direct,
+        evidence,
+        implication: "Compliant operators can benefit from enforcement if removed supply previously competed for the same guest demand. Investors should still validate that the target property is already compliant before relying on this upside.",
+      }),
+      details: {
+        ...complianceSourceDetails(
+          rag,
+          docs,
+          "Route enforcement/removal prompts to the RAG compliance index, answer the legal/compliance mechanism first, and avoid attaching unrelated opportunity or risk-score visuals.",
+          [],
+          ["complianceRisk"]
+        ),
+        complianceMode: "rag-first",
+        complianceTopic: topic,
+      },
+    };
+  }
+
+  if (topic === "loi-le-meur") {
+    const docs = complianceDocs(rag, ["loi_001", "loi_002", "loi_004"]);
+    const evidence = complianceEvidenceLines(docs, 220);
+    const direct = "Loi Le Meur tightens Paris short-term-rental rules by lowering the primary-residence cap to 90 nights, strengthening SIRET/registration obligations, and starting stronger enforcement from 2025.";
+    const facts = [
+      "loi_001 says the French primary-residence short-term-rental cap is 90 nights per calendar year.",
+      "loi_002 says Paris STR operators need SIRET/business registration in the documented income or non-primary-residence cases.",
+      "loi_004 says enforcement began in January 2025 and makes dedicated or secondary STR assets structurally different from primary-residence listings.",
+    ];
+    return {
+      intent: "compliance",
+      title: "Loi Le Meur Paris compliance",
+      recommendation: direct,
+      facts,
+      kpis: [
+        { label: "Primary cap", value: "90 nights" },
+        { label: "Registration", value: "SIRET cases" },
+        { label: "Citation IDs", value: "loi_001, loi_002, loi_004" },
+      ],
+      visualizations: [],
+      complianceAnswer: simpleComplianceAnswer({
+        direct,
+        evidence,
+        implication: "For investors, Paris primary-residence STR upside is capped and should not be treated like unrestricted hotel-style supply. Secondary or dedicated STR assets need stronger registration, tax, and local-rule due diligence before underwriting revenue.",
+      }),
+      details: {
+        ...complianceSourceDetails(
+          rag,
+          docs,
+          "Route Loi Le Meur, SIRET, 90-night cap, and Paris primary-residence prompts to the RAG compliance index before any Athens risk or market analytics.",
+          [],
+          ["complianceRisk"]
+        ),
+        complianceMode: "rag-first",
+        complianceTopic: topic,
+      },
+    };
+  }
+
   const riskRows = ["HIGH", "MEDIUM", "LOW"].map((level) => ({
     label: `${level.charAt(0)}${level.slice(1).toLowerCase()} risk`,
     count: rag.riskCounts.get(level) || 0,
@@ -2210,7 +2486,6 @@ async function complianceAnalysis(prompt) {
     legendHigh: "higher risk",
     metricNote: "Map: shows where the committed RAG handoff finds higher shares of high-risk unlicensed listings.",
   }) : [];
-  const topArea = rankedAreas[0] || rag.areas[0] || {};
   const topCitation = rag.topCitations[0] || {};
   const nDocs = rag.index?.n_documents || rag.session?.corpus?.n_docs || rag.topCitations.length;
   return {
@@ -2234,16 +2509,34 @@ async function complianceAnalysis(prompt) {
       ...riskMix,
       ...areaRanking,
     ],
-    details: sourceDetails(
-      [FILES.ragUnlicensedReport, FILES.ragComplianceIndex, FILES.ragSessionLog],
-      "Load the committed Phase 5 RAG handoff outputs, aggregate unlicensed Athens listings by compliance-risk level and neighbourhood, and expose the cited compliance document titles used by the notebook retrieval layer. The deployed backend consumes the handoff artifacts; it does not run live ChromaDB retrieval at request time.",
-      ["Not legal advice.", "The output is analyst triage from committed RAG handoff files; final acquisition or operating decisions need local legal review.", "ChromaDB index files remain local/managed and are not served by the Vercel function."],
-      [
-        ...rankedAreas.map((area) => `${shortArea(area.area)}: ${fmtInt(area.high)} high-risk unlicensed listings, ${fmtInt(area.count)} total unlicensed listings`),
-        ...rag.topCitations.map((citation) => `${citation.title}: cited for ${fmtInt(citation.count)} listings; ${citation.citation}`),
+    complianceAnswer: complianceTemplateAnswer({
+      direct: "Prioritise Athens unlicensed-listing review using the RAG handoff, then validate legal interpretation with local counsel.",
+      evidence: [
+        `${fmtInt(rag.total)} Athens listings are flagged as unlicensed in the committed RAG handoff output.`,
+        `${fmtInt(rag.highRisk)} listings are classified as high compliance risk.`,
+        `${fmtInt(rag.regularisable)} listings are marked regularisable and need document checks.`,
       ],
-      metricGuides(["complianceRisk", "regularisable", "ragSimilarity", "listings"])
-    ),
+      implication: "This portfolio view is useful when the user asks for compliance triage or enforcement exposure. It should not replace source-specific answers for AMA, freeze, enforcement, or Loi Le Meur questions.",
+      nextActions: [
+        "Open the high-risk listing queue first.",
+        "Check each listing's top citation and regularisable flag.",
+        "Escalate central-zone non-regularisable cases for legal review.",
+      ],
+    }),
+    details: {
+      ...sourceDetails(
+        baseSources,
+        "Load the committed Phase 5 RAG handoff outputs, aggregate unlicensed Athens listings by compliance-risk level and neighbourhood, and expose the cited compliance document titles used by the notebook retrieval layer. The deployed backend consumes the handoff artifacts; it does not run live ChromaDB retrieval at request time.",
+        ["Not legal advice.", "The output is analyst triage from committed RAG handoff files; final acquisition or operating decisions need local legal review.", "ChromaDB index files remain local/managed and are not served by the Vercel function."],
+        [
+          ...rankedAreas.map((area) => `${shortArea(area.area)}: ${fmtInt(area.high)} high-risk unlicensed listings, ${fmtInt(area.count)} total unlicensed listings`),
+          ...rag.topCitations.map((citation) => `${citation.title}: cited for ${fmtInt(citation.count)} listings; ${citation.citation}`),
+        ],
+        metricGuides(["complianceRisk", "regularisable", "ragSimilarity", "listings"])
+      ),
+      complianceMode: "portfolio-triage",
+      complianceTopic: topic,
+    },
   };
 }
 
@@ -2374,6 +2667,9 @@ function deterministicDemandAnswer(analysis) {
 }
 
 function deterministicAnswer(analysis) {
+  if (analysis.intent === "compliance" && analysis.details?.complianceMode === "rag-first" && analysis.complianceAnswer) {
+    return localizePlaceNames(analysis.complianceAnswer);
+  }
   if (analysis.intent === "demand" && /prophet/i.test(analysis.title || "")) {
     return deterministicDemandAnswer(analysis);
   }
@@ -2399,7 +2695,8 @@ function qualityCheck(answer, analysis) {
   const warnings = [];
   if (!answer || answer.length < 40) warnings.push("Answer is too short.");
   if ((analysis.kpis || []).length > 4) warnings.push("Too many headline KPIs.");
-  if (!(analysis.visualizations || []).length) warnings.push("No visualization returned.");
+  const visualizationOptional = analysis.intent === "compliance" && analysis.details?.complianceMode === "rag-first";
+  if (!(analysis.visualizations || []).length && !visualizationOptional) warnings.push("No visualization returned.");
   if (!analysis.details?.sourceFiles?.length) warnings.push("No source files listed.");
   const score = Math.max(0, 100 - warnings.length * 7);
   return { score, warnings, passed: score >= 97 };
@@ -2443,6 +2740,8 @@ export async function buildGroundedAnalysis({ prompt, agentId, messages = [] }) 
       `Facts: ${analysis.facts.join(" ")}`,
       `KPIs: ${analysis.kpis.map((k) => `${k.label}: ${k.value}`).join("; ")}`,
       `Visualizations: ${(analysis.visualizations || []).map((viz) => viz.title || viz.kind || "untitled").join("; ") || "none"}`,
+      `Compliance citation IDs: ${(analysis.details?.citationIds || []).join(", ") || "none"}`,
+      `Compliance source passages: ${(analysis.details?.sourcePassages || []).map((doc) => `${doc.id}: ${doc.text}`).join(" ") || "none"}`,
       `Additional signals: ${(analysis.details?.extra || []).slice(0, 12).join(" ") || "none"}`,
       `Visualization data summary: ${(analysis.visualizations || []).slice(0, 4).map((viz) => {
         const sample = (viz.data || []).slice(0, 6).map((row) => {
