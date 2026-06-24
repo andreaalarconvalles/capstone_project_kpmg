@@ -43,3 +43,12 @@ Current deployed status:
 - `/api/chat` clearly labels compliance output as analyst triage and avoids final legal advice. It does not perform live ChromaDB retrieval at request time.
 - The local RAG implementation stores only source/legal text and code in git; generated ChromaDB index files remain local or in managed storage.
 - Compliance answers should keep the same consumer-friendly response shape: direct answer, up to 4 non-duplicated KPI cards, one relevant visualization if useful, and expandable methodology/sources/caveats.
+
+## Deployment status
+
+| Layer | Status | Evidence |
+| --- | --- | --- |
+| RAG corpus files | Committed | `data/outputs/rag_compliance_index_v1.json`, `data/outputs/rag_unlicensed_report_v1.csv`, `data/outputs/aria_rag_session_log.json`, `models/rag_corpus_v1.pkl` |
+| Vercel compliance answers | Wired to RAG handoff outputs | `/api/chat` routes compliance prompts through `analytics-pipeline.js` and `complianceAnalysis()` |
+| ChromaDB retrieval | Local reproducibility utility | `rag/chromadb_retriever.py`; generated `rag/chroma_db/` is gitignored |
+| Live legal/vector retrieval | Not deployed intentionally | Compliance output is analyst triage, not final legal advice |
