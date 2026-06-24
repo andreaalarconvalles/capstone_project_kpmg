@@ -174,6 +174,13 @@ Install the analytical Python environment:
 python -m pip install -r requirements.txt
 ```
 
+Or create the equivalent Conda environment:
+
+```powershell
+conda env create -f environment.yml
+conda activate aria-capstone
+```
+
 Install the locked Vercel frontend dependencies:
 
 ```powershell
@@ -187,7 +194,7 @@ Validate the committed data/model evidence base with one command from the reposi
 python scripts/validate_outputs.py
 ```
 
-This command checks the schema, row counts, key numeric ranges, routing evidence, RAG corpus contract, model artifact presence, `requirements.txt`, and the frontend `package-lock.json`. The same check runs in GitHub Actions as `Output contract validation`.
+This command checks the schema, row counts, key numeric ranges, routing evidence, RAG corpus contract, model artifact presence, `requirements.txt`, `environment.yml`, and the frontend `package-lock.json`. The same check runs in GitHub Actions as `Output contract validation`.
 
 ---
 
@@ -279,6 +286,15 @@ Two Prophet scenario forecast outputs (Paris and Athens) estimate monthly occupi
 ChromaDB-ready corpus and local retrieval utility for AMA regulations (Athens) and Loi Le Meur (Paris). Given a listing or compliance query, the Phase 5 assets return the applicable regulation passage and compliance status. Primary targets: 137 unlicensed Athens listings (~EUR 1.03M annual revenue).
 
 Production handoff note: the Vercel app now consumes committed JS-readable RAG handoff files for compliance triage: `rag_unlicensed_report_v1.csv`, `rag_compliance_index_v1.json`, and `aria_rag_session_log.json`. It does not run live ChromaDB retrieval at request time, and compliance output remains analyst triage rather than final legal advice. The reproducible local ChromaDB utility is `rag/chromadb_retriever.py`; generated index files are local only - `rag/chroma_db/` is gitignored.
+
+RAG deployment status:
+
+| Layer | Status | Evidence |
+| --- | --- | --- |
+| RAG corpus files | Committed | `data/outputs/rag_compliance_index_v1.json`, `data/outputs/rag_unlicensed_report_v1.csv`, `data/outputs/aria_rag_session_log.json`, `models/rag_corpus_v1.pkl` |
+| Vercel compliance answers | Wired to RAG handoff outputs | `/api/chat` routes compliance prompts through `analytics-pipeline.js` and `complianceAnalysis()` |
+| ChromaDB retrieval | Local reproducibility utility | `rag/chromadb_retriever.py`; generated `rag/chroma_db/` is gitignored |
+| Live legal/vector retrieval | Not deployed intentionally | Compliance output is analyst triage, not final legal advice |
 
 ---
 

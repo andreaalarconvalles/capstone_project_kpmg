@@ -178,6 +178,12 @@
       "kind": "text",
       "min_bytes": 1000,
       "required_text": ["Model Inventory", "Current Validated Metrics", "Known Limitations", "Artifact Governance"]
+    },
+    {
+      "path": "models/rag_corpus_v1.pkl",
+      "description": "Phase 5 serialized RAG corpus artifact",
+      "kind": "binary",
+      "min_bytes": 10000
     }
   ],
   "dependency_files": [
@@ -186,6 +192,12 @@
       "description": "Root analytical Python requirements",
       "kind": "text",
       "required_text": ["pandas", "xgboost", "lightgbm", "prophet", "chromadb", "shap"]
+    },
+    {
+      "path": "environment.yml",
+      "description": "Root Conda analytical environment",
+      "kind": "text",
+      "required_text": ["aria-capstone", "python=3.11", "pip", "pandas", "xgboost", "lightgbm", "prophet", "chromadb", "shap"]
     },
     {
       "path": "Stage 7 - UI Interface/vercel_vite_app/package-lock.json",
