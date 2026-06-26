@@ -212,7 +212,12 @@ function Sidebar({
 
       {/* user card */}
       <div style={{ borderTop: `1px solid ${C.hairSoft}`, padding: 10, display: "flex", alignItems: "center", gap: 10 }}>
-        <div style={{ width: 32, height: 32, borderRadius: 100, background: `linear-gradient(135deg, ${C.violet}, ${C.magenta})`, display: "grid", placeItems: "center", fontSize: 14, fontWeight: 600, color: "#fff", flexShrink: 0 }}>L</div>
+        <div style={{ position: "relative", width: 32, height: 32, borderRadius: 100, background: "#fff", border: `1px solid ${C.hair}`, display: "grid", placeItems: "center", flexShrink: 0, overflow: "hidden" }}>
+          <span style={{ fontSize: 13, fontWeight: 800, color: "#0a1a6b", letterSpacing: -0.3 }}>ie</span>
+          <img src="/ie-university.png" alt="IE University"
+            onError={(e) => { e.currentTarget.style.display = "none"; }}
+            style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "contain", padding: 3, boxSizing: "border-box", background: "#fff" }} />
+        </div>
         <div style={{ minWidth: 0, flex: 1 }}>
           <div style={{ fontSize: 13.5, fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>Luka Tcheishvili</div>
           <div style={{ fontSize: 11.5, color: C.muted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>IE × KPMG Capstone</div>
