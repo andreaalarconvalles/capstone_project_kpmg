@@ -577,6 +577,22 @@ function isComplianceIntentPrompt(text) {
   return directCompliance || removalCompliance;
 }
 
+// Strong-signal scope gate. Returns true only when the prompt is clearly inside
+// ARIA's Paris/Athens short-term-rental domain, so we can skip the LLM scope router
+// (and, importantly, keep the rag-first compliance path token-free). Softer or
+// ambiguous prompts return false and are sent to the LLM router for disambiguation.
+export function isInScopeDomain(prompt) {
+  const p = String(prompt || "").toLowerCase();
+  if (!p.trim()) return false;
+  if (cityMentionsFromScope(prompt).size > 0) return true;
+  if (isComplianceIntentPrompt(p)) return true;
+  // Only unambiguous ARIA-internal signals fast-path here. Generic short-term-rental
+  // terms (airbnb, nightly, saturation) are intentionally excluded so prompts like
+  // "is Lisbon a good market for short-term rentals?" reach the LLM router for city disambiguation.
+  const strongDomain = /(arrondissement|underpric|prophet|shap|xgboost|lightgbm|opportunity score|host revenue|kpmg|\baria\b|loi\s+le\s+meur)/i;
+  return strongDomain.test(p);
+}
+
 export function classifyIntent(prompt, agentId) {
   const p = `${prompt} ${agentId}`.toLowerCase();
   const scopeP = `${geographyScopeText(prompt)} ${agentId}`.toLowerCase();

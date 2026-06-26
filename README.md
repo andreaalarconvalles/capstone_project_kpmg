@@ -209,7 +209,7 @@ This command checks the schema, row counts, key numeric ranges, routing evidence
 
 Master dataset: `aria_mega_dataset_v4_1_final.csv` — 135,051 listings × 96 columns.
 
-⚠️ Large files (>50MB) are excluded from version control. See Data Access section below.
+Large files (>50MB) are excluded from version control. See Data Access section below.
 
 ---
 
@@ -240,7 +240,7 @@ Two separate XGBoost models (Paris and Athens) predicting fair nightly price. 26
 | City | R² | MAE | vs Naive | Note |
 |------|----|-----|----------|------|
 | Paris | 0.588 | €29.1 | +36% | Above published 0.52–0.58 range for 2021-vintage data |
-| Athens | 0.676 | €29.1 | +44% | Target >0.65 ✅ PASSED |
+| Athens | 0.676 | €29.1 | +44% | Target >0.65 PASSED |
 
 Business output: 2,945 Athens listings underpriced >€15. Median gap €25. Total foregone revenue €4.8M/year.
 
@@ -258,10 +258,10 @@ Binary classifier predicting host churn risk for Athens listings. 11 features af
 
 | Metric | Value | Target | Status |
 |--------|-------|--------|--------|
-| AUC-ROC | 0.8288 | >0.72 | ✅ PASSED |
-| Avg Precision | 0.8864 | >0.65 | ✅ PASSED |
-| Brier Score | 0.1656 | <0.25 | ✅ PASSED |
-| CV stability | ±0.0088 | <0.02 | ✅ STABLE |
+| AUC-ROC | 0.8288 | >0.72 | PASSED |
+| Avg Precision | 0.8864 | >0.65 | PASSED |
+| Brier Score | 0.1656 | <0.25 | PASSED |
+| CV stability | ±0.0088 | <0.02 | STABLE |
 
 Business output: 865 listings flagged as both underpriced AND high-risk. Revenue opportunity: €1.43M potential (€0.71M realisable).
 
@@ -379,10 +379,10 @@ For MLOps hygiene review, see [`docs/MLOPS_REPO_REVIEW.md`](docs/MLOPS_REPO_REVI
 
 | Phase | Notebook | Status |
 |-------|----------|--------|
-| Phase 1 — EDA | `ARIA_EDA_v4_FINAL.ipynb` | ✅ Done · A+/99 |
-| Phase 2 — XGBoost Pricing | `ARIA_XGBoost_v1.ipynb` | ✅ Done · A/96 |
-| Phase 3 — LightGBM Risk | `ARIA_LightGBM_v1.ipynb` | ✅ Done · A/95 |
-| Phase 4 — Prophet Forecasting | `ARIA_Prophet_v2.ipynb` | ✅ Done |
-| Phase 5 — RAG Compliance | `ARIA_RAG_v1.ipynb` | ✅ Done |
-| Phase 6 — LangGraph Orchestrator | `ARIA_LangGraph_v1.ipynb` | ✅ Done |
-| Phase 7 — Vercel React UI | `Stage 7 - UI Interface/vercel_vite_app/` | ✅ Done · Live |
+| Phase 1 — EDA | `ARIA_EDA_v4_FINAL.ipynb` | Done · A+/99 |
+| Phase 2 — XGBoost Pricing | `ARIA_XGBoost_v1.ipynb` | Done · A/96 |
+| Phase 3 — LightGBM Risk | `ARIA_LightGBM_v1.ipynb` | Done · A/95 |
+| Phase 4 — Prophet Forecasting | `ARIA_Prophet_v2.ipynb` | Done |
+| Phase 5 — RAG Compliance | `ARIA_RAG_v1.ipynb` | Done |
+| Phase 6 — LangGraph Orchestrator | `ARIA_LangGraph_v1.ipynb` | Done |
+| Phase 7 — Vercel React UI | `Stage 7 - UI Interface/vercel_vite_app/` | Done · Live |
