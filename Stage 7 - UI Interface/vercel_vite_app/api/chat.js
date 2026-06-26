@@ -220,9 +220,11 @@ async function callVertexModel({ accessToken, projectId, location, model, prompt
 // True when Vertex rejects a model because it is not a valid publisher model id, is not
 // available in the chosen region, or the project has not enabled it in Model Garden.
 function isModelUnavailableError(error) {
-  if (Number(error?.status) === 404) return true;
+  const status = Number(error?.status);
+  // 404 = wrong id / not enabled in Model Garden; 429 = model valid but no quota allocated.
+  if (status === 404 || status === 429) return true;
   const msg = String(error?.message || "");
-  return /was not found|not have access|is not found|is not available|is not supported|publisher model|unknown model|no longer available/i.test(msg);
+  return /was not found|not have access|is not found|is not available|is not supported|publisher model|unknown model|no longer available|quota exceeded|quota/i.test(msg);
 }
 
 // Try the requested model. If Vertex reports it as unavailable/not-accessible in this
@@ -243,7 +245,7 @@ async function callVertexModelWithFallback({ accessToken, projectId, location, m
 
 // Short, transparent banner prepended to the answer when a fallback occurred.
 function modelFallbackNotice(requestedModelName) {
-  return `**Note:** ${requestedModelName} is not enabled in this Vertex project, so this answer was generated with Gemini 2.5 Pro instead.`;
+  return `**Note:** ${requestedModelName} is not available in this Vertex project yet (it needs Model Garden enablement or a quota grant), so this answer was generated with Gemini 2.5 Pro instead.`;
 }
 
 function personaGuidance({ agentId, agentName, analysis }) {
@@ -624,49 +626,6 @@ export default async function handler(req, res) {
       } catch (error) {
         return json(res, 502, { error: error.message || "Could not load Paris boundaries." });
       }
-    }
-
-    // TEMPORARY diagnostic: GET /api/chat?probe=models tests which Vertex models this
-    // project can actually serve (tiny 1-token calls). Remove after the picker is configured.
-    if (url.searchParams.get("probe") === "models") {
-      const projectId = process.env.GOOGLE_CLOUD_PROJECT || process.env.VERTEX_PROJECT_ID || "";
-      const homeLoc = process.env.GOOGLE_CLOUD_LOCATION || process.env.VERTEX_LOCATION || DEFAULT_LOCATION;
-      let token;
-      try { token = await getAccessToken(); }
-      catch (e) { return json(res, 500, { error: e.message || "Could not authenticate to Vertex." }); }
-
-      const tinyBody = (provider) => provider === "anthropic"
-        ? { anthropic_version: ANTHROPIC_VERTEX_VERSION, messages: [{ role: "user", content: "hi" }], max_tokens: 1 }
-        : { contents: [{ role: "user", parts: [{ text: "hi" }] }], generationConfig: { maxOutputTokens: 1, temperature: 0 } };
-
-      const probeOne = async (provider, model, loc) => {
-        try {
-          const r = await fetch(endpointFor({ projectId, location: loc, model }), {
-            method: "POST",
-            headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-            body: JSON.stringify(tinyBody(provider)),
-          });
-          let detail = "";
-          if (!r.ok) { const d = await r.json().catch(() => ({})); detail = String(d?.error?.message || "").split(".")[0].slice(0, 120); }
-          return { model, region: loc, ok: r.ok, status: r.status, detail };
-        } catch (e) { return { model, region: loc, ok: false, status: "ERR", detail: String(e.message || e).slice(0, 80) }; }
-      };
-
-      const geminis = ["gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-2.0-flash", "gemini-2.0-flash-001", "gemini-flash-latest", "gemini-pro-latest", "gemini-3-pro-preview", "gemini-3-flash-preview"];
-      const claudes = ["claude-sonnet-4-6", "claude-opus-4-7", "claude-sonnet-4-5@20250929", "claude-opus-4-1@20250805", "claude-3-7-sonnet@20250219", "claude-3-5-haiku@20241022"];
-      const claudeRegions = [...new Set([homeLoc, "us-east5", "global"])];
-
-      const results = await Promise.all([
-        ...geminis.map((m) => probeOne("google", m, homeLoc)),
-        ...claudes.flatMap((m) => claudeRegions.map((loc) => probeOne("anthropic", m, loc))),
-      ]);
-      return json(res, 200, {
-        projectId,
-        homeRegion: homeLoc,
-        works: results.filter((r) => r.ok).map((r) => `${r.model} @ ${r.region}`),
-        gemini: results.filter((r) => geminis.includes(r.model)),
-        claude: results.filter((r) => claudes.includes(r.model)),
-      });
     }
 
     return json(res, 200, {
