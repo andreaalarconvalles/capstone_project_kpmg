@@ -96,7 +96,7 @@ function ModelPicker({ modelId, onPick }) {
               onMouseLeave={(e) => { if (modelId !== m.id) e.currentTarget.style.background = "transparent"; }}>
               {m.ml ? <Icon name="Cpu" size={16} color={C2.muted} /> : <Icon name="Sparkles" size={16} color={C2.muted} />}
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13.5, fontWeight: 500 }}>{m.name}{m.default && <span style={{ color: C2.muted, fontWeight: 400 }}> · default</span>}</div>
+                <div style={{ fontSize: 13.5, fontWeight: 500 }}>{m.name}{m.default && <span style={{ color: C2.muted, fontWeight: 400 }}> · default</span>}{m.badge && <span style={{ marginLeft: 6, fontSize: 9, fontWeight: 700, letterSpacing: 0.3, color: C2.muted, border: `1px solid ${C2.hair}`, borderRadius: 5, padding: "1px 5px", verticalAlign: "middle" }}>{m.badge}</span>}</div>
                 <div style={{ fontSize: 12, color: C2.muted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{m.desc}</div>
               </div>
               {modelId === m.id && <Icon name="Check" size={15} color={C2.blue} sw={2.4} />}
