@@ -615,8 +615,7 @@ export default async function handler(req, res) {
       const accessToken = await getToken();
       const systemPrompt = scope === "general" ? buildGeneralSystemPrompt(prompt) : buildOtherCitySystemPrompt();
       const userPrompt = buildGeneralUserPrompt({ prompt, messages });
-      const flashModel = process.env.ARIA_ROUTER_MODEL || ROUTER_MODEL;
-      const vertex = await callVertexModel({ accessToken, projectId, location, model: flashModel, prompt: userPrompt, systemPrompt });
+      const vertex = await callVertexModel({ accessToken, projectId, location, model, prompt: userPrompt, systemPrompt });
       const answer = sanitizeGeneralAnswer(vertex.answer)
         || (scope === "general"
           ? "I can help with that, though my deeper expertise is Paris and Athens short-term-rental analysis. Could you rephrase your question?"
