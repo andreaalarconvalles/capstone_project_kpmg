@@ -382,7 +382,7 @@ function DeleteConversationDialog({ conversation, onCancel, onConfirm }) {
           border: `1px solid ${CA.hair}`, borderRadius: 16,
           boxShadow: "0 24px 70px rgba(0,0,0,0.24)", padding: 18,
         }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 11, marginBottom: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 11, marginBottom: 16 }}>
           <div style={{
             width: 34, height: 34, borderRadius: 10, display: "grid", placeItems: "center",
             background: `${CA.cta}18`, color: CA.cta, flexShrink: 0,
@@ -391,12 +391,9 @@ function DeleteConversationDialog({ conversation, onCancel, onConfirm }) {
           </div>
           <div>
             <div id="delete-chat-title" style={{ fontSize: 15.5, fontWeight: 700 }}>Delete Chat?</div>
-            <div style={{ fontSize: 12.5, color: CA.muted, marginTop: 2 }}>Review before removing this conversation.</div>
+            <div style={{ fontSize: 12.5, color: CA.muted, marginTop: 2, lineHeight: 1.4 }}>Do you really want to delete this chat? This can't be undone.</div>
           </div>
         </div>
-        <p style={{ margin: "8px 0 16px", color: CA.muted, fontSize: 13.5, lineHeight: 1.5 }}>
-          Are you sure you want to delete "{conversation.title}"? This cannot be undone.
-        </p>
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
           <button ref={cancelRef} className="aria-focus" onClick={onCancel}
             style={{
