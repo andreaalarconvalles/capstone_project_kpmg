@@ -154,12 +154,12 @@ const MODELS = [
   { group: "AI Models", items: [
     { id: "gemini-2.5-pro", name: "Gemini 2.5 Pro", desc: "Default deep analysis", default: true, ml: false, provider: "google" },
     { id: "gemini-2.5-flash", name: "Gemini 2.5 Flash", desc: "Fast responses", ml: false, provider: "google" },
-    { id: "gemini-3.5-flash", name: "Gemini 3.5 Flash", desc: "Newest fast Gemini option", ml: false, provider: "google" },
-    { id: "gemini-3.1-pro-preview", name: "Gemini 3.1 Pro", desc: "Preview reasoning model", ml: false, provider: "google" },
+    { id: "gemini-2.5-flash-lite", name: "Gemini 2.5 Flash-Lite", desc: "Lightest, fastest Gemini", ml: false, provider: "google" },
+    { id: "gemini-2.0-flash", name: "Gemini 2.0 Flash", desc: "Previous-gen fast model", ml: false, provider: "google" },
   ]},
   { group: "Claude Models", badge: "Vertex", items: [
-    { id: "claude-sonnet-4-6", name: "Claude Sonnet 4.6", desc: "Anthropic partner model", ml: false, provider: "anthropic" },
-    { id: "claude-opus-4-7", name: "Claude Opus 4.7", desc: "Anthropic partner model", ml: false, provider: "anthropic" },
+    { id: "claude-sonnet-4-5@20250929", name: "Claude Sonnet 4.5", desc: "Anthropic partner model", ml: false, provider: "anthropic" },
+    { id: "claude-opus-4-1@20250805", name: "Claude Opus 4.1", desc: "Anthropic partner model", ml: false, provider: "anthropic" },
   ]},
   { group: "ARIA Analysis Engines", badge: "ML", items: [
     { id: "xgboost-pricing-v1", name: "XGBoost Pricing v1", desc: "Price prediction · Paris + Athens", ml: true, chip: "XGBoost Pricing" },
