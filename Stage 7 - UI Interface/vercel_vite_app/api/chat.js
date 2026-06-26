@@ -217,6 +217,37 @@ async function callVertexModel({ accessToken, projectId, location, model, prompt
   return callGeminiVertex({ accessToken, projectId, location, model, prompt, systemPrompt });
 }
 
+// True when Vertex rejects a model because it is not a valid publisher model id, is not
+// available in the chosen region, or the project has not enabled it in Model Garden.
+function isModelUnavailableError(error) {
+  const status = Number(error?.status);
+  // 404 = wrong id / not enabled in Model Garden; 429 = model valid but no quota allocated.
+  if (status === 404 || status === 429) return true;
+  const msg = String(error?.message || "");
+  return /was not found|not have access|is not found|is not available|is not supported|publisher model|unknown model|no longer available|quota exceeded|quota/i.test(msg);
+}
+
+// Try the requested model. If Vertex reports it as unavailable/not-accessible in this
+// project or region (e.g. a Claude or preview Gemini model that has not been enabled),
+// transparently retry with the default Gemini model so model switching never hard-fails
+// during a demo. Returns the model actually used and whether a fallback happened.
+async function callVertexModelWithFallback({ accessToken, projectId, location, model, prompt, systemPrompt }) {
+  try {
+    const result = await callVertexModel({ accessToken, projectId, location, model, prompt, systemPrompt });
+    return { ...result, modelUsed: model, fellBack: false };
+  } catch (error) {
+    if (model === DEFAULT_MODEL || !isModelUnavailableError(error)) throw error;
+    console.error(`[ARIA model] "${model}" is unavailable in ${location}; falling back to ${DEFAULT_MODEL}:`, error?.message || error);
+    const result = await callVertexModel({ accessToken, projectId, location, model: DEFAULT_MODEL, prompt, systemPrompt });
+    return { ...result, modelUsed: DEFAULT_MODEL, fellBack: true };
+  }
+}
+
+// Short, transparent banner prepended to the answer when a fallback occurred.
+function modelFallbackNotice(requestedModelName) {
+  return `**Note:** ${requestedModelName} is not available in this Vertex project yet (it needs Model Garden enablement or a quota grant), so this answer was generated with Gemini 2.5 Pro instead.`;
+}
+
 function personaGuidance({ agentId, agentName, analysis }) {
   const hay = `${agentId || ""} ${agentName || ""} ${analysis?.resolvedPrompt || ""} ${analysis?.prompt || ""}`.toLowerCase();
   const isHost = /(host|manager|my listing|my price|am i priced|i own|i host|underpric)/.test(hay) || agentId === "host-revenue";
@@ -627,6 +658,7 @@ export default async function handler(req, res) {
   const projectNumber = String(body.projectNumber || process.env.GOOGLE_CLOUD_PROJECT_NUMBER || process.env.VERTEX_PROJECT_NUMBER || "").trim();
   const location = String(body.location || process.env.GOOGLE_CLOUD_LOCATION || process.env.VERTEX_LOCATION || DEFAULT_LOCATION).trim();
   const model = String(body.model || process.env.VERTEX_MODEL || DEFAULT_MODEL).trim();
+  const modelName = String(body.modelName || model).trim();
   const agentId = String(body.agentId || "market");
   const agentName = String(body.agentName || "ARIA Market Entry Advisor");
   const agentTagline = String(body.agentTagline || "short-term rental market intelligence");
@@ -656,11 +688,13 @@ export default async function handler(req, res) {
       const accessToken = await getToken();
       const systemPrompt = scope === "general" ? buildGeneralSystemPrompt(prompt) : buildOtherCitySystemPrompt();
       const userPrompt = buildGeneralUserPrompt({ prompt, messages });
-      const vertex = await callVertexModel({ accessToken, projectId, location, model, prompt: userPrompt, systemPrompt });
-      const answer = sanitizeGeneralAnswer(vertex.answer)
+      const vertex = await callVertexModelWithFallback({ accessToken, projectId, location, model, prompt: userPrompt, systemPrompt });
+      const baseAnswer = sanitizeGeneralAnswer(vertex.answer)
         || (scope === "general"
           ? "I can help with that, though my deeper expertise is Paris and Athens short-term-rental analysis. Could you rephrase your question?"
           : "ARIA is not yet trained on data for that market, so I cannot give a professional, data-backed analysis there. I can analyse Paris or Athens short-term-rental investment, pricing, risk, demand, or compliance instead.");
+      const modelNotice = vertex.fellBack ? modelFallbackNotice(modelName) : null;
+      const answer = modelNotice ? `${modelNotice}\n\n${baseAnswer}` : baseAnswer;
       return json(res, 200, {
         answer,
         scope,
@@ -671,7 +705,8 @@ export default async function handler(req, res) {
         details: {},
         projectId,
         location,
-        model,
+        model: vertex.modelUsed,
+        modelNotice,
         resolvedPrompt: prompt,
         contextResolution: scope === "general"
           ? "Answered as a general assistant (outside ARIA analytics scope)."
@@ -723,7 +758,7 @@ export default async function handler(req, res) {
 
     const systemPrompt = buildSystemPrompt({ agentId, agentName, agentTagline, analysis });
     const contextualPrompt = buildModelPrompt({ prompt, analysis, messages });
-    const vertex = await callVertexModel({ accessToken, projectId, location, model, prompt: contextualPrompt, systemPrompt });
+    const vertex = await callVertexModelWithFallback({ accessToken, projectId, location, model, prompt: contextualPrompt, systemPrompt });
     // Keep a usable model answer even if generation was cut off (finishReason MAX_TOKENS / max_tokens).
     // completeAnswerSections() trims any truncated trailing section to its last complete sentence,
     // so we only fall back to the deterministic answer when the model returned nothing at all.
@@ -733,9 +768,11 @@ export default async function handler(req, res) {
     const shapedAnswer = needsStructuredFallback(primaryAnswer, analysis) ? fallbackAnswer : primaryAnswer;
     const completedAnswer = completeAnswerSections(shapedAnswer, fallbackAnswer) || fallbackAnswer;
     const polishedAnswer = ensureSourcesLine(completedAnswer, analysis);
+    const modelNotice = vertex.fellBack ? modelFallbackNotice(modelName) : null;
+    const answerWithNotice = modelNotice ? `${modelNotice}\n\n${polishedAnswer}` : polishedAnswer;
 
     return json(res, 200, {
-      answer: polishedAnswer,
+      answer: answerWithNotice,
       scope: "in_scope",
       intent: analysis.intent,
       sources: analysis.sources,
@@ -744,7 +781,8 @@ export default async function handler(req, res) {
       details: analysis.details,
       projectId,
       location,
-      model,
+      model: vertex.modelUsed,
+      modelNotice,
       resolvedPrompt: analysis.resolvedPrompt,
       contextResolution: analysis.conversationContext?.summary,
     });
