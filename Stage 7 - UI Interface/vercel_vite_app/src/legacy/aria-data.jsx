@@ -1039,11 +1039,11 @@ const SEED_CONVERSATIONS = [
 ];
 
 /* ---------- Theme palettes ----------
-   airbnb = default (light, Airbnb brand) · dark = neutral near-black · kpmg = KPMG navy (Framer-derived)
+   airbnb = Light (default) · kpmgLight = Ocean (KPMG navy blue) · dark = Dark (near-black)
    Each palette is self-contained incl. brand accent + primary-CTA tokens. */
 const PALETTES = {
   airbnb: {
-    label: "Airbnb", icon: "Sun",
+    label: "Light", icon: "Sun",
     canvas: "#ffffff", s1: "#f7f7f7", s2: "#f2f2f2", hair: "#dddddd", hairSoft: "#ebebeb",
     ink: "#222222", inkSoft: "#3f3f3f", muted: "#6a6a6a", success: "#16a34a", scrollThumb: "#cfcfcf",
     accent: "#ff385c", accentActive: "#e00b41",        // Rausch
@@ -1070,7 +1070,7 @@ const PALETTES = {
     font: "'Inter',system-ui,sans-serif",
   },
   kpmgLight: {
-    label: "KPMG", icon: "Landmark",
+    label: "Ocean", icon: "Waves",
     canvas: "#ffffff", s1: "#f4f7fc", s2: "#e9f0f9", hair: "#d3deee", hairSoft: "#e8eef7",
     ink: "#0a1f44", inkSoft: "#2b3a57", muted: "#5d6b86", success: "#00a3a1", scrollThumb: "#cdd9ea",
     accent: "#00338d", accentActive: "#005eb8",        // KPMG Blue / Medium Blue
