@@ -265,33 +265,45 @@ ${analysis.contextText}
 
 // --- Scope routing (off-topic / general-assistant handling) -----------------
 
+// Parse the router model's reply into a scope label. Returns "" when the reply is
+// empty or unparseable, so the caller can fall back safely instead of silently
+// assuming in_scope (which would run the full analytics pipeline on an off-topic prompt).
 function parseScopeLabel(text) {
   const t = String(text || "").toLowerCase();
   if (/other[_\s-]?city/.test(t)) return "other_city";
+  if (/in[_\s-]?scope/.test(t)) return "in_scope";
   if (/\bgeneral\b/.test(t)) return "general";
-  return "in_scope";
+  return "";
 }
 
-async function classifyScopeWithModel({ accessToken, projectId, location, prompt, messages }) {
-  const routerModel = process.env.ARIA_ROUTER_MODEL || ROUTER_MODEL;
-  const systemPrompt = `You are a scope classifier for ARIA, an analytics assistant whose data and models cover ONLY the Paris and Athens short-term-rental (Airbnb) markets: pricing, investment opportunity, risk, demand and occupancy forecasts, and short-term-rental regulation and compliance.
+const SCOPE_ROUTER_SYSTEM_PROMPT = `You are a scope classifier for ARIA, an analytics assistant whose data and models cover ONLY the Paris and Athens short-term-rental (Airbnb) markets: pricing, investment opportunity, risk, demand and occupancy forecasts, and short-term-rental regulation and compliance.
 Classify the user's latest message into exactly one label:
 - in_scope: about Paris or Athens short-term-rental markets, pricing, investment, risk, demand, regulation, or ARIA's own models and methodology, OR a short follow-up that continues such a topic from the recent conversation.
 - other_city: asks for market, investment, or real-estate analysis of a specific place that is NOT Paris or Athens — even if the question uses words like "invest", "market", or "short-term rental". Examples: Lisbon, Madrid, Berlin, London, Barcelona, Rome, any non-Paris/Athens location.
-- general: anything else, including small talk, the current time, math, coding, general knowledge, or questions about who or what ARIA is.
-City specificity overrides ambiguity: if the target location is clearly not Paris or Athens, choose other_city, not in_scope.
+- general: anything else, including small talk, the current time, math (for example "what is 17 times 23"), coding, general knowledge (for example "capital of Japan"), creative writing (for example "write a haiku"), or questions about who or what ARIA is.
+City specificity overrides ambiguity: if the target location is clearly not Paris or Athens, choose other_city, not in_scope. If the message has no Paris/Athens/real-estate connection at all, choose general.
 Reply with ONLY the label: in_scope, other_city, or general.`;
-  const userPrompt = `${formatConversationForPrompt(messages)}\n\nLatest user message: ${prompt}\n\nLabel:`;
-  const vertexRes = await fetch(endpointFor({ projectId, location, model: routerModel }), {
+
+// Ask one Vertex model to classify the prompt. Returns a parsed scope ("in_scope" |
+// "other_city" | "general") or "" when the model replied with nothing usable.
+// thinkingBudget is set to 0 for Gemini 2.5 Flash so the small output budget is not
+// consumed by internal reasoning, which previously left the label empty.
+async function requestScopeLabel({ accessToken, projectId, location, model, userPrompt }) {
+  // Generous cap: billing is on generated tokens, not the cap. Flash disables thinking
+  // entirely (budget 0); Pro cannot disable it, so the headroom lets its internal
+  // reasoning finish and still emit the label instead of returning an empty string.
+  const generationConfig = { temperature: 0, maxOutputTokens: 512 };
+  if (/flash/i.test(model)) generationConfig.thinkingConfig = { thinkingBudget: 0 };
+  const vertexRes = await fetch(endpointFor({ projectId, location, model }), {
     method: "POST",
     headers: {
       "Authorization": `Bearer ${accessToken}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      systemInstruction: { parts: [{ text: systemPrompt }] },
+      systemInstruction: { parts: [{ text: SCOPE_ROUTER_SYSTEM_PROMPT }] },
       contents: [{ role: "user", parts: [{ text: userPrompt }] }],
-      generationConfig: { temperature: 0, maxOutputTokens: 20 },
+      generationConfig,
     }),
   });
   const data = await vertexRes.json();
@@ -304,17 +316,44 @@ Reply with ONLY the label: in_scope, other_city, or general.`;
   return parseScopeLabel(label);
 }
 
+// Classify the prompt with the lightweight router model first; if it is unavailable
+// in this Vertex project, errors, or returns an unusable label, retry once with the
+// known-good default model (gemini-2.5-pro, the same model the analytics path uses).
+// Returns "" only when every attempt failed to produce a parseable label.
+async function classifyScopeWithModel({ accessToken, projectId, location, prompt, messages }) {
+  const routerModel = process.env.ARIA_ROUTER_MODEL || ROUTER_MODEL;
+  const userPrompt = `${formatConversationForPrompt(messages)}\n\nLatest user message: ${prompt}\n\nLabel:`;
+  // Only Gemini models can use this generateContent router call; skip Claude here.
+  const candidates = [routerModel, DEFAULT_MODEL].filter(
+    (m, i, arr) => modelProvider(m) === "google" && arr.indexOf(m) === i
+  );
+  for (const model of candidates) {
+    try {
+      const scope = await requestScopeLabel({ accessToken, projectId, location, model, userPrompt });
+      if (scope) return scope;
+      console.error(`[ARIA router] model ${model} returned an unparseable scope label; trying next model.`);
+    } catch (err) {
+      console.error(`[ARIA router] model ${model} request failed:`, err?.message || err);
+    }
+  }
+  return "";
+}
+
 // Resolve the lane. Obvious in-scope prompts skip the router (fast, token-free for
 // the rag-first compliance path). Everything else asks the LLM router.
-// On failure we default to "general" (not "in_scope") because by the time we reach
-// the catch block we already know isInScopeDomain() returned false, meaning the prompt
-// has no strong Paris/Athens/ARIA signals — so running the full analytics pipeline on
-// it would produce irrelevant or nonsensical output.
+// When the router cannot produce a label we default to "general" (not "in_scope"):
+// by this point isInScopeDomain() has already returned false, so the prompt has no
+// strong Paris/Athens/ARIA signals and running the analytics pipeline would produce
+// irrelevant output. "general" answers directly as a normal assistant instead.
 async function resolveScope({ prompt, messages, getToken, projectId, location }) {
   if (isInScopeDomain(prompt)) return { scope: "in_scope", accessToken: null };
   try {
     const accessToken = await getToken();
     const scope = await classifyScopeWithModel({ accessToken, projectId, location, prompt, messages });
+    if (!scope) {
+      console.error("[ARIA router] no parseable scope from any model; falling back to general.");
+      return { scope: "general", accessToken };
+    }
     return { scope, accessToken };
   } catch (err) {
     console.error("[ARIA router] scope-classification failed, falling back to general:", err?.message || err);
