@@ -282,6 +282,8 @@ Classify the user's latest message into exactly one label:
 - other_city: asks for market, investment, or real-estate analysis of a specific place that is NOT Paris or Athens — even if the question uses words like "invest", "market", or "short-term rental". Examples: Lisbon, Madrid, Berlin, London, Barcelona, Rome, any non-Paris/Athens location.
 - general: anything else, including small talk, the current time, math (for example "what is 17 times 23"), coding, general knowledge (for example "capital of Japan"), creative writing (for example "write a haiku"), or questions about who or what ARIA is.
 City specificity overrides ambiguity: if the target location is clearly not Paris or Athens, choose other_city, not in_scope. If the message has no Paris/Athens/real-estate connection at all, choose general.
+A message that mentions Paris or Athens but is NOT about real estate or short-term rental (for example weather, history, food, sightseeing, travel directions, language, or personal safety) is general, not in_scope.
+A Paris or Athens question about buying, renting, pricing, neighbourhoods, areas, investment, demand, risk, or market conditions IS in_scope, even if it does not use the words "short-term rental".
 Reply with ONLY the label: in_scope, other_city, or general.`;
 
 // Ask one Vertex model to classify the prompt. Returns a parsed scope ("in_scope" |
