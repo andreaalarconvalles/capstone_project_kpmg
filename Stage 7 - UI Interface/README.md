@@ -18,11 +18,11 @@ as manual overrides:
 
 | Agent | Focus |
 |---|---|
-| 💶 Host Revenue Intelligence | Personal revenue manager — pricing, occupancy, underpricing gap |
-| 🏘️ Gentrification Early Warning | Displacement risk 12–24 months ahead |
-| 🕵️ STR Financial Crime Detection | AML anomaly detection & SAR drafting |
-| 🚇 Tourism Demand Forecast | Infrastructure load intelligence |
-| 🏗️ Market Entry Advisor | Site selection & ROI intelligence |
+| Host Revenue Intelligence | Personal revenue manager — pricing, occupancy, underpricing gap |
+| Gentrification Early Warning | Displacement risk 12–24 months ahead |
+| STR Financial Crime Detection | AML anomaly detection & SAR drafting |
+| Tourism Demand Forecast | Infrastructure load intelligence |
+| Market Entry Advisor | Site selection & ROI intelligence |
 
 Every agent chat shows a folded LangGraph-style multi-agent reasoning trace, streams its answer,
 and renders inline Recharts/SVG visuals. Scripted prompts keep polished demo answers, while
