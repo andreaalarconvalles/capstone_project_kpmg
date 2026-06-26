@@ -244,8 +244,11 @@ async function callVertexModelWithFallback({ accessToken, projectId, location, m
 }
 
 // Short, transparent banner prepended to the answer when a fallback occurred.
-function modelFallbackNotice(requestedModelName) {
-  return `**Note:** ${requestedModelName} is not available in this Vertex project yet (it needs Model Garden enablement or a quota grant), so this answer was generated with Gemini 2.5 Pro instead.`;
+function modelFallbackNotice(requestedModelName, requestedModelId) {
+  if (modelProvider(requestedModelId) === "anthropic") {
+    return `**Note:** ${requestedModelName} is awaiting quota approval from Anthropic on Vertex AI, so this answer was generated with Gemini 2.5 Pro in the meantime.`;
+  }
+  return `**Note:** ${requestedModelName} is not available in this Vertex project yet, so this answer was generated with Gemini 2.5 Pro instead.`;
 }
 
 function personaGuidance({ agentId, agentName, analysis }) {
@@ -693,7 +696,7 @@ export default async function handler(req, res) {
         || (scope === "general"
           ? "I can help with that, though my deeper expertise is Paris and Athens short-term-rental analysis. Could you rephrase your question?"
           : "ARIA is not yet trained on data for that market, so I cannot give a professional, data-backed analysis there. I can analyse Paris or Athens short-term-rental investment, pricing, risk, demand, or compliance instead.");
-      const modelNotice = vertex.fellBack ? modelFallbackNotice(modelName) : null;
+      const modelNotice = vertex.fellBack ? modelFallbackNotice(modelName, model) : null;
       const answer = modelNotice ? `${modelNotice}\n\n${baseAnswer}` : baseAnswer;
       return json(res, 200, {
         answer,

@@ -157,8 +157,8 @@ const MODELS = [
     { id: "gemini-2.5-flash-lite", name: "Gemini 2.5 Flash-Lite", desc: "Lightest, fastest Gemini", ml: false, provider: "google" },
   ]},
   { group: "Claude Models", badge: "Vertex", items: [
-    { id: "claude-sonnet-4-6", name: "Claude Sonnet 4.6", desc: "Anthropic partner model", ml: false, provider: "anthropic" },
-    { id: "claude-opus-4-7", name: "Claude Opus 4.7", desc: "Anthropic partner model", ml: false, provider: "anthropic" },
+    { id: "claude-sonnet-4-6", name: "Claude Sonnet 4.6", desc: "Pending Anthropic quota approval", badge: "Soon", ml: false, provider: "anthropic" },
+    { id: "claude-opus-4-7", name: "Claude Opus 4.7", desc: "Pending Anthropic quota approval", badge: "Soon", ml: false, provider: "anthropic" },
   ]},
   { group: "ARIA Analysis Engines", badge: "ML", items: [
     { id: "xgboost-pricing-v1", name: "XGBoost Pricing v1", desc: "Price prediction · Paris + Athens", ml: true, chip: "XGBoost Pricing" },
