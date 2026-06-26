@@ -493,15 +493,18 @@ const CITY_ALIASES = {
   Athens: new Set(["athens", "athen", "athns", "athnes", "athans", "athina", "athenas"]),
 };
 
-function cityMentionsFromPrompt(prompt) {
+function cityMentionsFromPrompt(prompt, { fuzzy = true } = {}) {
   const tokens = promptTokens(prompt);
   const mentions = new Set();
   for (const token of tokens) {
     if (CITY_ALIASES.Paris.has(token)) mentions.add("Paris");
     if (CITY_ALIASES.Athens.has(token)) mentions.add("Athens");
   }
-  if (mentions.size) return mentions;
+  if (mentions.size || !fuzzy) return mentions;
 
+  // Fuzzy fallback for typos (e.g. "Athen", "Pariss"). The scope gate calls this with
+  // fuzzy:false because near-miss tokens like "parts"~"paris" or "parish"~"paris" would
+  // fabricate a city mention and wrongly fast-path an off-topic prompt into analytics.
   for (const token of tokens) {
     if (token.length >= 4 && editDistance(token, "paris") <= 1) mentions.add("Paris");
     if (token.length >= 5 && editDistance(token, "athens") <= 2) mentions.add("Athens");
@@ -517,8 +520,8 @@ function geographyScopeText(prompt) {
     .replace(/\bnot\s+(?:paris|athens)\b/gi, " ");
 }
 
-function cityMentionsFromScope(prompt) {
-  return cityMentionsFromPrompt(geographyScopeText(prompt));
+function cityMentionsFromScope(prompt, opts) {
+  return cityMentionsFromPrompt(geographyScopeText(prompt), opts);
 }
 
 function topN(items, scoreKey, n = 6, desc = true) {
@@ -577,20 +580,40 @@ function isComplianceIntentPrompt(text) {
   return directCompliance || removalCompliance;
 }
 
+// Real-estate / short-term-rental / market intent. Combined with a supported-city
+// mention this is a confident in-scope signal. Deliberately excludes generic topics
+// (weather, history, food, sightseeing, travel, personal safety) so that a bare city
+// mention on its own does not fast-path an off-topic prompt into the analytics pipeline.
+const STR_REALESTATE_INTENT = /\b(invest\w*|airbnb|short[-\s]?term|vacation\s+rental|holiday\s+let|\bstr\b|rental|rentals|\brent\b|buy|buying|buyer|purchas\w*|acquir\w*|acquisition|price|pricing|priced|underpric\w*|revenue|yield|\broi\b|occupanc\w*|demand|nightly|saturat\w*|market\w*|neighbou?rhood\w*|arrondissement|district|\barea\b|areas|propert\w*|listing\w*|\bhost\b|hosts|portfolio|underwrit\w*|repric\w*|opportunit\w*|expensive|affordab\w*|premium|gentrif\w*|house|housing|apartment|flat|condo|real\s+estate|forecast\w*|season\w*|tourism)\b/i;
+
 // Strong-signal scope gate. Returns true only when the prompt is clearly inside
 // ARIA's Paris/Athens short-term-rental domain, so we can skip the LLM scope router
-// (and, importantly, keep the rag-first compliance path token-free). Softer or
-// ambiguous prompts return false and are sent to the LLM router for disambiguation.
+// (and keep the rag-first compliance path token-free). Everything softer or ambiguous
+// returns false and is sent to the LLM router, which disambiguates with full language
+// understanding (e.g. "weather in Paris" -> general, "buy a house in Paris" -> in_scope).
 export function isInScopeDomain(prompt) {
   const p = String(prompt || "").toLowerCase();
   if (!p.trim()) return false;
-  if (cityMentionsFromScope(prompt).size > 0) return true;
+
+  // Unambiguous ARIA-internal terms (these do not appear in casual off-topic chat).
+  // "aria", "kpmg" and "prophet" are intentionally NOT here: they are common words
+  // (the assistant's name, the firm, the religious/everyday sense), so identity and
+  // company questions must reach the router and be answered, not turned into analytics.
+  const strongInternal = /(arrondissement|underpric|\bshap\b|xgboost|lightgbm|opportunity\s+score|host\s+revenue|loi\s+le\s+meur)/i;
+  if (strongInternal.test(p)) return true;
+
+  // Compliance / regulation: fast-path so the rag-first compliance path stays token-free.
   if (isComplianceIntentPrompt(p)) return true;
-  // Only unambiguous ARIA-internal signals fast-path here. Generic short-term-rental
-  // terms (airbnb, nightly, saturation) are intentionally excluded so prompts like
-  // "is Lisbon a good market for short-term rentals?" reach the LLM router for city disambiguation.
-  const strongDomain = /(arrondissement|underpric|prophet|shap|xgboost|lightgbm|opportunity score|host revenue|kpmg|\baria\b|loi\s+le\s+meur)/i;
-  return strongDomain.test(p);
+
+  // Geography. Exact aliases only (no fuzzy match) so near-miss tokens cannot fabricate
+  // a city mention and slip an off-topic prompt past the gate.
+  const cities = cityMentionsFromScope(prompt, { fuzzy: false });
+  // Both supported cities named together is ARIA's cross-city comparison wheelhouse.
+  if (cities.has("Paris") && cities.has("Athens")) return true;
+  // A single supported city only fast-paths when paired with real-estate/STR intent.
+  if (cities.size > 0 && STR_REALESTATE_INTENT.test(p)) return true;
+
+  return false;
 }
 
 export function classifyIntent(prompt, agentId) {

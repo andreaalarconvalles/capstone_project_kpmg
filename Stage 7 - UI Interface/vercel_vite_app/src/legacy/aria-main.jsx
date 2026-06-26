@@ -382,7 +382,7 @@ function DeleteConversationDialog({ conversation, onCancel, onConfirm }) {
           border: `1px solid ${CA.hair}`, borderRadius: 16,
           boxShadow: "0 24px 70px rgba(0,0,0,0.24)", padding: 18,
         }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 11, marginBottom: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 11, marginBottom: 16 }}>
           <div style={{
             width: 34, height: 34, borderRadius: 10, display: "grid", placeItems: "center",
             background: `${CA.cta}18`, color: CA.cta, flexShrink: 0,
@@ -391,12 +391,9 @@ function DeleteConversationDialog({ conversation, onCancel, onConfirm }) {
           </div>
           <div>
             <div id="delete-chat-title" style={{ fontSize: 15.5, fontWeight: 700 }}>Delete Chat?</div>
-            <div style={{ fontSize: 12.5, color: CA.muted, marginTop: 2 }}>Review before removing this conversation.</div>
+            <div style={{ fontSize: 12.5, color: CA.muted, marginTop: 2, lineHeight: 1.4 }}>Do you really want to delete this chat? This can't be undone.</div>
           </div>
         </div>
-        <p style={{ margin: "8px 0 16px", color: CA.muted, fontSize: 13.5, lineHeight: 1.5 }}>
-          Are you sure you want to delete "{conversation.title}"? This cannot be undone.
-        </p>
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
           <button ref={cancelRef} className="aria-focus" onClick={onCancel}
             style={{
@@ -581,6 +578,7 @@ function App() {
     let text = "";
     let blocks = [];
     let brief = genericScript(ag, prompt).brief;
+    let responseScope = "in_scope";
     try {
       upd({ traceDone: 2 });
       const res = await fetch("/api/chat", {
@@ -599,6 +597,7 @@ function App() {
       });
       const j = await res.json();
       if (!res.ok) throw new Error(j?.error || "Vertex AI request failed.");
+      responseScope = j.scope || "in_scope";
       text = j.answer || "No response returned.";
       blocks = [{ type: "text", text }];
       if (Array.isArray(j.kpis) && j.kpis.length) blocks.push({ type: "kpis", kpis: j.kpis.slice(0, 4) });
@@ -608,14 +607,20 @@ function App() {
       if (j.details) blocks.push({ type: "details", details: j.details });
       brief = {
         title: `${ag.name} — Vertex Analysis`,
-        kpis: Array.isArray(j.kpis) && j.kpis.length ? j.kpis.slice(0, 4) : brief.kpis,
+        // Respect an explicit empty array from the backend (general / other-city answers)
+        // so scripted default KPIs do not leak into off-topic responses.
+        kpis: Array.isArray(j.kpis) ? j.kpis.slice(0, 4) : brief.kpis,
       };
     } catch (e) {
       text = `Live analysis needs attention: ${e.message}\n\nThe UI is correctly routing custom prompts to the backend. Check Vercel Vertex authentication and GitHub data access, and keep using the suggested prompts for scripted demo responses while the live path is being configured.`;
       blocks = [{ type: "text", text }];
     }
     if (cancelRef.current || !isCurrentRun()) return;
-    upd({ traceDone: steps.length, traceRunning: false, blocks, brief });
+    const isOffScope = responseScope === "general" || responseScope === "other_city";
+    const finalTrace = isOffScope
+      ? [{ node: "Scope Router", detail: "classified outside ARIA analytics" }, { node: "Assistant", detail: "generating direct response" }]
+      : steps;
+    upd({ trace: finalTrace, traceDone: finalTrace.length, traceRunning: false, blocks, brief });
 
     // stream the text
     const words = text.split(" ");
