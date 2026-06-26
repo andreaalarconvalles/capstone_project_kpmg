@@ -593,6 +593,7 @@ function App() {
           projectNumber: settings.projectNumber,
           location: settings.region,
           model,
+          modelName: (MODEL_BY_ID[modelId] && MODEL_BY_ID[modelId].name) || model,
         }),
       });
       const j = await res.json();
