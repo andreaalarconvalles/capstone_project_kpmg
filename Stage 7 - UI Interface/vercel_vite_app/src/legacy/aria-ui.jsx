@@ -254,7 +254,7 @@ function Sidebar({
             style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "contain", padding: 3, boxSizing: "border-box", background: "#fff" }} />
         </div>
         <div style={{ minWidth: 0, flex: 1 }}>
-          <div style={{ fontSize: 13.5, fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>Luka Tcheishvili</div>
+          <div style={{ fontSize: 13.5, fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>Guest</div>
           <div style={{ fontSize: 11.5, color: C.muted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>IE × KPMG Capstone</div>
         </div>
         <button className="aria-focus" onClick={onOpenSettings} title="Settings" aria-label="Settings"
