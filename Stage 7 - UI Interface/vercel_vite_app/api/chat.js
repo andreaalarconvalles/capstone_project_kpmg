@@ -227,18 +227,32 @@ function isModelUnavailableError(error) {
   return /was not found|not have access|is not found|is not available|is not supported|publisher model|unknown model|no longer available|quota exceeded|quota/i.test(msg);
 }
 
+// Some Google models are served only from the multi-region "global" endpoint rather than
+// the project's default regional endpoint. Route those to the right location regardless of
+// the configured region (probed: gemini-3.5-flash and gemini-flash-latest resolve only in
+// "global" for this project, while the 2.5 family resolves in europe-west1).
+const MODEL_LOCATION_OVERRIDES = {
+  "gemini-3.5-flash": "global",
+  "gemini-flash-latest": "global",
+};
+function locationForModel(model, defaultLocation) {
+  return MODEL_LOCATION_OVERRIDES[model] || defaultLocation;
+}
+
 // Try the requested model. If Vertex reports it as unavailable/not-accessible in this
-// project or region (e.g. a Claude or preview Gemini model that has not been enabled),
-// transparently retry with the default Gemini model so model switching never hard-fails
-// during a demo. Returns the model actually used and whether a fallback happened.
+// project or region (e.g. a Claude model with no quota), transparently retry with the
+// default Gemini model so model switching never hard-fails during a demo. Models with a
+// location override are called in their required region; the fallback uses the default.
 async function callVertexModelWithFallback({ accessToken, projectId, location, model, prompt, systemPrompt }) {
+  const primaryLocation = locationForModel(model, location);
   try {
-    const result = await callVertexModel({ accessToken, projectId, location, model, prompt, systemPrompt });
+    const result = await callVertexModel({ accessToken, projectId, location: primaryLocation, model, prompt, systemPrompt });
     return { ...result, modelUsed: model, fellBack: false };
   } catch (error) {
     if (model === DEFAULT_MODEL || !isModelUnavailableError(error)) throw error;
-    console.error(`[ARIA model] "${model}" is unavailable in ${location}; falling back to ${DEFAULT_MODEL}:`, error?.message || error);
-    const result = await callVertexModel({ accessToken, projectId, location, model: DEFAULT_MODEL, prompt, systemPrompt });
+    console.error(`[ARIA model] "${model}" is unavailable in ${primaryLocation}; falling back to ${DEFAULT_MODEL}:`, error?.message || error);
+    const fallbackLocation = locationForModel(DEFAULT_MODEL, location);
+    const result = await callVertexModel({ accessToken, projectId, location: fallbackLocation, model: DEFAULT_MODEL, prompt, systemPrompt });
     return { ...result, modelUsed: DEFAULT_MODEL, fellBack: true };
   }
 }
