@@ -152,10 +152,10 @@ function resolveAgentRoute(selectedAgentId, prompt) {
 
 const MODELS = [
   { group: "AI Models", items: [
-    { id: "gemini-2.5-pro", name: "Gemini 2.5 Pro", desc: "Default deep analysis", default: true, ml: false, provider: "google" },
+    { id: "gemini-3.5-flash", name: "Gemini 3.5 Flash", desc: "Newest fast Gemini", default: true, ml: false, provider: "google" },
+    { id: "gemini-2.5-pro", name: "Gemini 2.5 Pro", desc: "Deep analysis", ml: false, provider: "google" },
     { id: "gemini-2.5-flash", name: "Gemini 2.5 Flash", desc: "Fast responses", ml: false, provider: "google" },
     { id: "gemini-2.5-flash-lite", name: "Gemini 2.5 Flash-Lite", desc: "Lightest, fastest Gemini", ml: false, provider: "google" },
-    { id: "gemini-3.5-flash", name: "Gemini 3.5 Flash", desc: "Newest fast Gemini", ml: false, provider: "google" },
   ]},
   { group: "Claude Models", badge: "Vertex", items: [
     { id: "claude-sonnet-4-6", name: "Claude Sonnet 4.6", desc: "Pending Anthropic quota approval", badge: "Soon", ml: false, provider: "anthropic" },

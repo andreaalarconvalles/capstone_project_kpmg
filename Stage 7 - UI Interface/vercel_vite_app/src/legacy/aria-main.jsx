@@ -448,7 +448,7 @@ function App() {
   const [deleteTargetId, setDeleteTargetId] = useState(null);
   const [search, setSearch] = useState("");
   const [input, setInput] = useState("");
-  const [modelId, setModelId] = useState("gemini-2.5-pro");
+  const [modelId, setModelId] = useState("gemini-3.5-flash");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settings, setSettings] = useState({
     apiKey: "", project: "capstoneprojectkpmg", projectNumber: "52102703097", region: "europe-west1", defaultModel: "gemini-2.5-pro", demoMode: true,
