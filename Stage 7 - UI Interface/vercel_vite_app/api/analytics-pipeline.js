@@ -690,6 +690,10 @@ function metricFocus(prompt) {
   if (/(risk|high-risk|declin|vulnerab|priority|churn|warning)/i.test(p)) return "risk";
   if (/(underprice|underpriced|fair price|predicted price|pricing gap|price gap|shap|model driver)/i.test(p)) return "pricing gap";
   if (/(family|safe|safest|live|living)/i.test(p)) return "livability and saturation";
+  // Checked last so explicit price/revenue/risk cues win first. This captures the default
+  // investment framing ("best areas", "highest potential for return", "where to invest")
+  // so it is represented as a focus and can be carried into ambiguous follow-ups.
+  if (/(opportunit|investment|\binvest\b|best (?:area|areas|neighbou?rhood|neighbou?rhoods|place|places|region|regions|pick|picks|option|options|spot|spots|bet)|highest (?:potential|return|returns|opportunit)|potential for return|return on investment|\broi\b|most promising|where (?:should i |to |can i )?(?:invest|buy))/i.test(p)) return "opportunity ranking";
   return "";
 }
 
@@ -702,10 +706,15 @@ function isFollowUpPrompt(prompt) {
 
 export function resolvePromptContext(prompt, messages = []) {
   const history = normaliseContextMessages(messages);
+  // Infer the prior city/focus from the user's own turns only. ARIA's previous answers are
+  // prose dense with metric vocabulary ("Lowest is 0.00, highest is 1.00", "Lower is better
+  // for affordability"), so scanning them with metricFocus() would mis-read the intent (e.g.
+  // treat an opportunity answer as a "cheapest price" request). User messages state intent.
+  const userHistory = history.filter((message) => message.role === "user");
   const currentCity = cityFromPrompt(prompt);
-  const priorCity = lastSingleCity(history);
+  const priorCity = lastSingleCity(userHistory);
   const currentFocus = metricFocus(prompt);
-  const priorFocus = [...history].reverse().map((message) => metricFocus(message.text)).find(Boolean) || "";
+  const priorFocus = [...userHistory].reverse().map((message) => metricFocus(message.text)).find(Boolean) || "";
   const notes = [];
   let analysisPrompt = String(prompt || "").trim();
 
@@ -1536,12 +1545,21 @@ function makeRegionMap(title, city, rows, metricKey, metricLabel, displayFormatt
   }];
 }
 
+// A region map only helps when there are enough mappable neighbourhoods to compare. Below this
+// threshold a map of one or two dots is noise, so the analysis shows just the contextual chart.
+// Used to include the map by default on geographic answers without the user asking for it.
+function hasMappableRegions(rows, min = 3) {
+  return Array.isArray(rows) && rows.length >= min;
+}
+
 async function marketAnalysis(prompt) {
   const rows = await loadNeighbourhoodStats();
   const city = cityFromPrompt(prompt) || "Paris";
   const cityRows = rows.filter((r) => r.city === city);
   const expensive = /(expensive|costliest|costly|premium|luxury|highest (?:median |nightly |rental |rent )?price|highest priced|most expensive|pricey)/i.test(prompt);
-  const cheap = /(cheap|cheapest|affordable|budget|low price|lowest|nightly price|median price|rent price|rental price|monthly rent)/i.test(prompt);
+  // Require a genuine affordability signal. A bare "nightly price"/"median price" mention (or an
+  // injected "expensive nightly-price ranking" focus note) must NOT force the cheapest ranking.
+  const cheap = /(cheap|cheapest|affordab\w*|budget|least expensive|low(?:est|er)?\s+(?:median\s+|nightly\s+|rental\s+|rent\s+|monthly\s+)?(?:price|prices|cost|costs|rent)|lowest[-\s]?priced)/i.test(prompt);
   const revenue = /(revenue|income|earning|yield)/i.test(prompt);
   const demand = /(occupancy|demand|booked|tourist)/i.test(prompt);
   const family = /(family|safe|safest|live|living)/i.test(prompt);
@@ -1599,7 +1617,6 @@ async function marketAnalysis(prompt) {
             { label: "Average revenue", value: fmtEuro(best.revenue) },
             { label: "Listings reviewed", value: fmtInt(totalListings) },
           ];
-  const mapRequested = wantsRegionMap(prompt);
   const vizRequest = visualizationRequest(prompt);
   const metricLabel = expensive || cheap ? "Median nightly price" : revenue ? "Average revenue" : demand ? "Average occupancy" : saturated || family ? "Saturation score" : "Opportunity score";
   const metricDisplay = expensive || cheap || revenue ? fmtEuro : demand ? fmtPct : fmtScore;
@@ -1621,26 +1638,9 @@ async function marketAnalysis(prompt) {
           : saturated
             ? `${city} map: highest saturation pressure`
             : `${city} map: best opportunity regions`;
-  const visualizations = mapRequested
-    ? [
-      ...makeRegionMap(
-      mapTitle,
-      city,
-        mapSourceRows,
-        chartMetric,
-        metricLabel,
-        metricDisplay,
-      {
-        tone: expensive || cheap ? "price" : family ? "livability" : saturated ? "risk" : revenue ? "price" : "opportunity",
-        lowerIsBetter,
-        legendLow: expensive || cheap ? "cheaper" : family ? "calmer" : "lower",
-        legendHigh: expensive || cheap ? "costlier" : family ? "more saturated" : "higher",
-      }
-      ),
-      ...rankingVisualization,
-    ]
-    : vizRequest.heatmap
-      ? makeSegmentHeatmap(`${city} ${metricLabel.toLowerCase()} by segment`, cityRows, chartMetric, metricLabel, {
+  // Pick the chart that best matches the prompt, independent of the map.
+  const contextualChart = vizRequest.heatmap
+    ? makeSegmentHeatmap(`${city} ${metricLabel.toLowerCase()} by segment`, cityRows, chartMetric, metricLabel, {
         formatter: metricDisplay,
         tone: expensive || cheap ? "price" : family ? "livability" : saturated ? "risk" : "opportunity",
       })
@@ -1670,6 +1670,18 @@ async function marketAnalysis(prompt) {
         metricNote: "Donut chart: best for share questions. Each slice shows how much of the city dataset sits in each distance zone.",
       })
     : rankingVisualization;
+  // Lead geographic answers with the region map by default (coloured by the active metric) so the
+  // user never has to ask for it; the contextual chart follows. The map is dropped only when there
+  // are too few mappable neighbourhoods to compare.
+  const regionMap = makeRegionMap(mapTitle, city, mapSourceRows, chartMetric, metricLabel, metricDisplay, {
+    tone: expensive || cheap ? "price" : family ? "livability" : saturated ? "risk" : revenue ? "price" : "opportunity",
+    lowerIsBetter,
+    legendLow: expensive || cheap ? "cheaper" : family ? "calmer" : "lower",
+    legendHigh: expensive || cheap ? "costlier" : family ? "more saturated" : "higher",
+  });
+  const visualizations = hasMappableRegions(mapSourceRows)
+    ? [...regionMap, ...contextualChart]
+    : contextualChart;
   return {
     intent: "market-entry",
     title: `${city} market-entry recommendation`,
@@ -1699,9 +1711,7 @@ async function marketAnalysis(prompt) {
     visualizations,
     details: sourceDetails(
       [FILES.neighbourhoodStats],
-      mapRequested
-        ? "Rank neighbourhoods using the prepared neighbourhood summary table and render a real city map with approximate ARIA neighbourhood overlays. The map zooms to the city detected in the prompt and colors regions by the selected metric: opportunity, saturation, median nightly price, average revenue, or occupancy."
-        : "Rank neighbourhoods using the prepared neighbourhood summary table. The chart metric changes with the prompt: opportunity for investment, saturation for avoid/family-style shortlist prompts, median nightly price for affordability or premium-price prompts, average revenue for revenue prompts, and occupancy for demand prompts.",
+      "Rank neighbourhoods using the prepared neighbourhood summary table, render a real city map with approximate ARIA neighbourhood overlays coloured by the selected metric (opportunity, saturation, median nightly price, average revenue, or occupancy), and add the chart that best matches the prompt. The map zooms to the city detected in the prompt.",
       ["This is short-term-rental market intelligence, not a complete home-purchase or mortgage dataset."],
       ranked.map((r) => `${shortArea(r.area)}: opportunity ${fmtScore(r.opportunity)}, saturation ${fmtScore(r.saturation)}, median price ${fmtEuro(r.medianPrice)}`),
       metricGuides(["opportunity", "saturation", "medianNightlyPrice", "averageRevenue", "occupancy", "listings"])
@@ -1719,7 +1729,6 @@ async function pricingAnalysis(prompt) {
   const driverFocused = /(why|driver|explain|feature|shap|model|reason)/i.test(prompt);
   const compareFocused = /(actual|predicted|fair|compare|versus|vs|current)/i.test(prompt);
   const vizRequest = visualizationRequest(prompt);
-  const mapMode = wantsRegionMap(prompt);
   const cityName = isParis ? "Paris" : "Athens";
   const bestGap = num(best.avgGap, 0);
   const hasPositiveAreaGap = bestGap > 0;
@@ -1731,22 +1740,13 @@ async function pricingAnalysis(prompt) {
   const sourceFiles = isParis
     ? [FILES.parisPredictions, FILES.shapParis]
     : [FILES.athensUnderpricing, FILES.shapAthens];
-  const chart = driverFocused
+  // Pick the chart that best matches the prompt, independent of the map.
+  const contextualChart = driverFocused
     ? makeViz(`${cityName} main pricing model drivers`, shap.map((s) => ({
       label: s.displayFeature,
       value: s.impact,
       display: fmtScore(s.impact, 3),
     })), "Average SHAP impact", "impact", { kind: "horizontal-bar" })
-    : mapMode
-      ? [
-        ...makeRegionMap(`${cityName} map: average pricing gap`, cityName, pricing.areas, "avgGap", "Average pricing gap", fmtEuro, {
-          tone: "price",
-          lowerIsBetter: false,
-          legendLow: "lower gap",
-          legendHigh: "higher gap",
-        }),
-        ...pricingRankingChart,
-      ]
     : compareFocused
       ? makeViz(`${cityName} current vs predicted nightly price`, ranked.slice(0, 5).map((r) => ({
         label: r.area,
@@ -1775,6 +1775,16 @@ async function pricingAnalysis(prompt) {
             metricNote: "Bubble chart: best for comparing current price against model fair price. Points above the diagonal suggest pricing upside; larger bubbles represent more listings.",
           })
       : pricingRankingChart;
+  // Lead with the pricing-gap map by default so geographic upside is visible without asking.
+  const regionMap = makeRegionMap(`${cityName} map: average pricing gap`, cityName, pricing.areas, "avgGap", "Average pricing gap", fmtEuro, {
+    tone: "price",
+    lowerIsBetter: false,
+    legendLow: "lower gap",
+    legendHigh: "higher gap",
+  });
+  const chart = hasMappableRegions(pricing.areas)
+    ? [...regionMap, ...contextualChart]
+    : contextualChart;
   return {
     intent: "pricing",
     title: `${isParis ? "Paris" : "Athens"} pricing opportunity`,
@@ -1815,44 +1825,17 @@ async function riskAnalysis(prompt) {
   const priorityRanked = topN(underpricing.areas, "highRisk", 6, true);
   const priorityMode = /(priority|underprice|underpriced|intervention|action|coach|first)/i.test(prompt);
   const distributionMode = /(distribution|threshold|score range|risk score|how many|spread)/i.test(prompt);
-  const mapMode = wantsRegionMap(prompt);
   const vizRequest = visualizationRequest(prompt);
   const best = ranked[0] || risk.areas[0] || {};
   const priorityBest = priorityRanked[0] || {};
-  const chart = mapMode
-    ? [{
-      kind: "region-map",
-      city: "Athens",
-      title: "Athens high-risk regional map",
-      mapLabel: CITY_MAP_META.Athens.label,
-      center: CITY_MAP_META.Athens.center,
-      zoom: CITY_MAP_META.Athens.zoom,
-      metricKey: "value",
-      metricLabel: "High-risk share",
-      tone: "risk",
-      lowerIsBetter: false,
-      legendLow: "lower risk",
-      legendHigh: "higher risk",
-      data: ranked.slice(0, 12).map((r) => ({
-        label: shortArea(r.area),
-        value: Number(num(r.highShare).toFixed(2)),
-        display: fmtPct(r.highShare),
-        ...regionCoord("Athens", r.area),
-        listings: Number(num(r.count).toFixed(0)),
-        listingsDisplay: fmtInt(r.count),
-        priceDisplay: null,
-        revenueDisplay: null,
-        opportunityDisplay: null,
-        saturationDisplay: null,
-        occupancyDisplay: null,
-      })),
-    }, ...makeViz("Athens high-risk share by neighbourhood", ranked.map((r) => ({
-      label: r.area,
-      value: r.highShare,
-      display: fmtPct(r.highShare),
-    })), "High-risk share", "share", { kind: "horizontal-bar" })]
-    : vizRequest.relationship
-      ? makeBubbleScatter("Athens risk versus underpricing trade-off", priorityRanked.slice(0, 10), {
+  const riskRankingChart = makeViz("Athens high-risk share by neighbourhood", ranked.map((r) => ({
+    label: r.area,
+    value: r.highShare,
+    display: fmtPct(r.highShare),
+  })), "High-risk share", "share", { kind: "horizontal-bar" });
+  // Pick the chart that best matches the prompt, independent of the map.
+  const contextualChart = vizRequest.relationship
+    ? makeBubbleScatter("Athens risk versus underpricing trade-off", priorityRanked.slice(0, 10), {
         xKey: "highRiskShare",
         yKey: "avgGap",
         sizeKey: "count",
@@ -1881,11 +1864,38 @@ async function riskAnalysis(prompt) {
         value: r.highRisk,
         display: fmtInt(r.highRisk),
       })), "Priority listings", "count", { kind: "horizontal-bar" })
-      : makeViz("Athens high-risk share by neighbourhood", ranked.map((r) => ({
-        label: r.area,
-        value: r.highShare,
-        display: fmtPct(r.highShare),
-      })), "High-risk share", "share", { kind: "horizontal-bar" });
+      : riskRankingChart;
+  // Lead with the Athens risk map by default so the geographic risk picture is always visible.
+  const regionMap = [{
+    kind: "region-map",
+    city: "Athens",
+    title: "Athens high-risk regional map",
+    mapLabel: CITY_MAP_META.Athens.label,
+    center: CITY_MAP_META.Athens.center,
+    zoom: CITY_MAP_META.Athens.zoom,
+    metricKey: "value",
+    metricLabel: "High-risk share",
+    tone: "risk",
+    lowerIsBetter: false,
+    legendLow: "lower risk",
+    legendHigh: "higher risk",
+    data: ranked.slice(0, 12).map((r) => ({
+      label: shortArea(r.area),
+      value: Number(num(r.highShare).toFixed(2)),
+      display: fmtPct(r.highShare),
+      ...regionCoord("Athens", r.area),
+      listings: Number(num(r.count).toFixed(0)),
+      listingsDisplay: fmtInt(r.count),
+      priceDisplay: null,
+      revenueDisplay: null,
+      opportunityDisplay: null,
+      saturationDisplay: null,
+      occupancyDisplay: null,
+    })),
+  }];
+  const chart = hasMappableRegions(ranked)
+    ? [...regionMap, ...contextualChart]
+    : contextualChart;
   return {
     intent: "risk",
     title: "Athens host-risk prioritisation",
@@ -1906,9 +1916,7 @@ async function riskAnalysis(prompt) {
     visualizations: chart,
     details: sourceDetails(
       [FILES.athensRisk, FILES.athensUnderpricing],
-      mapMode
-        ? "Aggregate LightGBM risk probabilities by neighbourhood and render a real Athens map with approximate ARIA neighbourhood overlays for risk-by-area comparison prompts."
-        : "Aggregate LightGBM risk probabilities by neighbourhood and combine them with the underpricing output. The visualization changes with the prompt: high-risk share, priority overlap count, or risk-score distribution.",
+      "Aggregate LightGBM risk probabilities by neighbourhood, render a real Athens map with approximate ARIA neighbourhood overlays, and add the chart that matches the prompt: high-risk share, priority overlap count, or risk-score distribution.",
       ["Risk is a prioritisation signal for analyst review, not a final decision about a host."],
       ranked.map((r) => `${shortArea(r.area)}: ${fmtPct(r.highShare)} high-risk share, ${fmtInt(r.high)} high-risk listings`),
       metricGuides(["highRiskShare", "riskProbability", "priorityOverlap", "threshold", "listings"])
@@ -1923,7 +1931,6 @@ async function demandAnalysis(prompt) {
   const forecastAsked = /(forecast|90 day|future|summer|season|peak)/i.test(prompt);
   const revenueAsked = /(revenue|income|earning|yield)/i.test(prompt);
   const vizRequest = visualizationRequest(prompt);
-  const mapMode = wantsRegionMap(prompt);
   const forecastRows = forecastAsked ? await loadProphetForecast(city) : [];
   const forecastRanked = forecastRows.length ? aggregateForecastAreas(forecastRows, cityRows) : [];
 
@@ -1943,7 +1950,7 @@ async function demandAnalysis(prompt) {
       metricNote: "Ranking bar: best for choosing areas. Higher bars indicate stronger average monthly occupied-night demand in the committed Prophet scenario output.",
     });
     const lineChart = forecastLineChart(city, bestForecast);
-    const mapChart = mapMode ? makeRegionMap(`${city} map: strongest Prophet demand forecast`, city, forecastRanked, "forecastAvg", "Forecast occupied nights", fmtDays, {
+    const mapChart = hasMappableRegions(forecastRanked) ? makeRegionMap(`${city} map: strongest Prophet demand forecast`, city, forecastRanked, "forecastAvg", "Forecast occupied nights", fmtDays, {
       tone: "opportunity",
       lowerIsBetter: false,
       legendLow: "lower demand",
@@ -2004,17 +2011,8 @@ async function demandAnalysis(prompt) {
     value: r.occupancy,
     display: fmtPct(r.occupancy),
   })), "Occupancy", "occupancy", { kind: "horizontal-bar" });
-  const chart = mapMode
-    ? [
-      ...makeRegionMap(`${city} map: strongest occupancy regions`, city, cityRows, "occupancy", "Occupancy", fmtPct, {
-        tone: "opportunity",
-        lowerIsBetter: false,
-        legendLow: "lower demand",
-        legendHigh: "higher demand",
-      }),
-      ...occupancyRankingChart,
-    ]
-    : vizRequest.distribution
+  // Pick the chart that best matches the prompt, independent of the map.
+  const contextualChart = vizRequest.distribution
     ? makeHistogram(`${city} occupancy distribution`, cityRows, "occupancy", "Occupancy", {
       formatter: fmtPct,
       metricNote: "Histogram: best for demand-spread questions. Each bar shows how many areas fall into an occupancy range.",
@@ -2038,6 +2036,16 @@ async function demandAnalysis(prompt) {
         metricNote: "Bubble chart: best for demand trade-offs. Higher revenue and higher occupancy are better together; bubble size shows how much listing evidence supports the point.",
       })
     : occupancyRankingChart;
+  // Lead with the occupancy map by default so demand geography is always visible.
+  const regionMap = makeRegionMap(`${city} map: strongest occupancy regions`, city, cityRows, "occupancy", "Occupancy", fmtPct, {
+    tone: "opportunity",
+    lowerIsBetter: false,
+    legendLow: "lower demand",
+    legendHigh: "higher demand",
+  });
+  const chart = hasMappableRegions(cityRows)
+    ? [...regionMap, ...contextualChart]
+    : contextualChart;
   return {
     intent: "demand",
     title: `${city} occupancy signal`,
@@ -2596,7 +2604,6 @@ async function complianceAnalysis(prompt) {
     count: rag.riskCounts.get(level) || 0,
   }));
   const rankedAreas = topN(rag.areas, "high", 6, true);
-  const mapMode = wantsRegionMap(prompt);
   const riskMix = makeDonut("Athens unlicensed-listing compliance risk mix", riskRows, "label", "count", "Listings", {
     formatter: fmtInt,
     metricNote: "Donut chart: shows how the committed RAG handoff classifies unlicensed Athens listings by compliance triage risk.",
@@ -2610,7 +2617,9 @@ async function complianceAnalysis(prompt) {
     kind: "horizontal-bar",
     metricNote: "Ranking bar: identifies where high-risk unlicensed listings are concentrated for analyst review.",
   });
-  const mapChart = mapMode ? makeRegionMap("Athens map: unlicensed compliance risk concentration", "Athens", rag.areas, "highShare", "High-risk share", fmtPct, {
+  // This triage view is geographic (risk concentration by neighbourhood), so lead with the map by
+  // default. The source-specific legal answers above return no visuals and are unaffected.
+  const mapChart = hasMappableRegions(rag.areas) ? makeRegionMap("Athens map: unlicensed compliance risk concentration", "Athens", rag.areas, "highShare", "High-risk share", fmtPct, {
     tone: "risk",
     lowerIsBetter: false,
     legendLow: "lower risk",

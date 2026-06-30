@@ -423,6 +423,8 @@ const Composer = React.forwardRef(function Composer({
               width: "100%", background: "transparent", border: "none", outline: "none", color: C2.ink,
               fontSize: 15.5, lineHeight: 1.45, padding: "8px 0", maxHeight: 200, minHeight: 32,
               resize: "none",
+              // Reserve room on the right so the first line never runs under the floating Enhance pill.
+              paddingRight: canEnhance && !enhancePreview ? 104 : 0,
             }} />
         </div>
         {attachments.length > 0 && (
