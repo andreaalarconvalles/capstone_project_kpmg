@@ -243,6 +243,22 @@ const Composer = React.forwardRef(function Composer({
     setValue(next);
     setTimeout(() => grow(taRef.current), 0);
   };
+  // Light-touch cleanup of the raw dictation (fix punctuation/typos, drop fillers) on the
+  // backend. Returns the original text on any failure so dictation is never lost.
+  const polishVoiceText = async (text) => {
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: "polish", text }),
+      });
+      if (!res.ok) return text;
+      const data = await res.json();
+      return (data.polished || text).trim();
+    } catch {
+      return text;
+    }
+  };
   const stopVoice = () => {
     voiceWantedRef.current = false;
     if (speechRef.current) {
@@ -297,11 +313,19 @@ const Composer = React.forwardRef(function Composer({
       setVoiceMessage(blocked ? "Microphone access was blocked." : "Voice input stopped. Try again.");
     };
     recognition.onend = () => {
-      if (voiceWantedRef.current) {
-        voiceWantedRef.current = false;
-        setVoiceStatus("idle");
-        setVoiceMessage(voiceFinalRef.current ? "Voice added to prompt." : "");
-      }
+      voiceWantedRef.current = false;
+      setVoiceStatus("idle");
+      const spoken = voiceFinalRef.current.trim();
+      if (!spoken) { setVoiceMessage(""); return; }
+      // On stop, replace the raw live transcript with a light-touch cleaned version.
+      setVoiceMessage("Polishing...");
+      polishVoiceText(spoken).then((polished) => {
+        const base = voiceBaseRef.current.trim();
+        const cleaned = (polished || spoken).trim();
+        setValue([base, cleaned].filter(Boolean).join(base ? " " : ""));
+        setTimeout(() => grow(taRef.current), 0);
+        setVoiceMessage("Voice cleaned up.");
+      }).catch(() => setVoiceMessage("Voice added to prompt."));
     };
     try {
       recognition.start();
