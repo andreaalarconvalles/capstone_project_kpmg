@@ -379,9 +379,9 @@ For MLOps hygiene review, see [`docs/MLOPS_REPO_REVIEW.md`](docs/MLOPS_REPO_REVI
 
 | Phase | Notebook | Status |
 |-------|----------|--------|
-| Phase 1 — EDA | `ARIA_EDA_v4_FINAL.ipynb` | Done · A+/99 |
-| Phase 2 — XGBoost Pricing | `ARIA_XGBoost_v1.ipynb` | Done · A/96 |
-| Phase 3 — LightGBM Risk | `ARIA_LightGBM_v1.ipynb` | Done · A/95 |
+| Phase 1 — EDA | `ARIA_EDA_v4_FINAL.ipynb` | Done |
+| Phase 2 — XGBoost Pricing | `ARIA_XGBoost_v1.ipynb` | Done |
+| Phase 3 — LightGBM Risk | `ARIA_LightGBM_v1.ipynb` | Done |
 | Phase 4 — Prophet Forecasting | `ARIA_Prophet_v2.ipynb` | Done |
 | Phase 5 — RAG Compliance | `ARIA_RAG_v1.ipynb` | Done |
 | Phase 6 — LangGraph Orchestrator | `ARIA_LangGraph_v1.ipynb` | Done |
