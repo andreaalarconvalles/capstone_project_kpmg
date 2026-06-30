@@ -446,6 +446,30 @@ async function callGeminiVertexGrounded({ accessToken, projectId, location, mode
   return { answer, finishReason: candidate?.finishReason || "", groundingSources };
 }
 
+// Light-touch cleanup of a raw voice-dictation transcript: fixes punctuation, capitalization,
+// and obvious speech-to-text typos and removes filler words, while keeping the user's exact
+// words, phrasing, and intent. Uses Flash with thinking disabled for low latency.
+async function polishTranscript({ accessToken, projectId, location, text }) {
+  const systemPrompt = `You clean up raw voice-dictation transcripts with a LIGHT TOUCH. Fix capitalization, obvious speech-to-text spelling errors, and punctuation (commas, periods, question marks). Remove filler words and false starts such as "uh", "um", "er", "like", "you know", "or whatever". Keep the user's exact words, phrasing, sentence structure, language, and intent: do NOT rephrase, reorder, summarise, translate, or change meaning, and do not add or remove information. Do not answer the text and do not add commentary or quotation marks. Return only the cleaned text.`;
+  const vertexRes = await fetch(endpointFor({ projectId, location, model: "gemini-2.5-flash" }), {
+    method: "POST",
+    headers: { "Authorization": `Bearer ${accessToken}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      systemInstruction: { parts: [{ text: systemPrompt }] },
+      contents: [{ role: "user", parts: [{ text }] }],
+      generationConfig: { temperature: 0.1, maxOutputTokens: 256, thinkingConfig: { thinkingBudget: 0 } },
+    }),
+  });
+  const data = await vertexRes.json();
+  if (!vertexRes.ok) {
+    const error = new Error(data?.error?.message || "Transcript polish request failed.");
+    error.status = vertexRes.status;
+    throw error;
+  }
+  const out = data?.candidates?.[0]?.content?.parts?.map((part) => part.text || "").join("").trim();
+  return out || text;
+}
+
 function buildGeneralSystemPrompt() {
   const nowUtc = new Date().toISOString();
   return `You are ARIA, an AI assistant built for the ARIA (Agentic Real-estate Intelligence Advisor) capstone. Your speciality is Paris and Athens short-term-rental market intelligence, but you can also help with everyday general questions.
@@ -707,6 +731,25 @@ export default async function handler(req, res) {
       return json(res, 400, { error: "Request body must be valid JSON." });
     }
   }
+
+  // Voice-dictation cleanup: lightweight transcript polish that does not run the chat pipeline.
+  if (body.mode === "polish") {
+    const text = String(body.text || "").trim();
+    if (!text) return json(res, 200, { polished: "" });
+    const polishProjectId = String(body.projectId || process.env.GOOGLE_CLOUD_PROJECT || process.env.VERTEX_PROJECT_ID || "").trim();
+    const polishLocation = String(body.location || process.env.GOOGLE_CLOUD_LOCATION || process.env.VERTEX_LOCATION || DEFAULT_LOCATION).trim();
+    try {
+      const accessToken = await getAccessToken();
+      if (!accessToken) throw new Error("No access token.");
+      const polished = await polishTranscript({ accessToken, projectId: polishProjectId, location: polishLocation, text });
+      return json(res, 200, { polished: polished || text });
+    } catch (error) {
+      // Never block dictation: fall back to the original text if cleanup fails.
+      console.error("[ARIA polish] transcript cleanup failed:", error?.message || error);
+      return json(res, 200, { polished: text });
+    }
+  }
+
   const prompt = String(body.prompt || "").trim();
   const projectId = String(body.projectId || process.env.GOOGLE_CLOUD_PROJECT || process.env.VERTEX_PROJECT_ID || "").trim();
   const projectNumber = String(body.projectNumber || process.env.GOOGLE_CLOUD_PROJECT_NUMBER || process.env.VERTEX_PROJECT_NUMBER || "").trim();
