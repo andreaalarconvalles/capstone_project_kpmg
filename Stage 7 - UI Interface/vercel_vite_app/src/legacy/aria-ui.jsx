@@ -268,9 +268,11 @@ function Sidebar({
 
 /* ---------- rich text (markdown-ish, streaming-safe) ---------- */
 function renderInline(text) {
-  const parts = text.split(/(\*\*[^*]+\*\*|`[^`]+`|\*[^*]+\*)/g);
+  const parts = text.split(/(\[[^\]]+\]\([^)\s]+\)|\*\*[^*]+\*\*|`[^`]+`|\*[^*]+\*)/g);
   return parts.map((p, i) => {
     if (!p) return null;
+    const link = p.match(/^\[([^\]]+)\]\(([^)\s]+)\)$/);
+    if (link) return <a key={i} href={link[2]} target="_blank" rel="noopener noreferrer" style={{ color: C.accent, textDecoration: "underline" }}>{link[1]}</a>;
     if (p.startsWith("**") && p.endsWith("**")) return <strong key={i}>{p.slice(2, -2)}</strong>;
     if (p.startsWith("`") && p.endsWith("`")) return <em key={i}>{p.slice(1, -1)}</em>;
     if (p.startsWith("*") && p.endsWith("*") && p.length > 2) return <span key={i} style={{ color: C.muted }}>{p.slice(1, -1)}</span>;
