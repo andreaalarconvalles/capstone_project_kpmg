@@ -446,28 +446,40 @@ async function callGeminiVertexGrounded({ accessToken, projectId, location, mode
   return { answer, finishReason: candidate?.finishReason || "", groundingSources };
 }
 
-// Light-touch cleanup of a raw voice-dictation transcript: fixes punctuation, capitalization,
-// and obvious speech-to-text typos and removes filler words, while keeping the user's exact
-// words, phrasing, and intent. Uses Flash with thinking disabled for low latency.
-async function polishTranscript({ accessToken, projectId, location, text }) {
-  const systemPrompt = `You clean up raw voice-dictation transcripts with a LIGHT TOUCH. Fix capitalization, obvious speech-to-text spelling errors, and punctuation (commas, periods, question marks). Remove filler words and false starts such as "uh", "um", "er", "like", "you know", "or whatever". Keep the user's exact words, phrasing, sentence structure, language, and intent: do NOT rephrase, reorder, summarise, translate, or change meaning, and do not add or remove information. Do not answer the text and do not add commentary or quotation marks. Return only the cleaned text.`;
+// Shared low-latency Flash rewrite used by voice-transcript polish and prompt enhancement.
+// Thinking is disabled so the short rewrite is fast and never starved to an empty string.
+async function flashRewrite({ accessToken, projectId, location, text, systemPrompt, temperature = 0.2, maxOutputTokens = 256 }) {
   const vertexRes = await fetch(endpointFor({ projectId, location, model: "gemini-2.5-flash" }), {
     method: "POST",
     headers: { "Authorization": `Bearer ${accessToken}`, "Content-Type": "application/json" },
     body: JSON.stringify({
       systemInstruction: { parts: [{ text: systemPrompt }] },
       contents: [{ role: "user", parts: [{ text }] }],
-      generationConfig: { temperature: 0.1, maxOutputTokens: 256, thinkingConfig: { thinkingBudget: 0 } },
+      generationConfig: { temperature, maxOutputTokens, thinkingConfig: { thinkingBudget: 0 } },
     }),
   });
   const data = await vertexRes.json();
   if (!vertexRes.ok) {
-    const error = new Error(data?.error?.message || "Transcript polish request failed.");
+    const error = new Error(data?.error?.message || "Vertex rewrite request failed.");
     error.status = vertexRes.status;
     throw error;
   }
   const out = data?.candidates?.[0]?.content?.parts?.map((part) => part.text || "").join("").trim();
   return out || text;
+}
+
+const POLISH_SYSTEM_PROMPT = `You clean up raw voice-dictation transcripts with a LIGHT TOUCH. Fix capitalization, obvious speech-to-text spelling errors, and punctuation (commas, periods, question marks). Remove filler words and false starts such as "uh", "um", "er", "like", "you know", "or whatever". Keep the user's exact words, phrasing, sentence structure, language, and intent: do NOT rephrase, reorder, summarise, translate, or change meaning, and do not add or remove information. Do not answer the text and do not add commentary or quotation marks. Return only the cleaned text.`;
+
+const ENHANCE_SYSTEM_PROMPT = `You lightly improve a user's prompt for ARIA, an analytics assistant whose data covers ONLY the Paris and Athens short-term-rental (Airbnb) markets: pricing and underpricing, listing and host risk, demand and occupancy, opportunity, market saturation, and short-term-rental regulation. Rewrite the prompt so it is clear and professional and make an implied city or metric explicit, while staying very close to what the user actually asked. Keep it to ONE concise sentence. You MUST NOT add new analysis dimensions, factors, criteria, or requirements the user did not ask for (do not introduce things like property appreciation, personal safety, financing, or extra checklists); invent specific facts, numbers, names, neighbourhoods, or dates; change the topic; or answer the prompt. Frame it as short-term-rental analysis, not general real estate. Write it from the user's own first-person perspective and do NOT address or name ARIA or any assistant. Return only the improved prompt the user would send, with no preamble, quotes, or explanation.`;
+
+// Light-touch cleanup of a raw voice-dictation transcript (fix punctuation/typos, drop fillers).
+function polishTranscript({ accessToken, projectId, location, text }) {
+  return flashRewrite({ accessToken, projectId, location, text, systemPrompt: POLISH_SYSTEM_PROMPT, temperature: 0.1 });
+}
+
+// Rewrite a user's prompt to be clearer, more professional, and a little more detailed.
+function enhanceUserPrompt({ accessToken, projectId, location, text }) {
+  return flashRewrite({ accessToken, projectId, location, text, systemPrompt: ENHANCE_SYSTEM_PROMPT, temperature: 0.3, maxOutputTokens: 320 });
 }
 
 function buildGeneralSystemPrompt() {
@@ -747,6 +759,23 @@ export default async function handler(req, res) {
       // Never block dictation: fall back to the original text if cleanup fails.
       console.error("[ARIA polish] transcript cleanup failed:", error?.message || error);
       return json(res, 200, { polished: text });
+    }
+  }
+
+  // Prompt enhancement: rewrite the user's prompt to be clearer and a little more detailed.
+  if (body.mode === "enhance") {
+    const text = String(body.text || "").trim();
+    if (!text) return json(res, 200, { enhanced: "" });
+    const enhanceProjectId = String(body.projectId || process.env.GOOGLE_CLOUD_PROJECT || process.env.VERTEX_PROJECT_ID || "").trim();
+    const enhanceLocation = String(body.location || process.env.GOOGLE_CLOUD_LOCATION || process.env.VERTEX_LOCATION || DEFAULT_LOCATION).trim();
+    try {
+      const accessToken = await getAccessToken();
+      if (!accessToken) throw new Error("No access token.");
+      const enhanced = await enhanceUserPrompt({ accessToken, projectId: enhanceProjectId, location: enhanceLocation, text });
+      return json(res, 200, { enhanced: enhanced || text });
+    } catch (error) {
+      console.error("[ARIA enhance] prompt enhancement failed:", error?.message || error);
+      return json(res, 200, { enhanced: text });
     }
   }
 
