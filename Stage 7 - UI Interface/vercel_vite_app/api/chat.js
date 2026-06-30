@@ -325,13 +325,16 @@ function parseScopeLabel(text) {
 }
 
 const SCOPE_ROUTER_SYSTEM_PROMPT = `You are a scope classifier for ARIA, an analytics assistant whose data and models cover ONLY the Paris and Athens short-term-rental (Airbnb) markets: pricing, investment opportunity, risk, demand and occupancy forecasts, and short-term-rental regulation and compliance.
-Classify the user's latest message into exactly one label:
-- in_scope: about Paris or Athens short-term-rental markets, pricing, investment, risk, demand, regulation, or ARIA's own models and methodology, OR a short follow-up that continues such a topic from the recent conversation.
-- other_city: asks for market, investment, or real-estate analysis of a specific place that is NOT Paris or Athens — even if the question uses words like "invest", "market", or "short-term rental". Examples: Lisbon, Madrid, Berlin, London, Barcelona, Rome, any non-Paris/Athens location.
-- general: anything else, including small talk, the current time, math (for example "what is 17 times 23"), coding, general knowledge (for example "capital of Japan"), creative writing (for example "write a haiku"), or questions about who or what ARIA is.
-City specificity overrides ambiguity: if the target location is clearly not Paris or Athens, choose other_city, not in_scope. If the message has no Paris/Athens/real-estate connection at all, choose general.
-A message that mentions Paris or Athens but is NOT about real estate or short-term rental (for example weather, history, food, sightseeing, travel directions, language, or personal safety) is general, not in_scope.
-A Paris or Athens question about buying, renting, pricing, neighbourhoods, areas, investment, demand, risk, or market conditions IS in_scope, even if it does not use the words "short-term rental".
+First read the recent conversation, then classify the user's LATEST message into exactly one label.
+
+CONTINUATION RULE (check this first): if the recent conversation was an ARIA Paris/Athens short-term-rental analysis and the latest message continues it, asks to expand, visualise, or drill into it, or refers back to it, classify it in_scope. This includes short follow-ups and back-references such as "show me the map", "can you show it on a map", "show me the chart", "visualise that", "what about the risk", "and the pricing", "compare them", "those areas", "go deeper", "tell me more", "there", or "the same for Athens". A request to see a map, chart, or more detail of a previous Paris/Athens answer is in_scope. Only treat the latest message as a brand-new question when it clearly does NOT continue the recent analysis.
+
+Labels:
+- in_scope: about Paris or Athens short-term-rental markets, pricing, investment, risk, demand, regulation, or ARIA's own models and methodology, OR a follow-up that continues such a topic from the recent conversation (see the continuation rule).
+- other_city: asks for market, investment, or real-estate analysis of a specific place that is NOT Paris or Athens, even with words like "invest", "market", or "short-term rental". Examples: Lisbon, Madrid, Berlin, London, Barcelona, Rome.
+- general: a NEW question that does not continue the recent Paris/Athens analysis, such as small talk, the current time, math (for example "what is 17 times 23"), coding, general knowledge (for example "capital of Japan"), creative writing, current events or news, or questions about who or what ARIA is.
+
+If the latest message is NOT a continuation, classify it on its own: city specificity overrides ambiguity (a clearly non-Paris/Athens location is other_city); a Paris or Athens question about buying, renting, pricing, neighbourhoods, areas, investment, demand, risk, or market conditions is in_scope even without the words "short-term rental"; a message that mentions Paris or Athens but is NOT about real estate (weather, history, food, sightseeing, travel, personal safety) is general; and a message with no Paris/Athens/real-estate connection is general.
 Reply with ONLY the label: in_scope, other_city, or general.`;
 
 // Ask one Vertex model to classify the prompt. Returns a parsed scope ("in_scope" |
@@ -395,8 +398,25 @@ async function classifyScopeWithModel({ accessToken, projectId, location, prompt
 // by this point isInScopeDomain() has already returned false, so the prompt has no
 // strong Paris/Athens/ARIA signals and running the analytics pipeline would produce
 // irrelevant output. "general" answers directly as a normal assistant instead.
+// Deterministic context safety net for the LLM router, which can miss short follow-ups.
+// A visualisation, drill-down, or back-reference request ("show me a map as well", "add a
+// chart", "break it down", "those areas", "in more detail") only makes sense as a
+// continuation of the previous turn, so when a recent turn was clearly in ARIA's Paris/Athens
+// domain we inherit in_scope. Deliberately excludes city-introducing words like "compare" or
+// "what about" (e.g. "compare Berlin and Madrid"), which the LLM router handles with context.
+function isInScopeFollowUp(prompt, messages) {
+  const p = String(prompt || "").toLowerCase().trim();
+  if (!p) return false;
+  const continuationRe = /\b(maps?|charts?|graphs?|plot|table|heat\s?map|visuali[sz]e|diagram|breakdown|break it down|drill|deeper|in (?:more )?detail|more detail|expand|tell me more|those|these|that|there|them|the same|as well|also)\b/i;
+  if (!continuationRe.test(p)) return false;
+  const recent = Array.isArray(messages) ? messages.slice(-4) : [];
+  return recent.some((m) => m && m.text && isInScopeDomain(m.text));
+}
+
 async function resolveScope({ prompt, messages, getToken, projectId, location }) {
   if (isInScopeDomain(prompt)) return { scope: "in_scope", accessToken: null };
+  // Context-aware: a short follow-up that continues a recent Paris/Athens analysis stays in_scope.
+  if (isInScopeFollowUp(prompt, messages)) return { scope: "in_scope", accessToken: null };
   try {
     const accessToken = await getToken();
     const scope = await classifyScopeWithModel({ accessToken, projectId, location, prompt, messages });
