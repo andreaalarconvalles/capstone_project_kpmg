@@ -196,6 +196,8 @@ const Composer = React.forwardRef(function Composer({
   const [attachments, setAttachments] = React.useState([]);
   const [voiceStatus, setVoiceStatus] = React.useState("idle");
   const [voiceMessage, setVoiceMessage] = React.useState("");
+  const [enhancing, setEnhancing] = React.useState(false);
+  const [enhancePreview, setEnhancePreview] = React.useState(null);
   const attachmentsRef = React.useRef([]);
   const engine = MODEL_BY_ID[modelId];
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -341,16 +343,78 @@ const Composer = React.forwardRef(function Composer({
     onSend();
     clearPhotos();
   };
+  // Prompt enhancer: only offer it once there is enough text to be worth improving.
+  const ENHANCE_MIN_WORDS = 5;
+  const canEnhance = !streaming && value.trim().split(/\s+/).filter(Boolean).length >= ENHANCE_MIN_WORDS;
+  const runEnhance = async () => {
+    const text = value.trim();
+    if (!text || enhancing) return;
+    setEnhancing(true);
+    setEnhancePreview(null);
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: "enhance", text }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const improved = (data.enhanced || "").trim();
+        if (improved && improved !== text) setEnhancePreview(improved);
+      }
+    } catch { /* keep the original prompt on failure */ }
+    setEnhancing(false);
+  };
+  const applyEnhance = () => {
+    if (enhancePreview) { setValue(enhancePreview); setTimeout(() => grow(taRef.current), 0); }
+    setEnhancePreview(null);
+  };
 
   return (
-    <div style={{ width: "100%", maxWidth, margin: "0 auto" }}>
+    <div style={{ width: "100%", maxWidth, margin: "0 auto", position: "relative" }}>
+      {enhancePreview && (
+        <div className="aria-fadein" style={{
+          position: "absolute", bottom: "calc(100% + 8px)", left: 0, right: 0, zIndex: 5,
+          background: C2.s1, border: `1px solid ${C2.hair}`, borderRadius: 16, padding: 12,
+          boxShadow: "0 18px 44px rgba(0,0,0,0.16)",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 7, fontSize: 11.5, fontWeight: 700, color: C2.muted, letterSpacing: 0.2 }}>
+            <Icon name="Sparkles" size={13} color={C2.accent} /> SUGGESTED PROMPT
+          </div>
+          <div style={{ fontSize: 14, lineHeight: 1.5, color: C2.ink, marginBottom: 10 }}>{enhancePreview}</div>
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+            <button className="aria-focus" onClick={() => setEnhancePreview(null)}
+              style={{ height: 32, padding: "0 13px", borderRadius: 9, border: `1px solid ${C2.hair}`, background: C2.canvas, color: C2.ink, fontSize: 13, fontWeight: 600 }}>
+              Dismiss
+            </button>
+            <button className="aria-focus" onClick={applyEnhance}
+              style={{ height: 32, padding: "0 14px", borderRadius: 9, background: C2.cta, color: C2.ctaText, fontSize: 13, fontWeight: 700 }}>
+              Apply
+            </button>
+          </div>
+        </div>
+      )}
       <div className="aria-elev" style={{
         background: C2.s1, border: `1px solid ${C2.hair}`, borderRadius: 24, padding: "10px 10px 8px",
+        position: "relative",
       }}>
+        {canEnhance && !enhancePreview && (
+          <button className="aria-focus" onClick={runEnhance} disabled={enhancing} title="Improve this prompt"
+            style={{
+              position: "absolute", top: 8, right: 10, zIndex: 2,
+              display: "flex", alignItems: "center", gap: 5, height: 26, padding: "0 9px",
+              borderRadius: 100, border: `1px solid ${C2.hair}`, background: C2.canvas,
+              color: enhancing ? C2.muted : C2.accent, fontSize: 12, fontWeight: 600,
+              cursor: enhancing ? "default" : "pointer",
+            }}>
+            <Icon name={enhancing ? "Loader" : "Sparkles"} size={13} className={enhancing ? "aria-spin" : undefined} />
+            {enhancing ? "Improving…" : "Enhance"}
+          </button>
+        )}
         <div style={{ display: "flex", alignItems: "flex-start", width: "100%", padding: "0 6px 6px" }}>
           <textarea ref={taRef} value={value} rows={1}
             aria-label={`Ask ${agent.name}`} name="aria-prompt" autoComplete="off"
-            onChange={(e) => { setValue(e.target.value); grow(e.target); }}
+            onChange={(e) => { setValue(e.target.value); grow(e.target); if (enhancePreview) setEnhancePreview(null); }}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submit(); }
             }}
