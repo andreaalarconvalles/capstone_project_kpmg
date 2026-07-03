@@ -5,6 +5,8 @@
 
 **Agent handoff and project memory:** [`agent.md`](agent.md)
 
+**Prepared by:** Álvaro Jiménez · Álvaro Pérez · Andrea Alarcón · Bassem Halawani · Ghezlan Almatar · Luka Tcheishvili
+
 ---
 
 ## What is ARIA
