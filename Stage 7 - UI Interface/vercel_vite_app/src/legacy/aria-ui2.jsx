@@ -853,6 +853,19 @@ function SettingsModal({ open, onClose, settings, setSettings }) {
               <p>
                 For academic transparency, generative AI assistants were used only as productivity tools during this capstone: code scaffolding and debugging, routine data-wrangling boilerplate, comments and docstrings, and report drafting, copy-editing, and formatting. Every suggestion was reviewed by the team and treated as a draft, not an authority.
               </p>
+              <p style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                <span style={{ color: C2.muted }}>Source code</span>
+                <a
+                  href="https://github.com/lukatcheishvili/capstone_project_kpmg"
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="aria-focus"
+                  style={{ display: "inline-flex", alignItems: "center", gap: 7, color: C2.accent, textDecoration: "none", fontWeight: 500 }}
+                >
+                  <Icon name="Github" size={16} />
+                  aria-github.com
+                </a>
+              </p>
               <p style={{ color: C2.muted, marginBottom: 0 }}>IE Business School × KPMG Spain — Capstone 2026.</p>
             </div>
           )}
